@@ -143,7 +143,7 @@ test.describe('photo book', () => {
     await addPhoto(page, 'one.png')
 
     const stillResolves = await page.evaluate(async () => {
-      const { renderPages } = await import('/Pic-collage/src/lib/renderPages.tsx')
+      const { renderPages } = await import('/Pic-Collage-Maker/src/lib/renderPages.tsx')
       const s = window.__editor!.getState() as unknown as Record<string, unknown>
       const doc = {
         boardWidth: s.boardWidth,
@@ -188,7 +188,7 @@ test.describe('photo book', () => {
     await skipGallery(page)
 
     const colours = await page.evaluate(async () => {
-      const { renderPages } = await import('/Pic-collage/src/lib/renderPages.tsx')
+      const { renderPages } = await import('/Pic-Collage-Maker/src/lib/renderPages.tsx')
       const s = window.__editor!.getState() as unknown as Record<string, unknown>
       const base = {
         boardWidth: s.boardWidth,

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useProjects } from './projectsStore'
-import { useEditor } from './editorStore'
+import { useProjects } from '../projectsStore'
+import { useEditor } from '../editorStore'
 
 describe('projectsStore', () => {
   beforeEach(() => {

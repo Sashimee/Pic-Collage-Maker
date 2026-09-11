@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useProjects } from '../projectsStore'
 import { useEditor } from '../editorStore'
-import { loadProject } from '../../services/cloudSync'
+import { loadProject } from '../../services/localProjects'
 import { toProjectDocument } from '../../lib/projectSchema'
 
 /*

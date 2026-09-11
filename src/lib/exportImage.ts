@@ -319,7 +319,7 @@ export const shareFileName = (format: ExportFormat, index = 0, total = 1) =>
  * `file:` builds — where the real address is unknowable — fall back to the
  * published URL, because a share reading `http://localhost:5173/` helps nobody.
  */
-const PUBLISHED_URL = 'https://sashimee.github.io/Pic-collage/'
+const PUBLISHED_URL = 'https://sashimee.github.io/Pic-Collage-Maker/'
 
 export function appUrl(): string {
   try {

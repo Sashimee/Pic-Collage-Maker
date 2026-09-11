@@ -60,61 +60,129 @@ Pic-Collage-Maker/
 ├── vite.config.ts              # base path + react/tailwind/PWA plugins + manifest
 ├── package.json                # name: pic-collage-maker
 ├── tsconfig*.json              # app + node project references
-├── scripts/generate-icons.mjs  # dependency-free PNG icon generator (zlib) → public/
+├── vitest.config.ts            # unit-test config (jsdom, src/test-setup.ts)
+├── scripts/
+│   ├── generate-icons.mjs      # dependency-free PNG icon generator (zlib) → public/
+│   └── generate-og.mjs         # Open Graph share image
 ├── public/                     # favicon.svg + generated pwa-*.png / apple-touch-icon.png
-├── .github/workflows/deploy.yml# build + deploy to GitHub Pages
+├── docs/
+│   ├── user-guide.md           # end-user documentation
+│   ├── api.md                  # module/API notes
+│   └── adr/                    # 0001 client-only architecture, 0002 konva stays
+├── e2e/                        # playwright: 15 specs + helpers.ts + playwright.config.ts
+├── .github/
+│   ├── lighthouserc.json       # LHCI thresholds (see gotchas: needs `npm run build:lh`)
+│   └── workflows/              # ci.yml, deploy.yml (Pages), lighthouse.yml
 └── src/
     ├── main.tsx                # React root
-    ├── App.tsx                 # layout shell (Header / Canvas+SelectionBar / Toolbar) + export flow
+    ├── App.tsx                 # layout shell (Header / Canvas+SelectionBar / Docks) + export flow
     ├── index.css               # Tailwind import + base/touch styles
     ├── types.ts                # CanvasElement union, Background, Grid types, DEFAULT_FILTERS
+    ├── test-setup.ts           # vitest DOM/canvas stubs
     ├── store/
     │   ├── editorStore.ts      # zustand: elements, selection, background, mode, z-order, actions
     │   ├── projectsStore.ts    # named projects in IndexedDB + autosave + the page list
     │   ├── versionStore.ts     # version history snapshots (deduped, capped at MAX_SNAPSHOTS)
     │   ├── workspaceStore.ts   # panel layout / active tab persistence
     │   └── toastStore.ts       # toasts, with an optional action button
+    ├── services/
+    │   └── localProjects.ts    # the IndexedDB project store (no network — see gotchas)
     ├── i18n/
     │   ├── translations.ts     # Lang type, LANGS (flags), 6-language string maps
-    │   └── useLang.ts          # lang store (detect+persist) + useT() translator hook
+    │   ├── useLang.ts          # lang store (detect+persist) + useT() translator hook
+    │   └── useTheme.ts         # light/dark theme store
     ├── assets/fonts/           # self-hosted Poppins (latin subset) — see gotchas
+    ├── ai/                     # on-device "AI" tools — all pure pixel math, no network, no model download
+    │   ├── autoEnhance.ts      # one-tap exposure/contrast correction
+    │   ├── bgRemoval.ts        # background removal
+    │   ├── faceDetection.ts    # brightness-contrast face regions, for smart crop / retouch
+    │   ├── healTool.ts         # blemish/heal brush state + canvas helpers
+    │   ├── portraitRetouch.ts  # skin smoothing / eye + teeth work
+    │   ├── styleTransfer.ts    # oil / sketch / pop-art styles
+    │   └── textSuggestions.ts  # analyzePhoto() → caption suggestions
     ├── hooks/
     │   ├── useImage.ts         # URL → decoded HTMLImageElement
     │   ├── useMediaQuery.ts    # useIsDesktop() and friends
     │   ├── usePointerReorder.ts# axis-agnostic drag-to-reorder (LayerPanel, PageStrip)
     │   ├── usePageThumbs.ts    # page photo thumbs out of IndexedDB, with URL revocation
-    │   └── useScrollOverflow.ts# scroll-position → fade/arrow affordances (Docks, ActionSheet)
+    │   ├── useScrollOverflow.ts# scroll-position → fade/arrow affordances (Docks, ActionSheet)
+    │   ├── useContextMenu.ts   # right-click / long-press menu state
+    │   ├── useMemoryPressure.ts# drops caches when the device is under memory pressure
+    │   ├── useVersionCheck.ts  # same-origin version.json poll → UpdateBanner
+    │   ├── useShortcuts.ts     # the main keyboard map (undo, copy/paste, nudge, save/export)
+    │   └── useKeyboard.ts      # a second, overlapping shortcut map — see issue #3
     ├── lib/
     │   ├── grids.ts            # grid presets (GRID_LAYOUTS) + cellRect/assignSlots
-    │   ├── photoBook.ts        # mm/pt/px page sizes at 300 DPI + buildPhotoBook()
-    │   ├── renderPages.tsx     # off-screen Konva stage: any page → a bitmap
-    │   ├── projectSchema.ts    # ProjectDocument (schema 2): pages + activePage, w/ migration
-    │   ├── pagePreview.ts      # page → CSS background + photo rects, for the page strip
     │   ├── customLayout.ts     # draw-your-own layouts: polygon zones, stroke → split/circle
+    │   ├── customLayoutStorage.ts # saved custom layouts in localStorage
+    │   ├── cellShapes.ts       # CELL_SHAPE_PRESETS: per-cell shape masks
+    │   ├── shapes.ts           # PHOTO_SHAPES + tracePhotoShape() clip paths
+    │   ├── patterns.ts         # pattern background tiles + their glyphs
     │   ├── filters.ts          # FILTER_PRESETS + computeFilterConfig() → Konva filter stack
+    │   ├── snap.ts             # computeSnap(): alignment guides while dragging
+    │   ├── emojis.ts           # EMOJI_CATEGORIES for the sticker picker
+    │   ├── fonts.ts            # custom font upload → IndexedDB + FontFace registration
     │   ├── importPhotos.ts     # File → orig/preview(1080px)/thumb blobs + object URLs
+    │   ├── importFiles.ts      # file-picker / drop entry point into importPhotos
+    │   ├── exifHelpers.ts      # read EXIF off imports, re-inject it into exported JPEGs
+    │   ├── persistence.ts      # the IndexedDB photo blob store (putPhoto/getPhoto)
     │   ├── photoRehydrate.ts   # strip blob: URLs before persisting, rebuild them on load
+    │   ├── projectSchema.ts    # ProjectDocument (schema 2): pages + activePage, w/ migration
+    │   ├── projectFile.ts      # .piccollage pack/unpack (project + photos as one file)
+    │   ├── pagePreview.ts      # page → CSS background + photo rects, for the page strip
+    │   ├── renderPages.tsx     # off-screen Konva stage: any page → a bitmap
+    │   ├── photoBook.ts        # mm/pt/px page sizes at 300 DPI + buildPhotoBook()
+    │   ├── exportImage.ts      # exportBoard(), download, Web Share
+    │   ├── exportPDF.ts        # pdf-lib; takes an *array* of pages
+    │   ├── exportSVG.ts        # board → SVG string + download
+    │   ├── exportPresets.ts    # named size/format presets for the export menu
+    │   ├── batchExport.ts      # every page → a ZIP (jszip)
     │   ├── firstUse.ts         # one record of which hints have been seen
     │   ├── pwaInstall.ts       # beforeinstallprompt store + platform detection
     │   ├── analytics.ts        # cookieless GoatCounter beacon (honours DNT/GPC)
-    │   ├── exportPDF.ts        # pdf-lib; takes an *array* of pages
-    │   └── exportImage.ts      # exportBoard(), download, Web Share
+    │   └── confetti.ts         # canvas-confetti burst on export
     └── components/
         ├── EditorCanvas.tsx    # Konva stage, board group, gestures, transformer, export handle
         ├── CanvasNodes.tsx     # ElementNode dispatcher: PhotoNode / TextNode / StickerNode
+        ├── BoardScene.tsx      # the exportable board: background + photos + frame
+        ├── Background.tsx      # solid / gradient / pattern / photo board background
+        ├── BoardFrame.tsx      # the board's border/frame overlay
         ├── GridView.tsx        # grid-mode: clipped cover-fit photo cells + placeholders
+        ├── LayoutGallery.tsx   # the layout picker
+        ├── LayoutPreview.tsx   # one layout drawn as a thumbnail
+        ├── CustomLayoutEditor.tsx  # draw-your-own layout surface
+        ├── CustomLayoutToolbar.tsx # its tool row
+        ├── CropOverlay.tsx     # crop handles over the selected photo
+        ├── PhotoAssignmentSheet.tsx # pick which photo goes in which cell
         ├── PageStrip.tsx       # rail of pages under the canvas: add/switch/reorder/delete
         ├── PageThumb.tsx       # one page as plain DOM (background + positioned photos)
-        ├── BoardScene.tsx      # the exportable board: background + photos + frame
-        ├── GestureDemo.tsx     # animated inline-SVG demos of the four gestures
-        ├── TipToast.tsx        # first-use gesture tips, on the toast host
-        ├── PhotoBookSheet.tsx  # photo book options + progress
-        ├── Background.tsx      # solid / linear-gradient board background rect
-        ├── Toolbar.tsx         # bottom tab bar + active panel sheet
+        ├── LayerPanel.tsx      # layer list: reorder / duplicate / delete / group
         ├── Panels.tsx          # Photos / Layout / Text / Stickers / Background / Filters panels
+        ├── panels.config.tsx   # PANEL_TABS + usePanels() — the panel registry
+        ├── FilterPanel.tsx     # the filter stack UI
+        ├── WatermarkPanel.tsx  # watermark + print marks
+        ├── PhotoBookSheet.tsx  # photo book options + progress
+        ├── ProjectManager.tsx  # saved projects: open / rename / duplicate / delete
+        ├── VersionHistoryPanel.tsx # version snapshots, restore
+        ├── WorkspacePresets.tsx# saved panel layouts
+        ├── FontUploader.tsx    # custom font upload
+        ├── Docks.tsx        # MobileTabBar + MobileSheet + the desktop docks
         ├── SelectionBar.tsx    # floating per-element actions (dup / layer / delete)
         ├── HeaderBar.tsx       # brand, LangSwitcher, New, Export menu
+        ├── StatusBar.tsx       # zoom / size / hint line
+        ├── ZoomControls.tsx    # zoom in/out/fit buttons
+        ├── FullScreen.tsx      # useFullScreen() + its button
+        ├── ActionSheet.tsx / BottomSheet.tsx  # sheet primitives
+        ├── Onboarding.tsx      # first-run overlay
+        ├── GestureDemo.tsx     # animated inline-SVG demos of the four gestures
+        ├── TipToast.tsx        # first-use gesture tips, on the toast host
+        ├── ToastContainer.tsx  # toast host
+        ├── InstallSheet.tsx    # PWA install instructions per platform
+        ├── UpdateBanner.tsx    # "new version available" banner (useVersionCheck)
+        ├── EmptyState.tsx      # the no-photos-yet state
+        ├── ErrorBoundary.tsx   # top-level crash boundary
         ├── LangSwitcher.tsx    # 🇩🇪 / 🇬🇧 flag buttons
+        ├── motion.tsx          # MotionProvider — LazyMotion + reduced motion (see gotchas)
         └── ui.tsx              # Slider / ColorField / Chip / PrimaryButton primitives
 ```
 
@@ -224,13 +292,13 @@ untranslated.
   generated by `scripts/generate-icons.mjs` (pure zlib PNG encoder) into
   `public/`; `favicon.svg` is the source motif.
 - **`base` in `vite.config.ts` must equal the GitHub Pages subpath** (the repo
-  name), currently `'/Pic-collage/'`. It also feeds the manifest `start_url` /
+  name), currently `'/Pic-Collage-Maker/'`. It also feeds the manifest `start_url` /
   `scope`. **If the repo is renamed, update `BASE`** (and README/live-URL refs).
 - CI: every push to `main` runs `deploy.yml` → `npm install` (see gotchas) →
   `npm run build` → upload `dist/` → deploy to Pages. Node 24.
 - One-time (admin): repo **public** + Settings → Pages → Source = **GitHub
   Actions**.
-- Live: `https://sashimee.github.io/Pic-collage/`.
+- Live: `https://sashimee.github.io/Pic-Collage-Maker/`.
 
 ## Known gotchas / constraints
 
@@ -238,11 +306,11 @@ untranslated.
   collaborator; the repo **owner is Sashimee** ("Alex"). Admin actions — renaming
   the repo, changing visibility, enabling Pages — return `404` and **must be done
   by Sashimee**. Pushing to `main` works.
-- **Pending rename:** the app display name is already **"Pic Collage Maker"**
-  everywhere and the local folder is `/home/alex/projects/Pic-collage`, but the
-  GitHub repo is still `Pic-collage`. Renaming it to `Pic-Collage-Maker` (admin)
-  will change the live URL → then update `BASE`, manifest, README/CLAUDE URLs and
-  `git remote set-url` in one follow-up push.
+- **The local folder is still `/home/alex/projects/Pic-collage`** while the repo
+  and the Pages subpath are `Pic-Collage-Maker` (renamed 2026-09-11). The folder
+  name is cosmetic and feeds nothing; `BASE` is what matters. GitHub redirects
+  the old repo URL, so a stale `git remote` keeps working and hides the drift —
+  check `git remote -v` if something looks like it is pushing to the wrong place.
 - **CI uses `npm install`, not `npm ci`** — npm's cross-version handling of
   optional platform deps (`@emnapi/*`) made a valid lockfile read as out-of-sync
   under `npm ci`. Don't switch it back without regenerating the lockfile to match.
@@ -272,7 +340,7 @@ untranslated.
   to observe a flag, `await` a frame — see `EditorCanvas.exportImage`.
 - **Lighthouse needs its own build.** `npm run build:lh` emits `dist-lh/` with
   `base=/` because LHCI's static server serves the directory at the root, while
-  the normal build sets `base=/Pic-collage/` for Pages. Building the usual way
+  the normal build sets `base=/Pic-Collage-Maker/` for Pages. Building the usual way
   makes the bundle 404 and Lighthouse fails with `NO_FCP` without ever scoring
   anything.
 - **`prefers-reduced-motion` does not reach framer-motion by itself.** The CSS
