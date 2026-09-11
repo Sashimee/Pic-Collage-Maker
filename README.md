@@ -1,6 +1,6 @@
 # 🎨 Pic Collage Maker
 
-**▶️ Try it: <https://sashimee.github.io/Pic-collage/>**
+**▶️ Try it: <https://sashimee.github.io/Pic-Collage-Maker/>**
 
 A photo collage maker & editor that runs **entirely in your browser** —
 no account, no backend, nothing uploaded. Installable on iPhone and Android as a
@@ -24,7 +24,7 @@ Control**, so switching either on in your browser stops it making any request at
 all. See [`src/lib/analytics.ts`](./src/lib/analytics.ts).
 
 Found a bug or want something added?
-[Open an issue](https://github.com/Sashimee/Pic-collage/issues/new) — a
+[Open an issue](https://github.com/Sashimee/Pic-Collage-Maker/issues/new) — a
 screenshot plus your browser and phone model is plenty to go on.
 
 ## Features
@@ -67,7 +67,7 @@ The icon and the social card are generated, not hand-edited: the mark lives in
 
 Pushing to `main` builds and deploys to GitHub Pages automatically
 (`.github/workflows/deploy.yml`). One-time setup: **Settings → Pages → Source →
-GitHub Actions**. The app is served from the `/Pic-collage/` subpath — see
+GitHub Actions**. The app is served from the `/Pic-Collage-Maker/` subpath — see
 `base` in `vite.config.ts`. The Open Graph tags in `index.html` hardcode the
 absolute live URL (crawlers don't resolve relative paths), so a repo rename means
 updating `base`, the meta tags and the links here together.

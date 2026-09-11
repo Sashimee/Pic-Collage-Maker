@@ -11,7 +11,7 @@ export default defineConfig({
   // can take several seconds — well past Playwright's 5s default.
   expect: { timeout: 15_000 },
   use: {
-    baseURL: 'http://localhost:5173/Pic-collage/',
+    baseURL: 'http://localhost:5173/Pic-Collage-Maker/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Escape hatch for environments that already have a Chromium but not the
@@ -29,7 +29,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173/Pic-collage/',
+    url: 'http://localhost:5173/Pic-Collage-Maker/',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
