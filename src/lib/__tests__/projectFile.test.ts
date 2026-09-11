@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { packProject, unpackProject } from './projectFile'
-import type { LoadedDocument } from '../store/editorStore'
+import { packProject, unpackProject } from '../projectFile'
+import type { LoadedDocument } from '../../store/editorStore'
 
 describe('projectFile', () => {
   const sampleDoc: LoadedDocument = {
