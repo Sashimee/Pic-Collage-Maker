@@ -20,3 +20,6 @@ yarn-error.log*
 pnpm-debug.log*
 test-results/
 playwright-report/
+
+# Session resume state (working file, not project docs)
+RESUME.md
