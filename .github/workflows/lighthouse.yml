@@ -20,9 +20,9 @@ jobs:
       # comments in ci.yml / deploy.yml. Keep all three workflows consistent.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      # A root-based build. The normal one sets base=/Pic-collage/ for GitHub
+      # A root-based build. The normal one sets base=/Pic-Collage-Maker/ for GitHub
       # Pages, but LHCI's static server serves ./dist-lh at /, so index.html
-      # would ask for /Pic-collage/assets/*.js and get 404s — no JS, no React,
+      # would ask for /Pic-Collage-Maker/assets/*.js and get 404s — no JS, no React,
       # no paint, and Lighthouse failed with NO_FCP without ever scoring the
       # app. Same bundle, served where it expects to be.
       - name: Build for Lighthouse

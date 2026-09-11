@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Repo is served from https://<user>.github.io/Pic-collage/
-const BASE = '/Pic-collage/'
+// Repo is served from https://<user>.github.io/Pic-Collage-Maker/
+const BASE = '/Pic-Collage-Maker/'
 
 // A per-deploy id: prefer the CI commit SHA, fall back to the local git HEAD,
 // then a timestamp so `npm run build` still works outside of git (e.g. a

@@ -370,7 +370,7 @@ describe('buildShareText', () => {
   it('falls back to the published URL rather than sharing a localhost address', () => {
     // jsdom serves the tests from localhost, which is exactly the case the
     // fallback exists for.
-    expect(appUrl()).toBe('https://sashimee.github.io/Pic-collage/')
+    expect(appUrl()).toBe('https://sashimee.github.io/Pic-Collage-Maker/')
   })
 })
 
