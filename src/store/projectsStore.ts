@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { saveProject, loadProject, deleteProject, listProjects, type Project } from '../services/cloudSync'
+import { saveProject, loadProject, deleteProject, listProjects, type Project } from '../services/localProjects'
 import { useEditor, type LoadedDocument } from './editorStore'
 import { useVersionStore } from './versionStore'
 import {

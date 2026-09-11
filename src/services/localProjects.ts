@@ -5,12 +5,14 @@ export interface Project {
   name: string;
   createdAt: number;
   updatedAt: number;
-  data: any; // serialized editor snapshot
+  /** A serialized editor snapshot. Validated on read by `toProjectDocument`,
+   *  which also migrates older schemas — so what comes back is not known. */
+  data: unknown;
 }
 
 const DB_NAME = 'pic-collage-db';
 const STORE_NAME = 'projects';
-let dbPromise: Promise<IDBPDatabase<any>> | null = null;
+let dbPromise: Promise<IDBPDatabase> | null = null;
 
 export async function initDB() {
   if (typeof indexedDB === 'undefined') {
