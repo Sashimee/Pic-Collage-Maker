@@ -1,6 +1,8 @@
 // Simplified style transfer using canvas convolution kernels.
 // Oil painting (median approximation), sketch (edge detect + grayscale), pop art (posterize + color boost).
 
+import type { Pixels } from './pixels'
+
 export type StyleId = 'oil' | 'sketch' | 'popart' | 'none'
 
 export interface StyleTransferSettings {
@@ -15,44 +17,19 @@ export const STYLE_OPTIONS: { id: StyleId; label: string; emoji: string }[] = [
   { id: 'popart', label: 'Pop Art', emoji: '🌈' },
 ]
 
-/** Apply a style filter to an image and return a data URL. */
-export async function applyStyleTransfer(
-  src: string,
-  styleId: StyleId,
-  intensity = 0.8,
-): Promise<string> {
-  if (styleId === 'none') return src
-
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.src = src
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve()
-    img.onerror = reject
-  })
-
-  const canvas = document.createElement('canvas')
-  canvas.width = img.naturalWidth
-  canvas.height = img.naturalHeight
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, 0, 0)
-
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
+export function stylePixels(imgData: Pixels, styleId: StyleId, intensity: number): void {
+  const { data, width, height } = imgData
   switch (styleId) {
     case 'oil':
-      applyOilPainting(imgData.data, canvas.width, canvas.height, intensity)
+      applyOilPainting(data, width, height, intensity)
       break
     case 'sketch':
-      applySketch(imgData.data, canvas.width, canvas.height, intensity)
+      applySketch(data, width, height, intensity)
       break
     case 'popart':
-      applyPopArt(imgData.data, canvas.width, canvas.height, intensity)
+      applyPopArt(data, width, height, intensity)
       break
   }
-
-  ctx.putImageData(imgData, 0, 0)
-  return canvas.toDataURL('image/jpeg', 0.95)
 }
 
 /** Approximate oil painting via adaptive nearest-neighbor color quantization + small block averaging. */

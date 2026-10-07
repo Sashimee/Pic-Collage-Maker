@@ -4,14 +4,16 @@
  * Works best on photos with distinct background colors (white, gray, solid colors).
  */
 
-interface RemovalOptions {
+import type { Pixels } from './pixels'
+
+export interface RemovalOptions {
   /** How similar a pixel must be to the background to be removed (0–1). Default 0.15. */
   threshold?: number
   /** Edge feather radius in pixels. Default 2. */
   feather?: number
 }
 
-function sampleBackgroundColor(imgData: ImageData): [number, number, number] {
+function sampleBackgroundColor(imgData: Pixels): [number, number, number] {
   const d = imgData.data
   const w = imgData.width
   const h = imgData.height
@@ -47,7 +49,7 @@ function colorDistance(a: [number, number, number], b: [number, number, number])
 }
 
 function floodFillMask(
-  imgData: ImageData,
+  imgData: Pixels,
   bgColor: [number, number, number],
   threshold: number,
 ): Uint8Array {
@@ -116,29 +118,9 @@ function featherEdges(mask: Uint8Array, w: number, h: number, radius: number): U
   return out
 }
 
-export async function removeBackground(
-  src: string,
-  opts: RemovalOptions = {},
-): Promise<string> {
+export function removeBackgroundPixels(imgData: Pixels, opts: RemovalOptions = {}): void {
   const { threshold = 0.15, feather = 2 } = opts
-
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.src = src
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve()
-    img.onerror = () => reject(new Error('Failed to load image'))
-  })
-
-  const w = img.naturalWidth
-  const h = img.naturalHeight
-
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, 0, 0)
-  const imgData = ctx.getImageData(0, 0, w, h)
+  const { width: w, height: h } = imgData
 
   const bgColor = sampleBackgroundColor(imgData)
   let mask = floodFillMask(imgData, bgColor, threshold)
@@ -150,7 +132,4 @@ export async function removeBackground(
     const alpha = 255 - mask[i]
     d[i * 4 + 3] = alpha
   }
-
-  ctx.putImageData(imgData, 0, 0)
-  return canvas.toDataURL('image/png')
 }

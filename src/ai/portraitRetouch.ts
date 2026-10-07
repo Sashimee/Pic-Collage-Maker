@@ -3,7 +3,8 @@
  * Uses brightness/contrast and skin tone detection for quick enhancement.
  */
 
-import { detectFaces } from './faceDetection'
+import type { Pixels } from './pixels'
+import { faceRegionsIn } from './faceDetection'
 
 export interface RetouchSettings {
   skinSmooth: number // 0..1
@@ -17,51 +18,27 @@ export const DEFAULT_RETOUCH_SETTINGS: RetouchSettings = {
   eyeBrighten: 0.35,
 }
 
-export async function portraitRetouch(
-  src: string,
-  opts: Partial<RetouchSettings> = {},
-): Promise<string> {
+export function retouchPixels(imgData: Pixels, opts: Partial<RetouchSettings> = {}): void {
   const { skinSmooth = 0.35, teethWhite = 0.4, eyeBrighten = 0.35 } = opts
-
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.src = src
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve()
-    img.onerror = () => reject(new Error('Failed to load image'))
-  })
-
-  const faces = await detectFaces(src)
-
-  const canvas = document.createElement('canvas')
-  canvas.width = img.naturalWidth
-  canvas.height = img.naturalHeight
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, 0, 0)
-
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const d = imgData.data
+  const { data: d, width, height } = imgData
+  const faces = faceRegionsIn(imgData)
 
   // If no faces detected, apply global subtle smoothing
   if (!faces.length) {
-    applyGlobalSmooth(d, canvas.width, canvas.height, skinSmooth * 0.3)
-    ctx.putImageData(imgData, 0, 0)
-    return canvas.toDataURL('image/png')
+    applyGlobalSmooth(d, width, height, skinSmooth * 0.3)
+    return
   }
 
   const face = faces[0]
 
   // Apply skin smoothing in face region
-  applyFaceSmooth(d, canvas.width, canvas.height, face, skinSmooth)
+  applyFaceSmooth(d, width, height, face, skinSmooth)
 
   // Brighten eye region (upper part of face box)
-  applyEyeBrighten(d, canvas.width, canvas.height, face, eyeBrighten)
+  applyEyeBrighten(d, width, height, face, eyeBrighten)
 
   // Teeth whitening (mouth region, lower center of face)
-  applyTeethWhite(d, canvas.width, canvas.height, face, teethWhite)
-
-  ctx.putImageData(imgData, 0, 0)
-  return canvas.toDataURL('image/png')
+  applyTeethWhite(d, width, height, face, teethWhite)
 }
 
 function applyGlobalSmooth(

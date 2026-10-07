@@ -189,7 +189,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
     if (el?.type !== 'photo' || !selectedId) return
     toast.info(t('toast.removingBg'))
     try {
-      const { removeBackground } = await import('../ai/bgRemoval')
+      const { removeBackground } = await import('../ai/tools')
       const result = await removeBackground(el.src)
       updateElement(selectedId, { src: result })
       toast.success(t('toast.bgRemoved'))
@@ -202,7 +202,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
     if (el?.type !== 'photo' || !selectedId) return
     toast.info(t('toast.retouching'))
     try {
-      const { portraitRetouch } = await import('../ai/portraitRetouch')
+      const { portraitRetouch } = await import('../ai/tools')
       const result = await portraitRetouch(el.src, { skinSmooth: 0.3, teethWhite: 0.2, eyeBrighten: 0.4 })
       updateElement(selectedId, { src: result })
       toast.success(t('toast.retouched'))
@@ -215,7 +215,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
     if (el?.type !== 'photo' || !selectedId) return
     toast.info(t('toast.enhancing'))
     try {
-      const { autoEnhance } = await import('../ai/autoEnhance')
+      const { autoEnhance } = await import('../ai/tools')
       const result = await autoEnhance(el.src)
       updateElement(selectedId, { src: result })
       toast.success(t('toast.enhanced'))

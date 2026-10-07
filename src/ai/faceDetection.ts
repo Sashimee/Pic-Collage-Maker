@@ -4,6 +4,8 @@
  * Falls back to center-crop when no face is detected.
  */
 
+import type { Pixels } from './pixels'
+
 export interface FaceBox {
   x: number
   y: number
@@ -35,8 +37,11 @@ export function findFaceRegions(img: HTMLImageElement): FaceBox[] {
   const ctx = canvas.getContext('2d')!
   ctx.drawImage(img, 0, 0, w, h)
 
-  const imageData = ctx.getImageData(0, 0, w, h)
-  const d = imageData.data
+  return faceRegionsIn(ctx.getImageData(0, 0, w, h))
+}
+
+export function faceRegionsIn(imageData: Pixels): FaceBox[] {
+  const { data: d, width: w, height: h } = imageData
 
   // Look for bright/skin-tone regions in upper 60% of image
   const sampleSize = Math.max(8, Math.floor(Math.min(w, h) / 50))

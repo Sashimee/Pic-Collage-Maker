@@ -42,8 +42,8 @@ for (const file of eager) {
   totalGzip += gz
   rows.push(`  ${file.padEnd(44)} ${(code.length / 1024).toFixed(1).padStart(7)} kB  ${(gz / 1024).toFixed(1).padStart(6)} kB gzip`)
 
-  // The bundler's own runtime helper is generated code with no sources or map.
-  if (/^assets\/rolldown-runtime-/.test(file)) continue
+  // The bundler's own runtime and preload helpers are generated code with no sources or map.
+  if (/^assets\/(rolldown-runtime|preload-helper)-/.test(file)) continue
   const mapPath = join(dist, `${file}.map`)
   if (!existsSync(mapPath)) {
     console.error(`check-bundle: ${mapPath} is missing — build with \`npm run build -- --sourcemap hidden\`.`)
