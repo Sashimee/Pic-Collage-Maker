@@ -13,8 +13,8 @@ one below has shipped as a real bug here. Report findings; do not edit.
 
 ## What to check
 
-1. **Hook order in async-rendered Konva nodes.** In `GridView.tsx` and
-   `CanvasNodes.tsx`, every hook must sit **above** any early `return null`. A
+1. **Hook order in async-rendered Konva nodes.** In `GridView.tsx`,
+   `CanvasNodes.tsx` and `nodes/TextNode.tsx`, every hook must sit **above** any early `return null`. A
    hook after `if (!image) return null` changes the hook count when the image
    resolves and crashes the whole stage. This once blanked every grid layout.
 

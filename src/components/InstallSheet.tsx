@@ -3,7 +3,7 @@ import { X, Download, WifiOff, Maximize2, Zap } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 import { useInstall } from '../lib/pwaInstall'
 import { track } from '../lib/analytics'
-import { BrandMark } from './HeaderBar'
+import { BrandMark } from './header/BrandMark'
 
 /*
  * Illustrations are inline SVG rather than screenshots: they stay sharp at any

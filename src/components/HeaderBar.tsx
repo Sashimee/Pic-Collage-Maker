@@ -4,7 +4,7 @@ import {
   Undo2, Redo2, Sun, Moon, Trash2, Download,
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
-  ChevronDown, FileCode, Maximize, FileText, Package, Smartphone,
+  ChevronDown, FileCode, FileText, Package, Smartphone,
   Plus, BookOpen,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
@@ -13,15 +13,16 @@ import { canShareImage } from '../lib/exportImage'
 import { clearPersisted } from '../lib/persistence'
 import { useT } from '../i18n/useLang'
 import { useTheme } from '../i18n/useTheme'
-import { useLang } from '../i18n/useLang'
 import { LangDropdown } from './LangSwitcher'
 import { IconButton } from './ui'
 import ProjectManager from './ProjectManager'
-import { ActionSheet, ActionItem, ActionDivider, ActionCancel } from './ActionSheet'
 import { m, AnimatePresence } from './motion'
 import { useToasts } from './ToastContainer'
 import { FullScreenButton } from './FullScreen'
 import { useInstall } from '../lib/pwaInstall'
+import { BrandMark } from './header/BrandMark'
+import { MobileMenu } from './header/MobileMenu'
+import { useProjectFileActions } from './header/useProjectFileActions'
 
 /**
  * `share` / `png` / `jpg` cover the whole project — every page. The `-page`
@@ -39,41 +40,6 @@ export type ExportKind =
   | 'book'
   | 'batch'
 
-/**
- * The app mark — the same photo-stack as public/favicon.svg, simplified for
- * header sizes (no soft-shadow plates, which vanish below ~32px anyway).
- * Keep it in step with favicon.svg and scripts/generate-icons.mjs.
- */
-export function BrandMark({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 512 512" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id="brand-tile" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#6366f1" />
-          <stop offset=".55" stopColor="#a855f7" />
-          <stop offset="1" stopColor="#ec4899" />
-        </linearGradient>
-        <clipPath id="brand-shot">
-          <rect x="187" y="173" width="198" height="198" rx="16" />
-        </clipPath>
-      </defs>
-      <rect width="512" height="512" rx="116" fill="url(#brand-tile)" />
-      <g transform="rotate(-12 222 246)">
-        <rect x="117" y="141" width="210" height="210" rx="26" fill="#fff" opacity=".5" />
-      </g>
-      <g transform="rotate(9 286 272)">
-        <rect x="167" y="153" width="238" height="238" rx="30" fill="#fff" />
-        <g clipPath="url(#brand-shot)">
-          <rect x="187" y="173" width="198" height="198" fill="#eef2ff" />
-          <circle cx="240" cy="228" r="25" fill="#fbbf24" />
-          <path d="M187 371 V330 L245 262 L282 300 L312 258 L385 330 V371 Z" fill="#6ee7b7" />
-          <path d="M187 371 V352 L268 300 L385 352 V371 Z" fill="#10b981" />
-        </g>
-      </g>
-    </svg>
-  )
-}
-
 export function HeaderBar({
   onExport,
   onExportSVG,
@@ -87,8 +53,6 @@ export function HeaderBar({
   const [exportOpen, setExportOpen] = useState(false)
   const [projectManagerOpen, setProjectManagerOpen] = useState(false)
   const t = useT()
-  const lang = useLang((s) => s.lang)
-  const setLang = useLang((s) => s.setLang)
   const clearAll = useEditor((s) => s.clearAll)
   const hasElements = useEditor((s) => s.elements.length > 0)
   const undo = useEditor((s) => s.undo)
@@ -108,89 +72,11 @@ export function HeaderBar({
   // Hidden once installed, and on browsers with no install route at all
   // (Firefox), where an entry point would only lead nowhere.
   const canInstall = useInstall((s) => !s.standalone && s.platform !== 'unsupported')
-
-  const handleSaveAsFile = async () => {
-    const { packProject } = await import('../lib/projectFile')
-    const doc = {
-      boardWidth: useEditor.getState().boardWidth,
-      boardHeight: useEditor.getState().boardHeight,
-      background: useEditor.getState().background,
-      mode: useEditor.getState().mode,
-      gridId: useEditor.getState().gridId,
-      gridGap: useEditor.getState().gridGap,
-      gridRadius: useEditor.getState().gridRadius,
-      frame: useEditor.getState().frame,
-      elements: useEditor.getState().elements,
-    }
-    const blob = await packProject(activeProjectId ? 'Project' : 'Collage', doc)
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `collage-${Date.now()}.piccollage`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    toast.success(t('toast.projectSavedFile'))
-  }
-
-  const handleOpenFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const { unpackProject } = await import('../lib/projectFile')
-      const { doc } = await unpackProject(file)
-      useEditor.getState().loadDocument(doc)
-      e.target.value = ''
-      toast.success(t('toast.projectOpened'))
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('error.loadImage'))
-      e.target.value = ''
-    }
-  }
+  const { handleSaveAsFile, handleOpenFile, handleBatchExport } = useProjectFileActions()
 
   const handleExport = async (kind: ExportKind) => {
     setExportOpen(false)
     onExport(kind)
-  }
-
-  const handleBatchExport = async () => {
-    const { batchExport } = await import('../lib/batchExport')
-    const s = useEditor.getState()
-    const elements = s.elements.filter((e) => e.type === 'photo')
-    if (!elements.length) {
-      toast.info(t('toast.noPhotosExport'))
-      return
-    }
-    const files: { name: string; dataUrl: string }[] = []
-    for (let i = 0; i < elements.length; i++) {
-      const el = elements[i]
-      const dataUrl = el.src
-      if (dataUrl && dataUrl.startsWith('data:')) {
-        files.push({ name: `photo-${i + 1}.png`, dataUrl })
-      } else if (dataUrl && dataUrl.startsWith('blob:')) {
-        // Convert blob URL to data URL
-        try {
-          const res = await fetch(dataUrl)
-          const blob = await res.blob()
-          const reader = new FileReader()
-          const dataUrlPromise = new Promise<string>((resolve) => {
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
-          })
-          const durl = await dataUrlPromise
-          files.push({ name: `photo-${i + 1}.png`, dataUrl: durl })
-        } catch { /* skip */ }
-      }
-    }
-    if (!files.length) {
-      toast.info(t('toast.noExportablePhotos'))
-      return
-    }
-    const zip = await batchExport(files)
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(zip)
-    a.download = `collage-batch-${Date.now()}.zip`
-    a.click()
-    URL.revokeObjectURL(a.href)
-    toast.success(t('toast.batchExportDone'))
   }
 
   /*
@@ -411,151 +297,19 @@ export function HeaderBar({
       </header>
 
       {/* Mobile Action Sheet */}
-      <ActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={t('menu.more')}>
-        <ActionItem
-          onClick={() => { setSheetOpen(false); undo() }}
-          icon={<Undo2 size={18} />}
-          label={t('header.undo')}
-          disabled={!canUndo}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); redo() }}
-          icon={<Redo2 size={18} />}
-          label={t('header.redo')}
-          disabled={!canRedo}
-        />
-        <ActionDivider />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); toggleTheme() }}
-          icon={theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          label={themeLabel}
-        />
-        {canInstall && onInstall && (
-          <ActionItem
-            onClick={() => { setSheetOpen(false); onInstall() }}
-            icon={<Smartphone size={18} />}
-            label={t('install.menu')}
-          />
-        )}
-        <ActionItem
-          onClick={() => { setSheetOpen(false); document.documentElement.requestFullscreen().catch(() => {}) }}
-          icon={<Maximize size={18} />}
-          label={t('fullscreen.enter')}
-        />
-        <ActionDivider />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('de') }}
-          icon={<span className="text-lg">🇩🇪</span>}
-          label={t('lang.de')}
-          active={lang === 'de'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('en') }}
-          icon={<span className="text-lg">🇬🇧</span>}
-          label={t('lang.en')}
-          active={lang === 'en'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('es') }}
-          icon={<span className="text-lg">🇪🇸</span>}
-          label={t('lang.es')}
-          active={lang === 'es'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('fr') }}
-          icon={<span className="text-lg">🇫🇷</span>}
-          label={t('lang.fr')}
-          active={lang === 'fr'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('it') }}
-          icon={<span className="text-lg">🇮🇹</span>}
-          label={t('lang.it')}
-          active={lang === 'it'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setLang('pt') }}
-          icon={<span className="text-lg">🇧🇷</span>}
-          label={t('lang.pt')}
-          active={lang === 'pt'}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); setProjectManagerOpen(true) }}
-          icon={<FolderOpen size={18} />}
-          label={t('header.projects')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleSave() }}
-          icon={<Save size={18} />}
-          label={t('project.save')}
-        />
-        <ActionDivider />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleNew() }}
-          icon={<Trash2 size={18} />}
-          label={t('header.new')}
-          disabled={!hasElements}
-          danger
-        />
-        <ActionDivider />
-        {/* Share lives in the top bar on mobile; no row for it here. */}
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleExport('png') }}
-          icon={<ImageIcon size={18} />}
-          label={t('export.png')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleExport('jpg') }}
-          icon={<FileImage size={18} />}
-          label={t('export.jpg')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); onExportSVG?.() }}
-          icon={<FileCode size={18} />}
-          label={t('export.svg')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleExport('pdf') }}
-          icon={<FileText size={18} />}
-          label={t('export.pdf')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleExport('book') }}
-          icon={<BookOpen size={18} />}
-          label={t('export.book')}
-        />
-        {multiPage && (
-          <ActionItem
-            onClick={() => { setSheetOpen(false); handleExport('share-page') }}
-            icon={<Share2 size={18} />}
-            label={t('export.sharePage')}
-          />
-        )}
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleBatchExport() }}
-          icon={<Package size={18} />}
-          label={t('export.batch')}
-        />
-        <ActionItem
-          onClick={() => { setSheetOpen(false); handleSaveAsFile() }}
-          icon={<Upload size={18} />}
-          label={t('export.saveProject')}
-        />
-        <label className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-text transition hover:bg-surface-3 active:scale-[0.98]">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted">
-            <Upload size={18} />
-          </span>
-          <span>{t('export.openProject')}</span>
-          <input
-            type="file"
-            accept=".piccollage,application/json"
-            onChange={(e) => { setSheetOpen(false); handleOpenFile(e) }}
-            className="sr-only"
-          />
-        </label>
-
-        <ActionCancel onClick={() => setSheetOpen(false)} label={t('menu.cancel')} />
-      </ActionSheet>
+      <MobileMenu
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onExport={handleExport}
+        onExportSVG={onExportSVG}
+        onInstall={onInstall}
+        onOpenProjects={() => setProjectManagerOpen(true)}
+        onSave={handleSave}
+        onNew={handleNew}
+        onBatchExport={handleBatchExport}
+        onSaveAsFile={handleSaveAsFile}
+        onOpenFile={handleOpenFile}
+      />
 
       <ProjectManager open={projectManagerOpen} onClose={() => setProjectManagerOpen(false)} />
     </>
