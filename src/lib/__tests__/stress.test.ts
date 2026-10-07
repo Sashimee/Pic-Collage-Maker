@@ -79,6 +79,7 @@ describe('stress tests', () => {
       rotation: vi.fn().mockReturnValue(0),
       setAttrs: vi.fn(),
       toDataURL: vi.fn().mockReturnValue('data:image/png;base64,MOCK'),
+      find: vi.fn().mockReturnValue([]),
     } as unknown as Konva.Group
 
     const result = exportBoard(mockGroup, 3840, 2160, 'png', { pixelRatio: 1 })

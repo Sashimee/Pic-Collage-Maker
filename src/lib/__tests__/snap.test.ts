@@ -115,4 +115,84 @@ describe('computeSnap', () => {
     const result2 = computeSnap(textClose, [photo], BOARD_W, BOARD_H, 295, 500)
     expect(result2.x).toBe(300)
   })
+
+  describe('equal spacing', () => {
+    const a = makePhoto('a', 100, 300, 100, 100)
+    const b = makePhoto('b', 260, 300, 100, 100)
+
+    it('centres between two neighbours of different sizes by their gaps', () => {
+      const wide = makePhoto('w', 500, 300, 300, 100)
+      const dragged = makePhoto('d', 395, 300, 60, 100)
+      const result = computeSnap(dragged, [b, wide], BOARD_W, BOARD_H, 395, 300)
+      // b ends at 360, wide starts at 500: 140 of room, 60 wide → 40 each side.
+      expect(result.x).toBe(400)
+      expect(result.spacing).toEqual([
+        { axis: 'x', from: 360, to: 400, at: 350 },
+        { axis: 'x', from: 460, to: 500, at: 350 },
+      ])
+      expect(result.guides.filter((g) => g.axis === 'x')).toEqual([])
+    })
+
+    it('repeats a pair’s gap beyond the right-hand one', () => {
+      const dragged = makePhoto('d', 425, 305, 100, 100)
+      const result = computeSnap(dragged, [a, b], BOARD_W, BOARD_H, 425, 305)
+      expect(result.x).toBe(420)
+      expect(result.spacing.filter((h) => h.axis === 'x')).toEqual([
+        { axis: 'x', from: 200, to: 260, at: 350 },
+        { axis: 'x', from: 360, to: 420, at: 350 },
+      ])
+    })
+
+    it('repeats a pair’s gap before the left-hand one', () => {
+      const pair = [makePhoto('p', 400, 300), makePhoto('q', 560, 300)]
+      const dragged = makePhoto('d', 245, 300, 100, 100)
+      const result = computeSnap(dragged, pair, BOARD_W, BOARD_H, 245, 300)
+      expect(result.x).toBe(240)
+      expect(result.spacing[0]).toEqual({ axis: 'x', from: 340, to: 400, at: 350 })
+    })
+
+    it('works down a column too', () => {
+      const top = makePhoto('t', 300, 100, 100, 100)
+      const bottom = makePhoto('u', 300, 250, 100, 100)
+      const dragged = makePhoto('d', 300, 396, 100, 100)
+      const result = computeSnap(dragged, [top, bottom], BOARD_W, BOARD_H, 300, 396)
+      expect(result.y).toBe(400)
+      expect(result.spacing.filter((h) => h.axis === 'y')).toEqual([
+        { axis: 'y', from: 200, to: 250, at: 350 },
+        { axis: 'y', from: 350, to: 400, at: 350 },
+      ])
+    })
+
+    it('ignores a pair that is not in the dragged element’s row', () => {
+      const dragged = makePhoto('d', 425, 700, 100, 100)
+      const result = computeSnap(dragged, [a, b], BOARD_W, BOARD_H, 425, 700)
+      expect(result.x).toBe(425)
+      expect(result.spacing).toEqual([])
+    })
+
+    it('only pairs adjacent neighbours, never across one in between', () => {
+      const row = [makePhoto('p', 100, 300), makePhoto('q', 260, 300), makePhoto('r', 420, 300)]
+      // Midway between p and r is exactly where q sits.
+      const dragged = makePhoto('d', 258, 300, 100, 100)
+      const result = computeSnap(dragged, row, BOARD_W, BOARD_H, 258, 300)
+      expect(result.spacing).toEqual([])
+      // Past r, the q–r gap repeats.
+      const after = computeSnap(dragged, row, BOARD_W, BOARD_H, 583, 300)
+      expect(after.x).toBe(580)
+      expect(after.spacing[0]).toEqual({ axis: 'x', from: 360, to: 420, at: 350 })
+    })
+
+    it('does not centre an element too wide for the gap', () => {
+      const dragged = makePhoto('d', 175, 305, 100, 100)
+      const result = computeSnap(dragged, [a, b], BOARD_W, BOARD_H, 175, 305)
+      expect(result.spacing).toEqual([])
+    })
+
+    it('is off when spacing is turned off', () => {
+      const dragged = makePhoto('d', 425, 305, 100, 100)
+      const result = computeSnap(dragged, [a, b], BOARD_W, BOARD_H, 425, 305, { spacing: false })
+      expect(result.x).toBe(425)
+      expect(result.spacing).toEqual([])
+    })
+  })
 })

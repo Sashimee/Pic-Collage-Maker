@@ -5,7 +5,7 @@ import { useEditor, type LoadedDocument } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
 import { BoardScene, type BoardInteractions } from './BoardScene'
 import type { CanvasElement } from '../types'
-import { computeSnap, type SnapLine } from '../lib/snap'
+import { computeSnap, type SnapResult } from '../lib/snap'
 import { CustomLayoutEditor } from './CustomLayoutEditor'
 import { CustomLayoutToolbar } from './CustomLayoutToolbar'
 import { useViewTransform } from './canvas/useViewTransform'
@@ -14,12 +14,14 @@ import { useTransformerAttach } from './canvas/useTransformerAttach'
 import { useExportHandle, type EditorHandle } from './canvas/useExportHandle'
 import { useCustomLayoutTools } from './canvas/useCustomLayoutTools'
 import { useCellPicker } from './canvas/useCellPicker'
-import { CanvasAidToggles, CanvasGuides, type GridType } from './canvas/CanvasAids'
+import { CanvasAidToggles, CanvasGuides, SnapAids, type GridType } from './canvas/CanvasAids'
+import { useGuides } from '../store/guidesStore'
 import { InlineTextEditor, type TextEditState } from './canvas/InlineTextEditor'
 import { CanvasErrorBridge } from './canvas/CanvasErrorBridge'
 
 export type { EditorHandle }
 
+const NO_SNAP = { guides: [], spacing: [] }
 const PLACEMENT_KEYS = new Set(['x', 'y', 'rotation', 'scaleX', 'scaleY'])
 const isPlacement = (patch: Partial<CanvasElement>) =>
   Object.keys(patch).every((k) => PLACEMENT_KEYS.has(k))
@@ -40,11 +42,11 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const boardRef = useRef<Konva.Group>(null)
   const trRef = useRef<Konva.Transformer>(null)
 
-  const [snapGuides, setSnapGuides] = useState<SnapLine[]>([])
+  const [snapGuides, setSnapGuides] = useState<Pick<SnapResult, 'guides' | 'spacing'>>(NO_SNAP)
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
   const [gridType, setGridType] = useState<GridType>('dot')
-  const [showRulers, setShowRulers] = useState(false)
+  const guides = useGuides()
 
   const boardWidth = useEditor((s) => s.boardWidth)
   const boardHeight = useEditor((s) => s.boardHeight)
@@ -73,7 +75,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
     tf,
     setTf,
     zoomAtPoint,
-    onBackgroundPress: () => setSnapGuides([]),
+    onBackgroundPress: () => setSnapGuides(NO_SNAP),
   })
   useTransformerAttach(trRef, stageRef)
   useExportHandle(ref, hostRef, boardRef, tf)
@@ -110,7 +112,10 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
 
   const handleDragMove = (el: CanvasElement) => (e: Konva.KonvaEventObject<DragEvent>) => {
     // Snapping one node of a group would shear it away from the others.
-    if (!snapEnabled || e.evt?.shiftKey || multiSelected.length > 1) return
+    if (!snapEnabled || e.evt?.shiftKey || multiSelected.length > 1) {
+      setSnapGuides(NO_SNAP)
+      return
+    }
     const node = e.target
     const currentX = node.x()
     const currentY = node.y()
@@ -121,10 +126,11 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
       boardHeight,
       currentX,
       currentY,
+      { spacing: guides.spacing },
     )
     if (result.x !== currentX) node.x(result.x)
     if (result.y !== currentY) node.y(result.y)
-    setSnapGuides(result.guides)
+    setSnapGuides(result)
   }
 
   // BoardScene draws from a document rather than from the store, so the same
@@ -231,8 +237,8 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
         onGridToggle={() => setShowGrid((v) => !v)}
         gridType={gridType}
         onGridTypeToggle={() => setGridType((g) => (g === 'dot' ? 'line' : 'dot'))}
-        showRulers={showRulers}
-        onRulersToggle={() => setShowRulers((v) => !v)}
+        showRulers={guides.rulers}
+        onRulersToggle={() => guides.toggle('rulers')}
       />
 
       {size.w > 0 && (
@@ -241,6 +247,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
           width={size.w}
           height={size.h}
           {...stageHandlers}
+          onDragEnd={() => setSnapGuides(NO_SNAP)}
           style={{ cursor: drawMode ? 'crosshair' : 'default' }}
         >
           <Layer>
@@ -253,21 +260,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                   interactions={interactions}
                   overlay={
                     <>
-                    {/* Snap guide lines */}
-                    {snapGuides.map((g, i) => (
-                      <Line
-                        key={`sg-${i}`}
-                        points={
-                          g.axis === 'x'
-                            ? [g.pos, g.from, g.pos, g.to]
-                            : [g.from, g.pos, g.to, g.pos]
-                        }
-                        stroke="#ef4444"
-                        strokeWidth={1}
-                        dash={[6, 4]}
-                        listening={false}
-                      />
-                    ))}
+                    <SnapAids guides={snapGuides.guides} spacing={snapGuides.spacing} />
 
                     {liveStroke && (
                       <Line
@@ -289,7 +282,9 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                       boardHeight={boardHeight}
                       showGrid={showGrid}
                       gridType={gridType}
-                      showRulers={showRulers}
+                      showRulers={guides.rulers}
+                      centerLines={guides.centerLines}
+                      printArea={guides.printArea}
                     />
                     {mode === 'custom-layout' && (
                       <CustomLayoutEditor

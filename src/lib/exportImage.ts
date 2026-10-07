@@ -32,6 +32,16 @@ export interface PrintSettings {
   cropMarks: boolean
 }
 
+/** Konva name for editor-only chrome inside the board group; exports hide it. */
+export const EDITOR_AID = 'editor-aid'
+
+/** Pixels per board unit in a board export. */
+export const EXPORT_PIXEL_RATIO = 2
+
+/** The bleed inset print marks use, about 3 mm at 300 DPI, in export pixels. */
+export const bleedInset = (width: number, height: number) =>
+  Math.max(12, Math.round(Math.min(width, height) * 0.016))
+
 // Render the collage board to a data URL at full board resolution,
 // with optional format, quality, and platform preset.
 export function exportBoard(
@@ -47,7 +57,7 @@ export function exportBoard(
     print?: PrintSettings
   } = {},
 ): string {
-  const { quality = 0.92, preset = 'original', pixelRatio = 2 } = options
+  const { quality = 0.92, preset = 'original', pixelRatio = EXPORT_PIXEL_RATIO } = options
   const dims = PRESET_DIMS[preset]
 
   const prev = {
@@ -58,6 +68,8 @@ export function exportBoard(
     rotation: board.rotation(),
   }
   board.setAttrs({ x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 })
+  const aids = board.find('.' + EDITOR_AID).filter((n) => n.visible())
+  aids.forEach((n) => n.visible(false))
 
   const mimeType = mimeFor(format)
 
@@ -74,18 +86,20 @@ export function exportBoard(
   // same-origin data URL — `drawImage` on a not-yet-complete image silently
   // draws nothing, which is how every watermarked export came out blank with
   // only the watermark on it. `toCanvas()` hands back drawable pixels directly.
-  const url = needsPost
-    ? applyPostProcess(
-        board.toCanvas(rect),
-        options.watermark,
-        options.print,
-        format,
-        quality,
-      )
-    : board.toDataURL({ ...rect, mimeType, quality })
-
-  board.setAttrs(prev)
-  return url
+  try {
+    return needsPost
+      ? applyPostProcess(
+          board.toCanvas(rect),
+          options.watermark,
+          options.print,
+          format,
+          quality,
+        )
+      : board.toDataURL({ ...rect, mimeType, quality })
+  } finally {
+    aids.forEach((n) => n.visible(true))
+    board.setAttrs(prev)
+  }
 }
 
 function mimeFor(format: ExportFormat) {
@@ -151,8 +165,7 @@ function applyPrintEffects(
   ctx.fillRect(0, 0, width, height)
   ctx.restore()
 
-  // Approx 3mm in pixels at 300dpi ≈ 35px; scale relative to export resolution
-  const mm3 = Math.max(12, Math.round(Math.min(width, height) * 0.016))
+  const mm3 = bleedInset(width, height)
 
   ctx.save()
   ctx.strokeStyle = '#000000'

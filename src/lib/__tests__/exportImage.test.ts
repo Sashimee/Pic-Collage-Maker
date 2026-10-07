@@ -17,7 +17,13 @@ import {
  * check here is *which API the export goes through*, not the pixels. The pixels
  * are covered end-to-end in e2e/export-watermark.spec.ts.
  */
-function mockBoard() {
+/** A board child with Konva's visible() getter/setter, recording its states. */
+function mockAid(visible = true) {
+  let shown = visible
+  return { visible: vi.fn((v?: boolean) => (v === undefined ? shown : (shown = v))) }
+}
+
+function mockBoard(aids: ReturnType<typeof mockAid>[] = []) {
   const ctx = {
     setTransform: vi.fn(),
     drawImage: vi.fn(),
@@ -48,6 +54,7 @@ function mockBoard() {
     setAttrs: vi.fn(),
     toCanvas: vi.fn().mockReturnValue(canvas),
     toDataURL: vi.fn().mockReturnValue('data:image/png;base64,FASTPATH'),
+    find: vi.fn().mockReturnValue(aids),
   }
   return { board: board as unknown as Konva.Group, raw: board, canvas, ctx }
 }
@@ -110,6 +117,36 @@ describe('exportBoard with overlays', () => {
         x: 3, y: 4, scaleX: 2, scaleY: 2, rotation: 0,
       })
     }
+  })
+
+  it('hides editor guides for the snapshot and shows them again after', () => {
+    for (const opts of [{ watermark: WATERMARK }, {}]) {
+      const shown = mockAid()
+      const off = mockAid(false)
+      const { board, raw } = mockBoard([shown, off])
+      let seen: boolean[] = []
+      const record = () => (seen = [shown.visible(), off.visible()])
+      raw.toCanvas.mockImplementationOnce(() => (record(), mockBoard().canvas))
+      raw.toDataURL.mockImplementationOnce(() => (record(), 'x'))
+
+      exportBoard(board, 100, 125, 'png', opts)
+
+      expect(raw.find).toHaveBeenCalledWith('.editor-aid')
+      expect(seen).toEqual([false, false])
+      expect(shown.visible()).toBe(true)
+      expect(off.visible()).toBe(false)
+    }
+  })
+
+  it('shows the guides again when the snapshot throws', () => {
+    const aid = mockAid()
+    const { board, raw } = mockBoard([aid])
+    raw.toDataURL.mockImplementationOnce(() => {
+      throw new Error('tainted canvas')
+    })
+    expect(() => exportBoard(board, 100, 125, 'png')).toThrow('tainted canvas')
+    expect(aid.visible()).toBe(true)
+    expect(raw.setAttrs).toHaveBeenLastCalledWith({ x: 3, y: 4, scaleX: 2, scaleY: 2, rotation: 0 })
   })
 })
 
