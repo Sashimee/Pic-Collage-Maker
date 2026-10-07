@@ -44,3 +44,6 @@ jobs:
         run: npm run build -- --sourcemap hidden
       - name: Bundle budget
         run: npm run check:bundle
+      # Against the build above: the service worker exists only in production.
+      - name: Offline E2E
+        run: npm run test:e2e:offline

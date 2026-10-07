@@ -20,6 +20,7 @@
     "generate:screenshots": "node scripts/generate-screenshots.mjs",
     "test:unit": "vitest run",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "test:e2e:offline": "playwright test -c e2e/offline.config.ts",
     "analyze": "vite build --mode analyze"
   },
   "dependencies": {
