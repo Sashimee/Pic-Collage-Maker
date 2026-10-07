@@ -19,12 +19,12 @@ import { useWorkspace } from '../store/workspaceStore'
 import { usePanelTips } from './TipToast'
 
 // Lazy-load panels to reduce initial bundle
-const PhotosPanel = lazy(() => import('./Panels').then((m) => ({ default: m.PhotosPanel })))
-const LayoutPanel = lazy(() => import('./Panels').then((m) => ({ default: m.LayoutPanel })))
-const TextPanel = lazy(() => import('./Panels').then((m) => ({ default: m.TextPanel })))
-const DrawPanel = lazy(() => import('./Panels').then((m) => ({ default: m.DrawPanel })))
-const StickerPanel = lazy(() => import('./Panels').then((m) => ({ default: m.StickerPanel })))
-const BackgroundPanel = lazy(() => import('./Panels').then((m) => ({ default: m.BackgroundPanel })))
+const PhotosPanel = lazy(() => import('./panels/PhotosPanel').then((m) => ({ default: m.PhotosPanel })))
+const LayoutPanel = lazy(() => import('./panels/LayoutPanel').then((m) => ({ default: m.LayoutPanel })))
+const TextPanel = lazy(() => import('./panels/TextPanel').then((m) => ({ default: m.TextPanel })))
+const DrawPanel = lazy(() => import('./panels/DrawPanel').then((m) => ({ default: m.DrawPanel })))
+const StickerPanel = lazy(() => import('./panels/StickerPanel').then((m) => ({ default: m.StickerPanel })))
+const BackgroundPanel = lazy(() => import('./panels/BackgroundPanel').then((m) => ({ default: m.BackgroundPanel })))
 const FilterPanel = lazy(() => import('./FilterPanel').then((m) => ({ default: m.FilterPanel })))
 const SettingsPanel = lazy(() => import('./WatermarkPanel').then((m) => ({ default: m.SettingsPanel })))
 const LayerPanel = lazy(() => import('./LayerPanel'))

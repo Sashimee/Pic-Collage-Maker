@@ -116,6 +116,7 @@ Pic-Collage-Maker/
     │   ├── customLayout.ts     # draw-your-own layouts: polygon zones, stroke → split/circle
     │   ├── customLayoutStorage.ts # saved custom layouts in localStorage
     │   ├── cellShapes.ts       # CELL_SHAPE_PRESETS: per-cell shape masks
+    │   ├── gridClip.ts         # grid-cell clip paths + clip bounds (GridView)
     │   ├── shapes.ts           # PHOTO_SHAPES + tracePhotoShape() clip paths
     │   ├── patterns.ts         # pattern background tiles + their glyphs
     │   ├── filters.ts          # FILTER_PRESETS + computeFilterConfig() → Konva filter stack
@@ -142,8 +143,12 @@ Pic-Collage-Maker/
     │   ├── analytics.ts        # cookieless GoatCounter beacon (honours DNT/GPC)
     │   └── confetti.ts         # canvas-confetti burst on export
     └── components/
-        ├── EditorCanvas.tsx    # Konva stage, board group, gestures, transformer, export handle
-        ├── CanvasNodes.tsx     # ElementNode dispatcher: PhotoNode / TextNode / StickerNode
+        ├── EditorCanvas.tsx    # Konva stage + board group; wires the canvas/ hooks together
+        ├── canvas/             # useViewTransform (fit/zoom), useStageGestures (wheel/pinch/draw),
+        │                       #   useTransformerAttach, useExportHandle (+ __boardRect seam),
+        │                       #   useCustomLayoutTools, useCellPicker, CanvasAids, InlineTextEditor
+        ├── CanvasNodes.tsx     # ElementNode dispatcher: PhotoNode / StickerNode / Drawing / Shape
+        ├── nodes/              # TextNode.tsx (text, spans, curve, chip) + shared.ts (NodeProps, commonHandlers)
         ├── BoardScene.tsx      # the exportable board: background + photos + frame
         ├── Background.tsx      # solid / gradient / pattern / photo board background
         ├── BoardFrame.tsx      # the board's border/frame overlay
@@ -157,7 +162,7 @@ Pic-Collage-Maker/
         ├── PageStrip.tsx       # rail of pages under the canvas: add/switch/reorder/delete
         ├── PageThumb.tsx       # one page as plain DOM (background + positioned photos)
         ├── LayerPanel.tsx      # layer list: reorder / duplicate / delete / group
-        ├── Panels.tsx          # Photos / Layout / Text / Stickers / Background / Filters panels
+        ├── panels/             # one file per panel: Photos / Layout / Text (+TextEffects) / Draw / Sticker / Background
         ├── panels.config.tsx   # PANEL_TABS + usePanels() — the panel registry
         ├── FilterPanel.tsx     # the filter stack UI
         ├── WatermarkPanel.tsx  # watermark + print marks
@@ -169,6 +174,7 @@ Pic-Collage-Maker/
         ├── Docks.tsx        # MobileTabBar + MobileSheet + the desktop docks
         ├── SelectionBar.tsx    # floating per-element actions (dup / layer / delete)
         ├── HeaderBar.tsx       # brand, LangSwitcher, New, Export menu
+        ├── header/             # BrandMark, MobileMenu (the mobile ··· sheet), useProjectFileActions
         ├── StatusBar.tsx       # zoom / size / hint line
         ├── ZoomControls.tsx    # zoom in/out/fit buttons
         ├── FullScreen.tsx      # useFullScreen() + its button
@@ -231,7 +237,7 @@ Actions: `addPhoto`, `addText`, `addSticker`, `updateElement`, `updateFilters`,
   `Background` + elements) **+ a sibling `Transformer`**. The transformer is a
   sibling (not a child) of the board group, so it is excluded from exports and
   its handles stay a constant on-screen size regardless of board zoom.
-- **View transform `tf = {x, y, scale}`** positions/scales the board group.
+- **View transform `tf = {x, y, scale}`** (`canvas/useViewTransform.ts`) positions/scales the board group.
   `fitToScreen()` centres and fits the board on resize; **wheel** and two-finger
   **pinch** gestures zoom-to-point by updating `tf` (canonical Konva math).
 - **Free mode:** all elements render as draggable/transformable `ElementNode`s.
@@ -337,7 +343,7 @@ untranslated.
   tick.** `exporting` (swaps photos to full resolution for export) was set,
   used, and cleared in three consecutive statements; React never re-rendered, so
   it never took effect and every export used the 1080px preview. If a render has
-  to observe a flag, `await` a frame — see `EditorCanvas.exportImage`.
+  to observe a flag, `await` a frame — see `exportImage` in `canvas/useExportHandle.ts`.
 - **Lighthouse needs its own build.** `npm run build:lh` emits `dist-lh/` with
   `base=/` because LHCI's static server serves the directory at the root, while
   the normal build sets `base=/Pic-Collage-Maker/` for Pages. Building the usual way
@@ -385,7 +391,7 @@ untranslated.
   not from `pages`.
 - **Dev-only test seams**, exposed under `import.meta.env.DEV`: `window.__editor`
   (editorStore), `__projects`, `__versions`, and `__boardRect()` (the board's
-  on-screen rect, from `EditorCanvas`). The e2e suite drives flows through these
+  on-screen rect, from `canvas/useExportHandle.ts`). The e2e suite drives flows through these
   — particularly ones that must survive a page reload, where module imports and
   React refs are gone.
 

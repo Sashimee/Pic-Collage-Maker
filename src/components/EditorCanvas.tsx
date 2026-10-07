@@ -1,45 +1,23 @@
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { forwardRef, useMemo, useRef, useState } from 'react'
 import { Group, Layer, Line, Stage, Transformer } from 'react-konva'
-import { Magnet, Grid3x3, Ruler } from 'lucide-react'
 import type Konva from 'konva'
 import { useEditor, type LoadedDocument } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
 import { BoardScene, type BoardInteractions } from './BoardScene'
-import { exportBoard, type ExportFormat } from '../lib/exportImage'
 import type { CanvasElement } from '../types'
 import { computeSnap, type SnapLine } from '../lib/snap'
-import { useToasts } from './ToastContainer'
-import { CustomLayoutEditor, SNAP_STEP, type LayoutTool } from './CustomLayoutEditor'
+import { CustomLayoutEditor } from './CustomLayoutEditor'
 import { CustomLayoutToolbar } from './CustomLayoutToolbar'
-import { zonesToCells } from '../lib/customLayout'
-import { saveCustomLayout } from '../lib/customLayoutStorage'
-import { importFiles } from '../lib/importFiles'
-import { track } from '../lib/analytics'
-import { hasSeen, markSeen } from '../lib/firstUse'
-import { PinchDemo } from './GestureDemo'
+import { useViewTransform } from './canvas/useViewTransform'
+import { useStageGestures } from './canvas/useStageGestures'
+import { useTransformerAttach } from './canvas/useTransformerAttach'
+import { useExportHandle, type EditorHandle } from './canvas/useExportHandle'
+import { useCustomLayoutTools } from './canvas/useCustomLayoutTools'
+import { useCellPicker } from './canvas/useCellPicker'
+import { CanvasAidToggles, CanvasGuides, type GridType } from './canvas/CanvasAids'
+import { InlineTextEditor, type TextEditState } from './canvas/InlineTextEditor'
 
-export interface EditorHandle {
-  /** Async: the export has to wait a frame for the full-resolution photo
-   *  sources to be swapped in before the canvas is snapshotted. */
-  exportImage: (format: ExportFormat) => Promise<string | null>
-}
-
-/** Two rAFs: one for React to commit, one for Konva to redraw. */
-const nextFrame = () =>
-  new Promise<void>((resolve) =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-  )
-
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v))
+export type { EditorHandle }
 
 export interface EditorCanvasProps {
   /**
@@ -57,12 +35,10 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const boardRef = useRef<Konva.Group>(null)
   const trRef = useRef<Konva.Transformer>(null)
 
-  const [size, setSize] = useState({ w: 0, h: 0 })
-  const [tf, setTf] = useState({ x: 0, y: 0, scale: 1 })
   const [snapGuides, setSnapGuides] = useState<SnapLine[]>([])
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
-  const [gridType, setGridType] = useState<'dot' | 'line'>('dot')
+  const [gridType, setGridType] = useState<GridType>('dot')
   const [showRulers, setShowRulers] = useState(false)
 
   const boardWidth = useEditor((s) => s.boardWidth)
@@ -78,400 +54,27 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const selectedId = useEditor((s) => s.selectedId)
   const select = useEditor((s) => s.select)
   const toggleMultiSelect = useEditor((s) => s.toggleMultiSelect)
-  const clearMultiSelect = useEditor((s) => s.clearMultiSelect)
   const updateElement = useEditor((s) => s.updateElement)
-  const tool = useEditor((s) => s.tool)
   const brushColor = useEditor((s) => s.brushColor)
   const brushSize = useEditor((s) => s.brushSize)
-  const addDrawing = useEditor((s) => s.addDrawing)
-
   const customLayoutZones = useEditor((s) => s.customLayoutZones)
   const customLayoutPast = useEditor((s) => s.customLayoutPast)
-  const splitCustomLayout = useEditor((s) => s.splitCustomLayout)
-  const circleCustomLayout = useEditor((s) => s.circleCustomLayout)
-  const mergeCustomLayoutCell = useEditor((s) => s.mergeCustomLayoutCell)
 
-  // Bumped to replay the layout gesture demo from the failure toast.
-  const [demoNonce, setDemoNonce] = useState(0)
-  const [customSnapEnabled, setCustomSnapEnabled] = useState(true)
-  const [layoutTool, setLayoutTool] = useState<LayoutTool>('cut')
-  const [circleOverlay, setCircleOverlay] = useState(false)
-
-  // Photo picker for empty grid cells.
-  const cellInputRef = useRef<HTMLInputElement>(null)
-  const pendingCell = useRef<number | null>(null)
-
-  const pinch = useRef<{ dist: number; cx: number; cy: number } | null>(null)
-  const pinchHintShown = useRef(false)
-  const toast = useToasts()
-  const drawMode = tool === 'draw'
-  const drawing = useRef(false)
-  const ptsRef = useRef<number[]>([])
-  const [, setTick] = useState(0)
-
-  // Pinch-to-zoom hint (one-time), now on the shared first-use registry.
-  useEffect(() => {
-    pinchHintShown.current = hasSeen('pinch')
-  }, [])
-
-  // A layout gesture either cuts or rounds, depending on the active tool.
-  // Both report back so a gesture that did nothing can say why — silence was
-  // the main reason the editor felt broken.
-  const handleLayoutStroke = (pts: { x: number; y: number }[]) => {
-    const ok =
-      layoutTool === 'circle'
-        ? circleCustomLayout(pts, circleOverlay)
-        : splitCustomLayout(pts, customSnapEnabled ? SNAP_STEP : undefined)
-    if (ok) track('layout-split')
-    else {
-      // A stroke that did nothing is exactly when the demo is wanted, so offer
-      // it rather than only saying what went wrong.
-      toast.action(t('customLayout.noSplit'), {
-        label: t('tips.showMe'),
-        onClick: () => setDemoNonce((n) => n + 1),
-      })
-    }
-  }
-
-  // Tapping an empty grid cell picks photos straight into that cell.
-  const openCellPicker = (index: number) => {
-    pendingCell.current = index
-    cellInputRef.current?.click()
-  }
-
-  const handleCellFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target
-    const start = pendingCell.current
-    pendingCell.current = null
-    if (!input.files?.length) return
-    // Only the first picked photo claims the tapped cell; any extras fall into
-    // the remaining free slots in order.
-    let first = true
-    try {
-      await importFiles(input.files, (src, w, h, photoId, opts) => {
-        const store = useEditor.getState()
-        store.addPhoto(src, w, h, photoId, opts)
-        if (first && start != null) {
-          const els = useEditor.getState().elements
-          const added = els[els.length - 1]
-          if (added?.type === 'photo') store.updateElement(added.id, { cellIndex: start })
-        }
-        first = false
-      })
-    } catch {
-      toast.info(t('error.loadImage'))
-    }
-    input.value = ''
-  }
-
-  const showPinchHint = () => {
-    if (pinchHintShown.current) return
-    pinchHintShown.current = true
-    markSeen('pinch')
-    toast.rich(
-      <span className="flex items-center gap-2.5">
-        <span className="h-9 w-9 shrink-0 text-text/70" data-gesture-demo="pinch">
-          <PinchDemo />
-        </span>
-        <span>{t('canvas.pinchZoom')}</span>
-      </span>,
-    )
-  }
-
-  // Inline text editor overlay (replaces window.prompt on double-tap).
-  const [editing, setEditing] = useState<{
-    id: string
-    value: string
-    left: number
-    top: number
-    width: number
-    fontSize: number
-    fontFamily: string
-    fill: string
-  } | null>(null)
-
-  // --- responsive board sizing -------------------------------------------
-  useLayoutEffect(() => {
-    const host = hostRef.current
-    if (!host) return
-    const ro = new ResizeObserver(() => {
-      setSize({ w: host.clientWidth, h: host.clientHeight })
-    })
-    ro.observe(host)
-    setSize({ w: host.clientWidth, h: host.clientHeight })
-    return () => ro.disconnect()
-  }, [])
-
-  // Floating chrome sits *over* the stage, so the board has to be fitted into
-  // what's left rather than into the whole host box — otherwise the toolbar and
-  // the selection/zoom controls cover the top and bottom of the board.
-  const base =
-    mode === 'custom-layout'
-      ? { top: 60, bottom: 120, left: 8, right: 8 } // tool bar / hint + demo + padding row
-      : { top: 12, bottom: 60, left: 52, right: 8 } // snap/grid column + controls
-  // An open panel sheet overlays the stage without a scrim, so it eats into the
-  // same space the floating chrome does. Cap it so a tall sheet can't squeeze
-  // the board down to nothing.
-  const panelInset = clamp(bottomInset, 0, 0.6) * size.h
-  const chromeInsets = { ...base, bottom: Math.max(base.bottom, panelInset) }
-
-  /** Centre of the area the board is actually fitted into, in stage pixels. */
-  const viewportCentre = () => ({
-    x: chromeInsets.left + (size.w - chromeInsets.left - chromeInsets.right) / 2,
-    y: chromeInsets.top + (size.h - chromeInsets.top - chromeInsets.bottom) / 2,
+  const { size, tf, setTf, zoomAtPoint } = useViewTransform(hostRef, bottomInset)
+  const { drawMode, liveStroke, stageHandlers } = useStageGestures({
+    stageRef,
+    tf,
+    setTf,
+    zoomAtPoint,
+    onBackgroundPress: () => setSnapGuides([]),
   })
+  useTransformerAttach(trRef, stageRef)
+  useExportHandle(ref, hostRef, boardRef, tf)
+  const layoutTools = useCustomLayoutTools()
+  const cellPicker = useCellPicker()
 
-  const fitToScreen = () => {
-    if (!size.w || !size.h) return
-    const availW = Math.max(1, size.w - chromeInsets.left - chromeInsets.right)
-    const availH = Math.max(1, size.h - chromeInsets.top - chromeInsets.bottom)
-    const scale = Math.min(availW / boardWidth, availH / boardHeight)
-    setTf({
-      x: chromeInsets.left + (availW - boardWidth * scale) / 2,
-      y: chromeInsets.top + (availH - boardHeight * scale) / 2,
-      scale,
-    })
-    // Let the zoom floor down to the fit when the fit needs it. Otherwise
-    // setCanvasZoom clamps at 0.25, the sync effect writes that back over the
-    // scale just computed, and the board spills out from under the chrome —
-    // which is what a phone with a panel open does once the strip is there.
-    useEditor.getState().setMinCanvasZoom(scale)
-    // Keep the store's zoom in step, or the first ZoomControls press jumps.
-    setCanvasZoom(scale)
-  }
+  const [editing, setEditing] = useState<TextEditState | null>(null)
 
-  // Re-fit when the viewport, the board or the on-canvas chrome changes.
-  useEffect(fitToScreen, [size.w, size.h, boardWidth, boardHeight, mode, bottomInset])
-
-  // --- transformer attachment --------------------------------------------
-  useEffect(() => {
-    const tr = trRef.current
-    const stage = stageRef.current
-    if (!tr || !stage) return
-    const sel = selectedId
-      ? elements.find((e) => e.id === selectedId)
-      : undefined
-    const attachable = !!sel && (mode !== 'grid' || sel.type !== 'photo')
-    const node = attachable ? stage.findOne('#' + selectedId) : undefined
-    tr.nodes(node ? [node] : [])
-    tr.getLayer()?.batchDraw()
-  }, [selectedId, mode, elements])
-
-  // --- export handle ------------------------------------------------------
-  // Dev-only test seam, alongside `window.__editor` in editorStore. The board
-  // occupies only part of the canvas, and by a different fraction on every
-  // viewport, so e2e gestures need its real on-screen rect to aim at it.
-  useEffect(() => {
-    if (!import.meta.env.DEV || typeof window === 'undefined') return
-    ;(window as unknown as { __boardRect?: () => DOMRectInit }).__boardRect = () => {
-      const host = hostRef.current?.getBoundingClientRect()
-      return {
-        x: (host?.x ?? 0) + tf.x,
-        y: (host?.y ?? 0) + tf.y,
-        width: boardWidth * tf.scale,
-        height: boardHeight * tf.scale,
-      }
-    }
-  }, [tf, boardWidth, boardHeight])
-
-  useImperativeHandle(ref, () => ({
-    exportImage: async (format) => {
-      const board = boardRef.current
-      if (!board) return null
-
-      // `exporting` swaps PhotoNode over to the full-resolution source
-      // (CanvasNodes.tsx). It is consumed through a React selector, so setting
-      // it and snapshotting in the same tick did nothing at all — React never
-      // got to re-render, and every export silently used the 1080px preview
-      // while rendering a 2160px canvas. Give React a frame to apply it, and a
-      // second for Konva to redraw with the decoded originals.
-      useEditor.getState().setExporting(true)
-      try {
-        await nextFrame()
-        const state = useEditor.getState()
-        return exportBoard(board, boardWidth, boardHeight, format, {
-          watermark: state.watermark,
-          print: state.print,
-        })
-      } finally {
-        // Never leave the canvas pinned to originals — that is the memory-heavy
-        // state, and a throw here would strand it.
-        useEditor.getState().setExporting(false)
-      }
-    },
-  }))
-
-  // --- gestures -----------------------------------------------------------
-  const canvasZoom = useEditor((s) => s.canvasZoom)
-  const setCanvasZoom = useEditor((s) => s.setCanvasZoom)
-
-  // Sync local zoom with store zoom (so ZoomControls works). Rewriting `scale`
-  // alone would leave the pan offsets computed for the old scale, so zoom about
-  // a fixed point — and that point has to be the centre of the *usable* area,
-  // the same box fitToScreen centres the board in. Using the raw viewport
-  // centre anchors the zoom somewhere the board isn't centred on, so every
-  // press of +/− walked the board further off-centre. The offset is small in
-  // free mode and nearly half the height with a panel open.
-  useEffect(() => {
-    setTf((prev) => {
-      if (Math.abs(prev.scale - canvasZoom) < 1e-6) return prev
-      const { x: cx, y: cy } = viewportCentre()
-      const pointTo = { x: (cx - prev.x) / prev.scale, y: (cy - prev.y) / prev.scale }
-      return {
-        scale: canvasZoom,
-        x: cx - pointTo.x * canvasZoom,
-        y: cy - pointTo.y * canvasZoom,
-      }
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasZoom, size.w, size.h, chromeInsets.top, chromeInsets.bottom, chromeInsets.left, chromeInsets.right])
-
-  const zoomAtPoint = (px: number, py: number, factor: number) => {
-    setTf((prev) => {
-      const newScale = clamp(prev.scale * factor, useEditor.getState().minCanvasZoom, 4)
-      const pointTo = { x: (px - prev.x) / prev.scale, y: (py - prev.y) / prev.scale }
-      const next = {
-        scale: newScale,
-        x: px - pointTo.x * newScale,
-        y: py - pointTo.y * newScale,
-      }
-      setCanvasZoom(newScale)
-      return next
-    })
-  }
-
-  const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
-    showPinchHint()
-    e.evt.preventDefault()
-    const stage = stageRef.current
-    const p = stage?.getPointerPosition()
-    if (!p) return
-    zoomAtPoint(p.x, p.y, e.evt.deltaY > 0 ? 1 / 1.06 : 1.06)
-  }
-
-  const localPoint = (t: Touch) => {
-    const rect = stageRef.current?.container().getBoundingClientRect()
-    return { x: t.clientX - (rect?.left ?? 0), y: t.clientY - (rect?.top ?? 0) }
-  }
-
-  const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    const touches = e.evt.touches
-    if (touches.length !== 2) return
-    showPinchHint()
-    e.evt.preventDefault()
-    e.evt.stopPropagation()
-    const p1 = localPoint(touches[0])
-    const p2 = localPoint(touches[1])
-    const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y)
-    const cx = (p1.x + p2.x) / 2
-    const cy = (p1.y + p2.y) / 2
-    const prev = pinch.current
-    if (prev) {
-      const factor = clamp(dist / prev.dist, 0.5, 2)
-      const sel = elements.find((el) => el.id === selectedId)
-      if (mode === 'grid' && sel?.type === 'photo') {
-        const newZoom = clamp((sel.cellZoom ?? 1) * factor, 1, 4)
-        updateElement(sel.id, { cellZoom: newZoom })
-      } else {
-        setTf((t) => {
-          const newScale = clamp(t.scale * factor, useEditor.getState().minCanvasZoom, 4)
-          const pointTo = { x: (cx - t.x) / t.scale, y: (cy - t.y) / t.scale }
-          setCanvasZoom(newScale)
-          return {
-            scale: newScale,
-            x: cx - pointTo.x * newScale + (cx - prev.cx),
-            y: cy - pointTo.y * newScale + (cy - prev.cy),
-          }
-        })
-      }
-    }
-    pinch.current = { dist, cx, cy }
-  }
-
-  const endPinch = () => {
-    pinch.current = null
-  }
-
-  // Click on empty space / background → clear selection.
-  const handlePointerDown = (
-    e: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
-  ) => {
-    const target = e.target
-    if (target === target.getStage() || target.name() === 'background') {
-      select(null)
-      setSnapGuides([])
-      if (e.evt.shiftKey) {
-        // Shift-click on canvas keeps multi-selection
-      } else {
-        clearMultiSelect()
-      }
-    }
-  }
-
-  // --- freehand drawing ---------------------------------------------------
-  const toBoard = (px: number, py: number) => ({
-    x: (px - tf.x) / tf.scale,
-    y: (py - tf.y) / tf.scale,
-  })
-
-  const startDraw = (px: number, py: number) => {
-    const p = toBoard(px, py)
-    drawing.current = true
-    ptsRef.current = [p.x, p.y]
-    setTick((t) => t + 1)
-  }
-  const moveDraw = (px: number, py: number) => {
-    if (!drawing.current) return
-    const p = toBoard(px, py)
-    ptsRef.current = [...ptsRef.current, p.x, p.y]
-    setTick((t) => t + 1)
-  }
-  const endDraw = () => {
-    if (!drawing.current) return
-    drawing.current = false
-    const pts = ptsRef.current
-    if (pts.length >= 4) addDrawing(pts, brushColor, brushSize)
-    ptsRef.current = []
-    setTick((t) => t + 1)
-  }
-
-  const onStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (drawMode) {
-      const p = stageRef.current?.getPointerPosition()
-      if (p) startDraw(p.x, p.y)
-      return
-    }
-    handlePointerDown(e)
-  }
-  const onStageMouseMove = () => {
-    if (!drawMode) return
-    const p = stageRef.current?.getPointerPosition()
-    if (p) moveDraw(p.x, p.y)
-  }
-  const onStageTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    if (drawMode && e.evt.touches.length === 1) {
-      e.evt.preventDefault()
-      const p = localPoint(e.evt.touches[0])
-      startDraw(p.x, p.y)
-      return
-    }
-    handlePointerDown(e)
-  }
-  const onStageTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
-    if (drawMode && drawing.current && e.evt.touches.length === 1) {
-      e.evt.preventDefault()
-      const p = localPoint(e.evt.touches[0])
-      moveDraw(p.x, p.y)
-      return
-    }
-    handleTouchMove(e)
-  }
-  const onStageTouchEnd = () => {
-    endDraw()
-    endPinch()
-  }
-
-  // --- snap wiring --------------------------------------------------------
   const handleDragMove = (el: CanvasElement) => (e: Konva.KonvaEventObject<DragEvent>) => {
     if (!snapEnabled || e.evt?.shiftKey) return
     const node = e.target
@@ -517,7 +120,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
     onChange: (id, patch) => updateElement(id, patch),
     onEditText: (id) => openTextEditor(id),
     onDragMove: (el) => handleDragMove(el),
-    onEmptyCell: openCellPicker,
+    onEmptyCell: cellPicker.open,
   }
 
   const openTextEditor = (id: string) => {
@@ -543,53 +146,30 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
     setEditing(null)
   }
 
-  // Grid background dots / lines
-  const gridSpacing = 40
-  const gridDots: { x: number; y: number }[] = []
-  const gridLinesH: { x1: number; y1: number; x2: number; y2: number }[] = []
-  const gridLinesV: { x1: number; y1: number; x2: number; y2: number }[] = []
-  if (showGrid) {
-    for (let x = 0; x <= boardWidth; x += gridSpacing) {
-      for (let y = 0; y <= boardHeight; y += gridSpacing) {
-        if (gridType === 'dot') {
-          gridDots.push({ x, y })
-        }
-      }
-      if (gridType === 'line') {
-        gridLinesV.push({ x1: x, y1: 0, x2: x, y2: boardHeight })
-      }
-    }
-    if (gridType === 'line') {
-      for (let y = 0; y <= boardHeight; y += gridSpacing) {
-        gridLinesH.push({ x1: 0, y1: y, x2: boardWidth, y2: y })
-      }
-    }
-  }
-
   return (
     <div ref={hostRef} className="canvas-host relative h-full w-full">
       {/* Opened programmatically when an empty cell is tapped, so there is no
           visible label to associate — aria-label is the only route. */}
       <input
-        ref={cellInputRef}
+        ref={cellPicker.inputRef}
         type="file"
         accept="image/*"
         multiple
         className="sr-only"
         aria-label={t('header.addPhotos')}
-        onChange={handleCellFiles}
+        onChange={cellPicker.onChange}
       />
       {mode === 'custom-layout' && (
         <CustomLayoutToolbar
-          demoNonce={demoNonce}
-          snapEnabled={customSnapEnabled}
+          demoNonce={layoutTools.demoNonce}
+          snapEnabled={layoutTools.snapEnabled}
           canUndo={customLayoutPast.length > 0}
           zoneCount={customLayoutZones.length}
           gap={gridGap}
-          tool={layoutTool}
-          circleOverlay={circleOverlay}
-          onToolChange={setLayoutTool}
-          onCircleOverlayToggle={() => setCircleOverlay((v) => !v)}
+          tool={layoutTools.tool}
+          circleOverlay={layoutTools.circleOverlay}
+          onToolChange={layoutTools.setTool}
+          onCircleOverlayToggle={layoutTools.toggleCircleOverlay}
           onGapChange={setGridGap}
           onUndo={() => useEditor.getState().undoCustomLayout()}
           onClear={() => {
@@ -597,99 +177,31 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
             // Re-entering the mode resets to a single full-board zone.
             s.setCustomLayoutMode(true)
           }}
-          onSnapToggle={() => setCustomSnapEnabled((v) => !v)}
-          onApply={() => {
-            // Persist the drawn zones as a reusable layout, then apply it.
-            // resolveLayoutById (used by the canvas) reads custom layouts from
-            // storage, so applyLayout -> grid mode renders it immediately.
-            const state = useEditor.getState()
-            const cells = zonesToCells(state.customLayoutZones)
-            if (cells.length < 2) {
-              toast.info(t('customLayout.needMore'))
-              return
-            }
-            const id =
-              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                ? crypto.randomUUID()
-                : Math.random().toString(36).slice(2)
-            saveCustomLayout({
-              id,
-              name: `Custom ${new Date().toLocaleDateString()}`,
-              createdAt: Date.now(),
-              cells,
-            })
-            track('layout-custom-applied')
-            state.applyLayout(id)
-            // Go straight to filling the zones the user just drew.
-            state.setAssignLayoutId(id)
-          }}
+          onSnapToggle={layoutTools.toggleSnap}
+          onApply={layoutTools.apply}
           onCancel={() => {
             useEditor.getState().setCustomLayoutMode(false)
           }}
         />
       )}
-      <div
-        className={`absolute left-2 top-2 z-10 flex-col gap-1.5 ${
-          mode === 'custom-layout' ? 'hidden' : 'flex'
-        }`}
-      >
-        <button
-          onClick={() => setSnapEnabled((v) => !v)}
-          aria-label={t('canvas.snapToGuides')}
-          aria-pressed={snapEnabled}
-          title={t('canvas.snapToGuides')}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl shadow backdrop-blur transition ${
-            snapEnabled ? 'bg-accent text-white' : 'bg-surface-2/90 text-muted hover:text-text'
-          }`}
-        >
-          <Magnet size={18} />
-        </button>
-        <button
-          onClick={() => setShowGrid((v) => !v)}
-          aria-label={t('canvas.toggleGrid')}
-          aria-pressed={showGrid}
-          title={t('canvas.toggleGrid')}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl shadow backdrop-blur transition ${
-            showGrid ? 'bg-accent text-white' : 'bg-surface-2/90 text-muted hover:text-text'
-          }`}
-        >
-          <Grid3x3 size={18} />
-        </button>
-        {showGrid && (
-          <button
-            onClick={() => setGridType((g) => (g === 'dot' ? 'line' : 'dot'))}
-            aria-label={t(gridType === 'dot' ? 'canvas.gridDots' : 'canvas.gridLines')}
-            title={t(gridType === 'dot' ? 'canvas.gridDots' : 'canvas.gridLines')}
-            className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-surface-2/90 px-2 text-[0.65rem] font-semibold text-muted shadow backdrop-blur transition hover:text-text"
-          >
-            {t(gridType === 'dot' ? 'canvas.gridDots' : 'canvas.gridLines')}
-          </button>
-        )}
-        <button
-          onClick={() => setShowRulers((v) => !v)}
-          aria-label={t('canvas.toggleRulers')}
-          aria-pressed={showRulers}
-          title={t('canvas.toggleRulers')}
-          className={`flex h-10 w-10 items-center justify-center rounded-xl shadow backdrop-blur transition ${
-            showRulers ? 'bg-accent text-white' : 'bg-surface-2/90 text-muted hover:text-text'
-          }`}
-        >
-          <Ruler size={18} />
-        </button>
-      </div>
+      <CanvasAidToggles
+        hidden={mode === 'custom-layout'}
+        snapEnabled={snapEnabled}
+        onSnapToggle={() => setSnapEnabled((v) => !v)}
+        showGrid={showGrid}
+        onGridToggle={() => setShowGrid((v) => !v)}
+        gridType={gridType}
+        onGridTypeToggle={() => setGridType((g) => (g === 'dot' ? 'line' : 'dot'))}
+        showRulers={showRulers}
+        onRulersToggle={() => setShowRulers((v) => !v)}
+      />
 
       {size.w > 0 && (
         <Stage
           ref={stageRef}
           width={size.w}
           height={size.h}
-          onWheel={handleWheel}
-          onMouseDown={onStageMouseDown}
-          onMouseMove={onStageMouseMove}
-          onMouseUp={endDraw}
-          onTouchStart={onStageTouchStart}
-          onTouchMove={onStageTouchMove}
-          onTouchEnd={onStageTouchEnd}
+          {...stageHandlers}
           style={{ cursor: drawMode ? 'crosshair' : 'default' }}
         >
           <Layer>
@@ -717,9 +229,9 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                       />
                     ))}
 
-                    {drawing.current && ptsRef.current.length >= 2 && (
+                    {liveStroke && (
                       <Line
-                        points={ptsRef.current}
+                        points={liveStroke}
                         stroke={brushColor}
                         strokeWidth={brushSize}
                         lineCap="round"
@@ -732,85 +244,24 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                   }
                   backdrop={
                     <>
-                    {/* Grid background */}
-                    {showGrid && gridType === 'dot' &&
-                      gridDots.map((d, i) => (
-                        <Line
-                          key={`gd-${i}`}
-                          points={[d.x, d.y, d.x + 0.1, d.y + 0.1]}
-                          stroke="rgba(0,0,0,0.12)"
-                          strokeWidth={1.5}
-                          lineCap="round"
-                          listening={false}
-                        />
-                      ))}
-                    {showGrid && gridType === 'line' && (
-                      <>
-                        {gridLinesV.map((l, i) => (
-                          <Line
-                            key={`gv-${i}`}
-                            points={[l.x1, l.y1, l.x2, l.y2]}
-                            stroke="rgba(0,0,0,0.08)"
-                            strokeWidth={0.5}
-                            listening={false}
-                          />
-                        ))}
-                        {gridLinesH.map((l, i) => (
-                          <Line
-                            key={`gh-${i}`}
-                            points={[l.x1, l.y1, l.x2, l.y2]}
-                            stroke="rgba(0,0,0,0.08)"
-                            strokeWidth={0.5}
-                            listening={false}
-                          />
-                        ))}
-                      </>
-                    )}
-
-                    {/* Pixel rulers */}
-                    {showRulers && (
-                      <>
-                        {/* Top ruler */}
-                        {Array.from({ length: Math.floor(boardWidth / 100) + 1 }).map((_, i) => {
-                          const x = i * 100
-                          return (
-                            <Line
-                              key={`rt-${i}`}
-                              points={[x, 0, x, 12]}
-                              stroke="rgba(0,0,0,0.25)"
-                              strokeWidth={0.5}
-                              listening={false}
-                            />
-                          )
-                        })}
-                        {/* Left ruler */}
-                        {Array.from({ length: Math.floor(boardHeight / 100) + 1 }).map((_, i) => {
-                          const y = i * 100
-                          return (
-                            <Line
-                              key={`rl-${i}`}
-                              points={[0, y, 12, y]}
-                              stroke="rgba(0,0,0,0.25)"
-                              strokeWidth={0.5}
-                              listening={false}
-                            />
-                          )
-                        })}
-                      </>
-                    )}
+                    <CanvasGuides
+                      boardWidth={boardWidth}
+                      boardHeight={boardHeight}
+                      showGrid={showGrid}
+                      gridType={gridType}
+                      showRulers={showRulers}
+                    />
                     {mode === 'custom-layout' && (
                       <CustomLayoutEditor
                         boardWidth={boardWidth}
                         boardHeight={boardHeight}
                         zones={customLayoutZones}
                         gap={gridGap}
-                        tool={layoutTool}
-                        onStroke={handleLayoutStroke}
-                        onTapZone={(i) => {
-                          if (!mergeCustomLayoutCell(i)) toast.info(t('customLayout.noMerge'))
-                        }}
+                        tool={layoutTools.tool}
+                        onStroke={layoutTools.onStroke}
+                        onTapZone={layoutTools.onTapZone}
                         tf={tf}
-                        snapEnabled={customSnapEnabled}
+                        snapEnabled={layoutTools.snapEnabled}
                       />
                     )}
                     </>
@@ -836,30 +287,11 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
         </Stage>
       )}
       {editing && (
-        <textarea
-          autoFocus
-          value={editing.value}
-          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-          onBlur={commitEdit}
-          onFocus={(e) => e.currentTarget.select()}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              commitEdit()
-            } else if (e.key === 'Escape') {
-              setEditing(null)
-            }
-          }}
-          style={{
-            left: editing.left,
-            top: editing.top,
-            width: editing.width,
-            fontSize: editing.fontSize,
-            fontFamily: editing.fontFamily,
-            color: editing.fill,
-            lineHeight: 1.1,
-          }}
-          className="absolute z-40 resize-none overflow-hidden rounded-md border-2 border-accent bg-surface/95 px-1 py-0.5 shadow-xl outline-none"
+        <InlineTextEditor
+          editing={editing}
+          onChange={setEditing}
+          onCommit={commitEdit}
+          onCancel={() => setEditing(null)}
         />
       )}
     </div>
