@@ -70,7 +70,8 @@ Pic-Collage-Maker/
 │   ├── user-guide.md           # end-user documentation
 │   ├── api.md                  # module/API notes
 │   └── adr/                    # 0001 client-only architecture, 0002 konva stays
-├── e2e/                        # playwright: 15 specs + helpers.ts + playwright.config.ts
+├── e2e/                        # playwright: 18 specs + helpers.ts + playwright.config.ts;
+│                               #   visual.spec.ts pixel baselines are made in the Playwright container (visual-regression agent)
 ├── .github/
 │   ├── lighthouserc.json       # LHCI thresholds (see gotchas: needs `npm run build:lh`)
 │   └── workflows/              # ci.yml, deploy.yml (Pages), lighthouse.yml
