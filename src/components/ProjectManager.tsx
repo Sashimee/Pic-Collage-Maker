@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import {
   FolderOpen,
   Plus,
@@ -32,6 +32,7 @@ export default function ProjectManager({ open, onClose }: Props) {
   const [storage, setStorage] = useState<StorageStatus | null>(null)
   const [storageCheck, setStorageCheck] = useState(0)
   const lang = useLang((s) => s.lang)
+  const titleId = useId()
 
   const {
     projects,
@@ -62,6 +63,15 @@ export default function ProjectManager({ open, onClose }: Props) {
     }
   }, [open, projects.length, storageCheck])
 
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
   if (!open) return null
 
   const handleCreate = async () => {
@@ -87,13 +97,20 @@ export default function ProjectManager({ open, onClose }: Props) {
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" aria-hidden="true" onClick={onClose} />
-      <div className="fixed inset-x-4 top-[10vh] z-50 mx-auto max-w-lg overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="fixed inset-x-4 top-[10vh] z-50 mx-auto max-w-lg overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-text">
+          <h2 id={titleId} className="flex items-center gap-2 text-base font-semibold text-text">
             <FolderOpen size={18} /> {t('project.title')}
           </h2>
           <button
+            autoFocus
             onClick={onClose}
+            aria-label={t('common.close')}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-surface-3">
             <X size={18} />
           </button>

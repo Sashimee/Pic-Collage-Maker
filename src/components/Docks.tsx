@@ -85,6 +85,7 @@ export function MobileTabBar({ panels }: { panels: PanelsApi }) {
               key={tab.id}
               onClick={() => select(tab.id)}
               aria-label={t(tab.labelKey)}
+              aria-pressed={isActive}
               className={`relative flex min-w-[4rem] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[0.7rem] font-medium transition active:scale-95 ${
                 isActive ? 'text-accent' : 'text-muted hover:text-text'
               }`}
@@ -166,6 +167,7 @@ export function ToolRail({ panels }: { panels: PanelsApi }) {
               key={tab.id}
               onClick={() => select(tab.id)}
               aria-label={t(tab.labelKey)}
+              aria-pressed={isActive}
               className={`relative flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-[0.7rem] font-medium transition active:scale-95 ${
                 isActive
                   ? 'text-accent'

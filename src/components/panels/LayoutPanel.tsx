@@ -143,6 +143,7 @@ export function LayoutPanel() {
             min={200}
             max={4096}
             value={boardWidth}
+            aria-label={t('aspect.width')}
             onChange={(e) =>
               setBoardSize(
                 Math.max(200, Math.min(4096, Number(e.target.value) || boardWidth)),
@@ -159,6 +160,7 @@ export function LayoutPanel() {
             min={200}
             max={4096}
             value={boardHeight}
+            aria-label={t('aspect.height')}
             onChange={(e) =>
               setBoardSize(
                 boardWidth,
