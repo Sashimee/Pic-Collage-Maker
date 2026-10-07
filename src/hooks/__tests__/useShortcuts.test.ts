@@ -120,4 +120,71 @@ describe('useShortcuts', () => {
     input.remove()
     expect(useEditor.getState().elements).toHaveLength(3)
   })
+
+  describe('clipboard', () => {
+    const paste = (data: { files?: File[]; text?: string }, target: EventTarget = window) => {
+      const event = Object.assign(new Event('paste', { bubbles: true, cancelable: true }), {
+        clipboardData: { files: data.files ?? [], getData: () => data.text ?? '' },
+      })
+      target.dispatchEvent(event)
+      return event
+    }
+    const png = new File(['x'], 'shot.png', { type: 'image/png' })
+
+    it('hands pasted image files to onPasteImages', () => {
+      const onPasteImages = vi.fn()
+      renderHook(() => useShortcuts({ onPasteImages }))
+      const event = paste({ files: [png] })
+      expect(onPasteImages).toHaveBeenCalledWith([png])
+      expect(event.defaultPrevented).toBe(true)
+    })
+
+    it('leaves a paste into a text field to the field', () => {
+      const onPasteImages = vi.fn()
+      renderHook(() => useShortcuts({ onPasteImages }))
+      const input = document.body.appendChild(document.createElement('input'))
+      const event = paste({ files: [png] }, input)
+      input.remove()
+      expect(onPasteImages).not.toHaveBeenCalled()
+      expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('pastes a copied element as a new element with its own id', () => {
+      renderHook(() => useShortcuts())
+      const original = useEditor.getState().elements[0]
+      paste({ text: JSON.stringify(original) })
+      const { elements, selectedId } = useEditor.getState()
+      expect(elements).toHaveLength(4)
+      expect(new Set(elements.map((e) => e.id)).size).toBe(4)
+      expect(elements[3]).toMatchObject({ x: original.x + 20, y: original.y + 20 })
+      expect(selectedId).toBe(elements[3].id)
+    })
+
+    it('ignores pasted text that is not an element', () => {
+      renderHook(() => useShortcuts())
+      const event = paste({ text: 'hello' })
+      expect(useEditor.getState().elements).toHaveLength(3)
+      expect(event.defaultPrevented).toBe(false)
+    })
+
+    it('ctrl+c with nothing selected copies the board image', () => {
+      const onCopyImage = vi.fn()
+      renderHook(() => useShortcuts({ onCopyImage }))
+      useEditor.getState().select(null)
+      press('c', { ctrl: true })
+      expect(onCopyImage).toHaveBeenCalledOnce()
+    })
+
+    it('ctrl+c with an element selected copies the element, not the board', () => {
+      const onCopyImage = vi.fn()
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+      renderHook(() => useShortcuts({ onCopyImage }))
+      const [a] = ids()
+      useEditor.getState().select(a)
+      press('c', { ctrl: true })
+      expect(onCopyImage).not.toHaveBeenCalled()
+      expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({ id: a })
+    })
+  })
 })
