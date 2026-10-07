@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Group, Image as KonvaImage, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
+import type { Context } from 'konva/lib/Context'
 import type { GridCell, GridCellShape, GridLayout, PhotoElement } from '../types'
 import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
@@ -32,7 +33,7 @@ function clamp(v: number, min: number, max: number) {
 }
 
 function roundedRectPath(
-  ctx: any,
+  ctx: Context,
   r: Rect2,
   radius: number,
 ) {
@@ -49,7 +50,7 @@ function roundedRectPath(
 function getClipFunc(cell: GridCell, rect: Rect2, radius: number) {
   const shape: GridCellShape = cell.shape ?? 'rect'
   if (shape === 'circle') {
-    return (ctx: any) => {
+    return (ctx: Context) => {
       ctx.beginPath()
       ctx.arc(
         rect.x + rect.w / 2,
@@ -62,7 +63,7 @@ function getClipFunc(cell: GridCell, rect: Rect2, radius: number) {
     }
   }
   if (shape === 'ellipse') {
-    return (ctx: any) => {
+    return (ctx: Context) => {
       const rx = rect.w / 2
       const ry = rect.h / 2
       ctx.beginPath()
@@ -71,11 +72,11 @@ function getClipFunc(cell: GridCell, rect: Rect2, radius: number) {
     }
   }
   if (shape === 'rounded-rect') {
-    return (ctx: any) => roundedRectPath(ctx, rect, cell.cornerRadius ?? radius)
+    return (ctx: Context) => roundedRectPath(ctx, rect, cell.cornerRadius ?? radius)
   }
   if (shape === 'polygon') {
     const pts = cell.polygon?.length ? cell.polygon : CELL_SHAPE_PRESETS.diamond
-    return (ctx: any) => {
+    return (ctx: Context) => {
       ctx.beginPath()
       pts.forEach((p, i) => {
         const x = rect.x + p.x * rect.w
@@ -87,8 +88,8 @@ function getClipFunc(cell: GridCell, rect: Rect2, radius: number) {
     }
   }
   if (shape === 'path' && cell.path) {
-    return (ctx: any) => {
-      const raw = (ctx as any)._context as CanvasRenderingContext2D | undefined
+    return (ctx: Context) => {
+      const raw = ctx._context as CanvasRenderingContext2D | undefined
       if (raw && 'Path2D' in window) {
         const p = new Path2D(cell.path!)
         raw.save()

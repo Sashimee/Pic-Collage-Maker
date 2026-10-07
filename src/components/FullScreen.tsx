@@ -2,12 +2,28 @@ import { useEffect, useState } from 'react'
 import { Maximize, Minimize } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 
+// Older Safari only has the webkit-prefixed API, and its methods return
+// undefined rather than a promise.
+type VendorCall = () => Promise<void> | void
+type VendorDocument = Document & {
+  webkitFullscreenElement?: Element | null
+  mozFullScreenElement?: Element | null
+  msFullscreenElement?: Element | null
+  webkitExitFullscreen?: VendorCall
+  mozCancelFullScreen?: VendorCall
+  msExitFullscreen?: VendorCall
+}
+type VendorElement = HTMLElement & {
+  webkitRequestFullscreen?: VendorCall
+  mozRequestFullScreen?: VendorCall
+  msRequestFullscreen?: VendorCall
+}
+
 export function useFullScreen() {
   const [isFullScreen, setIsFullScreen] = useState(false)
 
   const getFullScreenElement = (): Element | null => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const d = document as any
+    const d = document as VendorDocument
     return (
       d.fullscreenElement ??
       d.webkitFullscreenElement ??
@@ -28,23 +44,22 @@ export function useFullScreen() {
   }, [])
 
   const toggle = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const d = document as any
-    const de = document.documentElement as any
+    const d = document as VendorDocument
+    const de = document.documentElement as VendorElement
     if (!getFullScreenElement()) {
       const req =
         de.requestFullscreen ??
         de.webkitRequestFullscreen ??
         de.mozRequestFullScreen ??
         de.msRequestFullscreen
-      if (req) req.call(de).catch(() => {})
+      if (req) Promise.resolve(req.call(de)).catch(() => {})
     } else {
       const exit =
         d.exitFullscreen ??
         d.webkitExitFullscreen ??
         d.mozCancelFullScreen ??
         d.msExitFullscreen
-      if (exit) exit.call(d).catch(() => {})
+      if (exit) Promise.resolve(exit.call(d)).catch(() => {})
     }
   }
 

@@ -9,6 +9,7 @@ import type {
   GridCell,
   PhotoElement,
   PhotoFilters,
+  PhotoShape,
   ShapeElement,
   StickerElement,
   TextElement,
@@ -182,7 +183,7 @@ interface EditorState {
   setElements: (elements: CanvasElement[]) => void
 
   // shape & zoom
-  applyShapeToAll: (shape: string) => void
+  applyShapeToAll: (shape: PhotoShape) => void
   setCanvasZoom: (zoom: number) => void
   canvasZoom: number
   /**
@@ -464,7 +465,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       // Do not select locked elements
       const el = s.elements.find((e) => e.id === id)
-      if (el && (el as any).locked) return {}
+      if (el?.locked) return {}
       return { selectedId: id, multiSelected: [] }
     }),
 
@@ -667,7 +668,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   applyShapeToAll: (shape) =>
     set((s) => ({
       elements: s.elements.map((e) =>
-        e.type === 'photo' ? { ...e, shape: shape as any } : e,
+        e.type === 'photo' ? { ...e, shape } : e,
       ),
       ...record(s, 'shapeAll'),
     })),

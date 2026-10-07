@@ -21,7 +21,7 @@ export function LangDropdown() {
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-40" aria-hidden="true" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-surface-2 shadow-2xl">
             {LANGS.map((l) => (
               <button

@@ -16,7 +16,7 @@ function typeIcon(el: CanvasElement): string {
     case 'text':
       return '✏️'
     case 'sticker':
-      return (el as any).emoji ?? '🎴'
+      return el.emoji ?? '🎴'
     case 'drawing':
       return '🎨'
     case 'shape':
@@ -33,15 +33,14 @@ function previewText(el: CanvasElement): string {
     case 'photo':
       return 'Photo'
     case 'text': {
-      const txt = ((el as any).text as string) ?? ''
-      return txt.slice(0, 28) || 'Text'
+      return (el.text ?? '').slice(0, 28) || 'Text'
     }
     case 'sticker':
       return 'Sticker'
     case 'drawing':
       return 'Drawing'
     case 'shape': {
-      const st = ((el as any).shapeType as string) ?? ''
+      const st = el.shapeType ?? ''
       return st.charAt(0).toUpperCase() + st.slice(1) || 'Shape'
     }
     case 'group':
@@ -159,14 +158,13 @@ export default function LayerPanel() {
             const el = displayElements[index]
             const top = index * ROW_HEIGHT
             const isSelected = selectedId === el.id
-            const hidden = (el as any).hidden ?? false
-            const locked = (el as any).locked ?? false
+            const hidden = el.hidden ?? false
+            const locked = el.locked ?? false
             const isDragging = dragIndex === index
 
             return (
               <div
                 key={el.id}
-                onClick={() => select(el.id)}
                 className={`absolute left-0 right-0 flex items-center gap-2 rounded-lg border px-2 transition ${
                   isSelected
                     ? 'border-accent bg-accent/10'
@@ -201,11 +199,16 @@ export default function LayerPanel() {
                   <GripVertical size={16} />
                 </div>
 
-                <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
-
-                <span className="flex-1 truncate text-sm text-text/80 select-none">
-                  {previewText(el)}
-                </span>
+                <button
+                  onClick={() => select(el.id)}
+                  aria-pressed={isSelected}
+                  className="flex h-full min-w-0 flex-1 items-center gap-2 text-left"
+                >
+                  <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
+                  <span className="flex-1 truncate text-sm text-text/80 select-none">
+                    {previewText(el)}
+                  </span>
+                </button>
 
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button

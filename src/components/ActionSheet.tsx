@@ -64,7 +64,7 @@ export function ActionSheet({ open, onClose, title, children }: ActionSheetProps
               className="w-full rounded-t-2xl border-t border-border bg-surface shadow-[0_-8px_32px_rgba(0,0,0,0.25)]"
             >
               {/* Drag handle */}
-              <div className="flex justify-center pt-3 pb-1" onClick={onClose}>
+              <div className="flex justify-center pt-3 pb-1" onClick={onClose} aria-hidden="true">
                 <div className="h-1.5 w-10 rounded-full bg-muted/40" />
               </div>
 

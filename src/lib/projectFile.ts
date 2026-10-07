@@ -35,7 +35,7 @@ export async function packProject(
       photoIds.add(el.photoId)
     }
   }
-  const bg = doc.background as any
+  const bg = doc.background
   if (bg.type === 'photo' && bg.photoId) {
     photoIds.add(bg.photoId)
   }

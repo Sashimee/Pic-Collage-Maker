@@ -156,7 +156,7 @@ function ShapePicker() {
 
   const selected = elements.find((e) => e.id === selectedId)
   const isPhoto = selected?.type === 'photo'
-  const currentShape = isPhoto ? (selected as any).shape ?? 'rect' : 'rect'
+  const currentShape = isPhoto ? selected.shape ?? 'rect' : 'rect'
   const hasPhotos = elements.some((e) => e.type === 'photo')
 
   if (!isPhoto && !hasPhotos) return null

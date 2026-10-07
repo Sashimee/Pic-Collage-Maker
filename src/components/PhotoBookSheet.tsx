@@ -64,7 +64,7 @@ export function PhotoBookSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={busy ? undefined : close} />
+      <div className="fixed inset-0 z-40 bg-black/50" aria-hidden="true" onClick={busy ? undefined : close} />
       <div className="fixed inset-x-4 top-[12vh] z-50 mx-auto max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="flex items-center gap-2 text-base font-semibold text-text">

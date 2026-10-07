@@ -32,7 +32,6 @@ export function Background({
   }
 
   if (bg.type === 'photo') {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     return photoImage ? (
       <KonvaImage
         name="background"

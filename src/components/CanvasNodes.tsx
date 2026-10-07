@@ -13,6 +13,7 @@ import {
 } from 'react-konva'
 import type Konva from 'konva'
 import type {
+  BaseElement,
   CanvasElement,
   DrawingElement,
   PhotoElement,
@@ -25,9 +26,8 @@ import { useEditor } from '../store/editorStore'
 import { computeFilterConfig, computeFilterConfigFromStack } from '../lib/filters'
 import { tracePhotoShape } from '../lib/shapes'
 
-function toBlend(mode: string | undefined): any {
-  if (!mode || mode === 'normal') return 'source-over'
-  return mode as any
+function toBlend(mode: BaseElement['blendMode']): Konva.NodeConfig['globalCompositeOperation'] {
+  return !mode || mode === 'normal' ? 'source-over' : mode
 }
 
 interface NodeProps<T extends CanvasElement> {
@@ -322,7 +322,7 @@ function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: NodeProps<
                   fillLinearGradientStartPoint: { x: 0, y: 0 },
                   fillLinearGradientEndPoint: { x: item.w, y: 0 },
                   fillLinearGradientColorStops: gradient.stops
-                    .flatMap((stop: any) => [stop.offset, stop.color]),
+                    .flatMap((stop) => [stop.offset, stop.color]),
                 }
               : { fill: s.fill ?? el.fill }
             return (
@@ -357,7 +357,7 @@ function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: NodeProps<
                   fillLinearGradientStartPoint: { x: 0, y: 0 },
                   fillLinearGradientEndPoint: { x: el.fontSize, y: 0 },
                   fillLinearGradientColorStops: gradient.stops
-                    .flatMap((stop: any) => [stop.offset, stop.color]),
+                    .flatMap((stop) => [stop.offset, stop.color]),
                 }
               : { fill: el.fill }
             return (
@@ -390,7 +390,7 @@ function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: NodeProps<
           fillLinearGradientStartPoint: { x: 0, y: 0 },
           fillLinearGradientEndPoint: { x: el.width ?? dims.w, y: 0 },
           fillLinearGradientColorStops: gradient.stops
-            .flatMap((stop: any) => [stop.offset, stop.color]),
+            .flatMap((stop) => [stop.offset, stop.color]),
         }
       : { fill: el.fill }
 
