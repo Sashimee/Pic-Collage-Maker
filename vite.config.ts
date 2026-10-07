@@ -73,6 +73,8 @@ export default defineConfig({
       // was the root cause of updates only landing after a manual refresh.
       registerType: 'autoUpdate',
       workbox: {
+        // Runs ahead of workbox's own routes, which only ever answer GETs anyway.
+        importScripts: ['share-target.js'],
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for WASM models
@@ -99,6 +101,12 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: BASE,
         scope: BASE,
+        share_target: {
+          action: `${BASE}share-target`,
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: { files: [{ name: 'photos', accept: ['image/*'] }] },
+        },
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
