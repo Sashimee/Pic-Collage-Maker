@@ -582,6 +582,11 @@ const es: Dict = {
   'workspace.presetMinimal': 'Minimalista',
   'workspace.presetReview': 'Revisión',
   'workspace.reset': 'Restablecer diseño',
+  'library.arrows': 'Flechas',
+  'library.badges': 'Insignias',
+  'library.bubbles': 'Bocadillos',
+  'library.decor': 'Decoraciones',
+  'library.failed': 'La biblioteca de formas no se cargó. Comprueba tu conexión y vuelve a abrir la pestaña.',
 }
 
 export default es

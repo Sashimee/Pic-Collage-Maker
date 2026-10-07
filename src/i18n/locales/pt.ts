@@ -560,7 +560,11 @@ const pt: Dict = {
   'toast.enhanceFailed': 'Falha ao aprimorar',
   'fullscreen.enter': 'Tela cheia',
   'fullscreen.exit': 'Sair da tela cheia',
-
+  'library.arrows': 'Setas',
+  'library.badges': 'Distintivos',
+  'library.bubbles': 'Balões de fala',
+  'library.decor': 'Decorações',
+  'library.failed': 'A biblioteca de formas não carregou. Verifique sua conexão e reabra a aba.',
 }
 
 export default pt

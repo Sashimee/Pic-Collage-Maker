@@ -582,6 +582,11 @@ const de: Dict = {
   'workspace.presetMinimal': 'Minimal',
   'workspace.presetReview': 'Überprüfung',
   'workspace.reset': 'Layout zurücksetzen',
+  'library.arrows': 'Pfeile',
+  'library.badges': 'Abzeichen',
+  'library.bubbles': 'Sprechblasen',
+  'library.decor': 'Dekorationen',
+  'library.failed': 'Die Formenbibliothek konnte nicht geladen werden. Prüfe deine Verbindung und öffne den Tab erneut.',
 }
 
 export default de

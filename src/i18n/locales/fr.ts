@@ -582,6 +582,11 @@ const fr: Dict = {
   'workspace.presetMinimal': 'Minimal',
   'workspace.presetReview': 'Révision',
   'workspace.reset': 'Réinitialiser la mise en page',
+  'library.arrows': 'Flèches',
+  'library.badges': 'Badges',
+  'library.bubbles': 'Bulles',
+  'library.decor': 'Décorations',
+  'library.failed': 'La bibliothèque de formes ne s’est pas chargée. Vérifiez votre connexion et rouvrez l’onglet.',
 }
 
 export default fr

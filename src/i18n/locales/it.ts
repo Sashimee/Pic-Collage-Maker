@@ -581,6 +581,11 @@ const it: Dict = {
   'workspace.presetMinimal': 'Minimale',
   'workspace.presetReview': 'Revisione',
   'workspace.reset': 'Reimposta layout',
+  'library.arrows': 'Frecce',
+  'library.badges': 'Badge',
+  'library.bubbles': 'Fumetti',
+  'library.decor': 'Decorazioni',
+  'library.failed': 'La libreria di forme non si è caricata. Controlla la connessione e riapri la scheda.',
 }
 
 export default it

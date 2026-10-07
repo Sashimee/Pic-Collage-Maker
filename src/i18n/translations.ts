@@ -596,4 +596,9 @@ export const en: Dict = {
   'workspace.presetMinimal': 'Minimal',
   'workspace.presetReview': 'Review',
   'workspace.reset': 'Reset Layout',
+  'library.arrows': 'Arrows',
+  'library.badges': 'Badges',
+  'library.bubbles': 'Speech bubbles',
+  'library.decor': 'Decorations',
+  'library.failed': "The shape library didn't load. Check your connection and reopen the tab.",
 }
