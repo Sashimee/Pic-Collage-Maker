@@ -1,5 +1,10 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { Palette } from 'lucide-react'
+import { useT } from '../i18n/useLang'
+import { useColours } from '../lib/palette'
 import { m } from './motion'
+
+const ColourTools = lazy(() => import('./ColourTools').then((m) => ({ default: m.ColourTools })))
 
 const TAP = { scale: 0.94 }
 
@@ -46,18 +51,69 @@ export function ColorField({
   value: string
   onChange: (v: string) => void
 }) {
+  const t = useT()
+  const id = useId()
+  const [open, setOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // React's onChange is the native `input` event, which fires on every drag of
+  // the picker; `change` fires once, when the colour is committed.
+  useEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    const remember = () => useColours.getState().remember(input.value)
+    input.addEventListener('change', remember)
+    return () => input.removeEventListener('change', remember)
+  }, [])
+
+  const openNativePicker = () => {
+    const input = inputRef.current
+    if (!input) return
+    if (typeof input.showPicker === 'function') input.showPicker()
+    else input.click()
+  }
+
   return (
-    <label className="flex items-center justify-between gap-2 text-xs font-medium text-text/80">
-      <span>{label}</span>
-      <span className="relative h-9 w-14 overflow-hidden rounded-lg border border-border">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute -inset-2 h-[calc(100%+1rem)] w-[calc(100%+1rem)] cursor-pointer border-0 bg-transparent p-0"
-        />
-      </span>
-    </label>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 text-xs font-medium text-text/80">
+        <label htmlFor={`${id}-input`}>{label}</label>
+        <span className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={`${id}-tools`}
+            aria-label={label ? `${label}: ${t('color.tools')}` : t('color.tools')}
+            title={t('color.tools')}
+            onClick={() => setOpen((o) => !o)}
+            className={`flex h-11 w-11 items-center justify-center rounded-lg border transition active:scale-95 ${
+              open ? 'border-accent text-accent' : 'border-border text-text/70 hover:bg-surface-3'
+            }`}
+          >
+            <Palette size={16} aria-hidden />
+          </button>
+          <span className="relative h-11 w-14 overflow-hidden rounded-lg border border-border">
+            <input
+              ref={inputRef}
+              id={`${id}-input`}
+              type="color"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="absolute -inset-2 h-[calc(100%+1rem)] w-[calc(100%+1rem)] cursor-pointer border-0 bg-transparent p-0"
+            />
+          </span>
+        </span>
+      </div>
+      {open && (
+        <Suspense fallback={null}>
+          <ColourTools
+            id={`${id}-tools`}
+            value={value}
+            onPick={onChange}
+            openNativePicker={openNativePicker}
+          />
+        </Suspense>
+      )}
+    </div>
   )
 }
 
