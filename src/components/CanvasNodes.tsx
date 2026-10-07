@@ -10,7 +10,7 @@ import {
   Text as KonvaText,
   Arrow,
 } from 'react-konva'
-import type Konva from 'konva'
+import Konva from 'konva'
 import type {
   CanvasElement,
   DrawingElement,
@@ -22,17 +22,34 @@ import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
 import { tracePhotoShape } from '../lib/shapes'
 import { computeFilterConfig, computeFilterConfigFromStack } from '../lib/filters'
+import { cropBasisScale, scaleCrop, straightenScale } from '../lib/photoCrop'
 import { commonHandlers, lockProps, toBlend, type NodeProps } from './nodes/shared'
 import { TextNode } from './nodes/TextNode'
+
+const EMPTY_RECT = { x: 0, y: 0, width: 0, height: 0 }
+
+// Konva measures a container by its children and ignores its clip, so a
+// straightened photo would report its rotated, enlarged bounds and the
+// Transformer, snapping and align would all use those. The empty-rect sibling
+// above stands in for the frame; the clipped image reports nothing.
+function measureAsEmpty(node: Konva.Group | null) {
+  if (node) node.getClientRect = () => EMPTY_RECT
+}
 
 function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElement>) {
   const exporting = useEditor((s) => s.exporting)
   const displaySrc = exporting
     ? (el.originalSrc ?? el.previewSrc ?? el.src)
     : (el.previewSrc ?? el.src)
-  const image = useImage(displaySrc)
+  const drawn = useImage(displaySrc)
+  const basis = useImage(el.crop && displaySrc !== el.src ? el.src : '')
+  const k = drawn?.src === el.src ? 1 : cropBasisScale(drawn, basis)
+  const image = el.crop && k === null ? undefined : drawn
+  const crop = el.crop && k !== null ? scaleCrop(el.crop, k) : el.crop
   const ref = useRef<Konva.Image>(null)
   const shape = el.shape ?? 'rect'
+  const tilt = el.straighten ?? 0
+  const cover = straightenScale(tilt, el.width, el.height)
 
   useEffect(() => {
     const node = ref.current
@@ -40,7 +57,9 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
     const cfg = el.filterStack
       ? computeFilterConfigFromStack(el.filterStack)
       : computeFilterConfig(el.filters)
-    node.cache()
+    // The cache is sized to the node's own frame; a straightened photo is drawn
+    // `cover` times larger than that, so the cache needs as many more pixels.
+    node.cache(cover > 1 ? { pixelRatio: Konva.pixelRatio * cover } : undefined)
     node.filters(cfg.filters)
     node.brightness(cfg.brightness)
     node.contrast(cfg.contrast)
@@ -53,7 +72,7 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
       node.clearCache()
       node.filters([])
     }
-  }, [image, el.filters, el.filterStack, el.crop, el.width, el.height])
+  }, [image, el.filters, el.filterStack, crop?.x, crop?.y, crop?.width, crop?.height, el.width, el.height, cover])
 
   const v = el.filters.vignette
 
@@ -78,13 +97,27 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
       }
       {...commonHandlers(onChange, onDragMove)}
     >
-      <KonvaImage
-        ref={ref}
-        image={image}
-        width={el.width}
-        height={el.height}
-        crop={el.crop}
-      />
+      <Rect width={el.width} height={el.height} listening={false} />
+      <Group
+        clipWidth={tilt ? el.width : undefined}
+        clipHeight={tilt ? el.height : undefined}
+        ref={measureAsEmpty}
+      >
+        <KonvaImage
+          ref={ref}
+          image={image}
+          width={el.width}
+          height={el.height}
+          crop={crop}
+          x={el.width / 2}
+          y={el.height / 2}
+          offsetX={el.width / 2}
+          offsetY={el.height / 2}
+          rotation={tilt}
+          scaleX={(el.flipX ? -1 : 1) * cover}
+          scaleY={(el.flipY ? -1 : 1) * cover}
+        />
+      </Group>
       {v > 0 && (
         <Rect
           width={el.width}

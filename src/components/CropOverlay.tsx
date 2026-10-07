@@ -5,7 +5,10 @@ import { useEditor } from '../store/editorStore'
 import { useImage } from '../hooks/useImage'
 import { useT } from '../i18n/useLang'
 import { BottomSheet } from './BottomSheet'
+import { FlipHorizontal2, FlipVertical2 } from 'lucide-react'
 import { PHOTO_SHAPES } from '../lib/shapes'
+import { ASPECT_PRESETS, MAX_STRAIGHTEN, aspectBox, type AspectId } from '../lib/photoCrop'
+import { Slider } from './ui'
 import type { PhotoElement } from '../types'
 
 interface Box {
@@ -27,6 +30,7 @@ export function CropOverlay() {
   const el = useEditor((s) =>
     s.elements.find((e) => e.id === s.croppingId && e.type === 'photo'),
   ) as PhotoElement | undefined
+  const grid = useEditor((s) => s.mode === 'grid')
 
   return (
     <BottomSheet
@@ -34,12 +38,20 @@ export function CropOverlay() {
       title={t('crop.title')}
       onClose={() => setCropping(null)}
     >
-      {el && <CropPanel el={el} />}
+      {el && <CropPanel el={el} grid={grid} />}
     </BottomSheet>
   )
 }
 
-function CropPanel({ el }: { el: PhotoElement }) {
+const toggleClass = (on: boolean) =>
+  `flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg px-3 text-sm transition active:scale-95 ${
+    on ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-text/80 hover:bg-surface-3'
+  }`
+
+// Grid cells place a photo by cover-fit and pan, and their own cell shape
+// clips it, so a grid photo gets the crop, aspect and flip but not the photo
+// shape or straighten.
+function CropPanel({ el, grid }: { el: PhotoElement; grid: boolean }) {
   const t = useT()
   const image = useImage(el.src)
   const setCropping = useEditor((s) => s.setCropping)
@@ -59,6 +71,8 @@ function CropPanel({ el }: { el: PhotoElement }) {
 
   // Initial crop box (display coords) from an existing crop, else the whole image.
   const [box, setBox] = useState<Box | null>(null)
+  const [aspect, setAspect] = useState<AspectId>('free')
+  const ratio = ASPECT_PRESETS.find((p) => p.id === aspect)?.ratio ?? null
   useEffect(() => {
     if (!image || !fit.w) return
     if (el.crop) {
@@ -84,8 +98,12 @@ function CropPanel({ el }: { el: PhotoElement }) {
   }, [box])
 
   const clamp = (b: Box): Box => {
-    const width = Math.min(b.width, fit.w)
-    const height = Math.min(b.height, fit.h)
+    let width = Math.min(b.width, fit.w)
+    let height = Math.min(b.height, fit.h)
+    if (ratio !== null) {
+      width = Math.min(width, height * ratio)
+      height = width / ratio
+    }
     return {
       width,
       height,
@@ -109,36 +127,62 @@ function CropPanel({ el }: { el: PhotoElement }) {
     setCropping(null)
   }
 
-  const reset = () => setBox({ x: 0, y: 0, width: fit.w, height: fit.h })
+  const chooseAspect = (id: AspectId) => {
+    setAspect(id)
+    const next = ASPECT_PRESETS.find((p) => p.id === id)?.ratio
+    if (next && fit.w) setBox(aspectBox(next, fit.w, fit.h))
+  }
+
+  const reset = () => {
+    setAspect('free')
+    setBox({ x: 0, y: 0, width: fit.w, height: fit.h })
+    if (el.straighten || el.flipX || el.flipY)
+      updateElement(el.id, { straighten: 0, flipX: false, flipY: false })
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h3 className="mb-2.5 text-[0.7rem] font-semibold uppercase tracking-wide text-muted">
-          {t('filter.shape')}
-        </h3>
-        <div className="flex items-center gap-2">
-          {PHOTO_SHAPES.map((sh) => (
-            <button
-              key={sh.id}
-              onClick={() => updateElement(el.id, { shape: sh.id })}
-              title={t('shape.' + sh.id)}
-              className={`flex h-11 w-11 items-center justify-center rounded-lg text-lg transition active:scale-90 ${
-                shape === sh.id
-                  ? 'bg-accent text-accent-fg'
-                  : 'bg-surface-2 text-text/80 hover:bg-surface-3'
-              }`}
-            >
-              {sh.glyph}
-            </button>
-          ))}
+      {!grid && (
+        <div>
+          <h3 className="mb-2.5 text-[0.7rem] font-semibold uppercase tracking-wide text-muted">
+            {t('filter.shape')}
+          </h3>
+          <div className="flex items-center gap-2">
+            {PHOTO_SHAPES.map((sh) => (
+              <button
+                key={sh.id}
+                onClick={() => updateElement(el.id, { shape: sh.id })}
+                title={t('shape.' + sh.id)}
+                className={`flex h-11 w-11 items-center justify-center rounded-lg text-lg transition active:scale-90 ${
+                  shape === sh.id
+                    ? 'bg-accent text-accent-fg'
+                    : 'bg-surface-2 text-text/80 hover:bg-surface-3'
+                }`}
+              >
+                {sh.glyph}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div>
         <h3 className="mb-2.5 text-[0.7rem] font-semibold uppercase tracking-wide text-muted">
           {t('filter.crop')}
         </h3>
+        <div role="group" aria-label={t('crop.aspect')} className="mb-3 flex flex-wrap gap-2">
+          {ASPECT_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={aspect === p.id}
+              onClick={() => chooseAspect(p.id)}
+              className={toggleClass(aspect === p.id)}
+            >
+              {p.label ?? t('crop.free')}
+            </button>
+          ))}
+        </div>
         <div className="flex justify-center">
           {image && box && (
             <Stage width={fit.w} height={fit.h} className="rounded-lg shadow-lg">
@@ -168,9 +212,7 @@ function CropPanel({ el }: { el: PhotoElement }) {
                   strokeWidth={2}
                   draggable
                   onDragEnd={(e) =>
-                    setBox((b) =>
-                      b ? clamp({ ...b, x: e.target.x(), y: e.target.y() }) : b,
-                    )
+                    setBox((b) => (b ? clamp({ ...b, x: e.target.x(), y: e.target.y() }) : b))
                   }
                   onTransformEnd={() => {
                     const node = rectRef.current
@@ -189,17 +231,53 @@ function CropPanel({ el }: { el: PhotoElement }) {
                 <Transformer
                   ref={trRef}
                   rotateEnabled={false}
-                  keepRatio={false}
+                  keepRatio={ratio !== null}
+                  enabledAnchors={
+                    ratio !== null
+                      ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+                      : undefined
+                  }
                   anchorSize={14}
                   borderStroke="#6366f1"
                   anchorStroke="#6366f1"
-                  boundBoxFunc={(oldB, newB) =>
-                    newB.width < 24 || newB.height < 24 ? oldB : newB
-                  }
+                  boundBoxFunc={(oldB, newB) => (newB.width < 24 || newB.height < 24 ? oldB : newB)}
                 />
               </Layer>
             </Stage>
           )}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {!grid && (
+          <Slider
+            label={t('crop.straighten')}
+            min={-MAX_STRAIGHTEN}
+            max={MAX_STRAIGHTEN}
+            step={0.5}
+            value={el.straighten ?? 0}
+            onChange={(v) => updateElement(el.id, { straighten: v })}
+          />
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            aria-pressed={!!el.flipX}
+            onClick={() => updateElement(el.id, { flipX: !el.flipX })}
+            className={`${toggleClass(!!el.flipX)} flex-1 gap-2 text-center leading-tight`}
+          >
+            <FlipHorizontal2 size={18} aria-hidden />
+            {t('crop.flipH')}
+          </button>
+          <button
+            type="button"
+            aria-pressed={!!el.flipY}
+            onClick={() => updateElement(el.id, { flipY: !el.flipY })}
+            className={`${toggleClass(!!el.flipY)} flex-1 gap-2 text-center leading-tight`}
+          >
+            <FlipVertical2 size={18} aria-hidden />
+            {t('crop.flipV')}
+          </button>
         </div>
       </div>
 
