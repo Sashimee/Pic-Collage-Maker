@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type Dispatch, type RefObject, type SetStateAction } from 'react'
-import type Konva from 'konva'
+import Konva from 'konva'
 import { useEditor } from '../../store/editorStore'
 import { useT } from '../../i18n/useLang'
 import { hasSeen, markSeen } from '../../lib/firstUse'
 import { useToasts } from '../ToastContainer'
 import { PinchDemo } from '../GestureDemo'
 import { clamp, type ViewTransform } from './useViewTransform'
+import { snapAngle, twoFingerPlacement, type FingerPair, type Placement } from '../../lib/twoFinger'
 
 interface Options {
   stageRef: RefObject<Konva.Stage | null>
@@ -17,7 +18,8 @@ interface Options {
 
 /**
  * Stage-level pointer handling: wheel and two-finger pinch zoom (or per-cell
- * zoom on a selected grid photo), freehand drawing, and tap-to-deselect.
+ * zoom on a selected grid photo, or pinch-and-twist on a selected free
+ * element), freehand drawing, and tap-to-deselect.
  */
 export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroundPress }: Options) {
   const t = useT()
@@ -35,7 +37,15 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
   const addDrawing = useEditor((s) => s.addDrawing)
 
   const pinch = useRef<{ dist: number; cx: number; cy: number } | null>(null)
+  const twist = useRef<{
+    id: string
+    start: Placement
+    from: FingerPair
+    snapped: number | null
+    placement: Placement | null
+  } | null>(null)
   const pinchHintShown = useRef(false)
+  const pendingTouchPress = useRef<Konva.KonvaEventObject<TouchEvent> | null>(null)
   const drawMode = tool === 'draw'
   const drawing = useRef(false)
   const ptsRef = useRef<number[]>([])
@@ -77,18 +87,22 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
   const handleTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
     const touches = e.evt.touches
     if (touches.length !== 2) return
-    showPinchHint()
     e.evt.preventDefault()
     e.evt.stopPropagation()
     const p1 = localPoint(touches[0])
     const p2 = localPoint(touches[1])
+    const sel = elements.find((el) => el.id === selectedId)
+    if (sel && !sel.locked && !sel.hidden && (mode !== 'grid' || sel.type !== 'photo')) {
+      twistElement(sel.id, { a: toBoard(p1.x, p1.y), b: toBoard(p2.x, p2.y) })
+      return
+    }
+    showPinchHint()
     const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y)
     const cx = (p1.x + p2.x) / 2
     const cy = (p1.y + p2.y) / 2
     const prev = pinch.current
     if (prev) {
       const factor = clamp(dist / prev.dist, 0.5, 2)
-      const sel = elements.find((el) => el.id === selectedId)
       if (mode === 'grid' && sel?.type === 'photo') {
         const newZoom = clamp((sel.cellZoom ?? 1) * factor, 1, 4)
         updateElement(sel.id, { cellZoom: newZoom })
@@ -108,8 +122,55 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
     pinch.current = { dist, cx, cy }
   }
 
+  // The node is moved live and the store written once when the fingers lift,
+  // as Konva's own drag and Transformer do, so a gesture is one undo step
+  // however long it pauses.
+  const twistElement = (id: string, fingers: FingerPair) => {
+    const node = stageRef.current?.findOne('#' + id)
+    if (!node) return
+    const g = twist.current
+    if (!g || g.id !== id) {
+      // A finger on the element arms Konva's drag, and one on a Transformer
+      // anchor (easy to hit on a small element) starts a transform. Left alone,
+      // either takes over and Konva swallows every stage touchmove after it.
+      Konva.DD._dragElements.forEach((d, key) => {
+        if (d.dragStatus === 'dragging') d.node.stopDrag()
+        else Konva.DD._dragElements.delete(key)
+      })
+      stageRef.current?.find<Konva.Transformer>('Transformer').forEach((tr) => {
+        if (tr.isTransforming()) tr.stopTransform()
+      })
+      const el = useEditor.getState().elements.find((e) => e.id === id)
+      if (!el) return
+      const start = { x: el.x, y: el.y, rotation: el.rotation, scaleX: el.scaleX, scaleY: el.scaleY }
+      twist.current = { id, start, from: fingers, snapped: snapAngle(start.rotation), placement: null }
+      return
+    }
+    const { snapped, ...placement } = twoFingerPlacement(g.start, g.from, fingers)
+    if (snapped !== null && snapped !== g.snapped) navigator.vibrate?.(10)
+    g.snapped = snapped
+    g.placement = placement
+    node.setAttrs(placement)
+    node.getLayer()?.batchDraw()
+  }
+
   const endPinch = () => {
     pinch.current = null
+    const g = twist.current
+    twist.current = null
+    if (g?.placement) updateElement(g.id, g.placement)
+  }
+
+  const cancelTouch = () => {
+    endDraw()
+    pinch.current = null
+    pendingTouchPress.current = null
+    const g = twist.current
+    twist.current = null
+    if (!g) return
+    const node = stageRef.current?.findOne('#' + g.id)
+    node?.setAttrs(g.start)
+    node?.getLayer()?.batchDraw()
   }
 
   // Click on empty space / background → clear selection.
@@ -174,7 +235,10 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
       startDraw(p.x, p.y)
       return
     }
-    handlePointerDown(e)
+    // Deselecting waits for the finger to lift: if a second one lands first,
+    // this was the start of a pinch-and-twist on the selection, not a tap.
+    pendingTouchPress.current = e.evt.touches.length === 1 ? e : null
+    if (e.evt.touches.length === 2) handleTouchMove(e)
   }
   const onStageTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
     if (drawMode && drawing.current && e.evt.touches.length === 1) {
@@ -185,9 +249,13 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
     }
     handleTouchMove(e)
   }
-  const onStageTouchEnd = () => {
+  const onStageTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
     endDraw()
     endPinch()
+    if (e.evt.touches.length > 0) return
+    const press = pendingTouchPress.current
+    pendingTouchPress.current = null
+    if (press) handlePointerDown(press)
   }
 
   return {
@@ -202,6 +270,7 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
       onTouchStart: onStageTouchStart,
       onTouchMove: onStageTouchMove,
       onTouchEnd: onStageTouchEnd,
+      onTouchCancel: cancelTouch,
     },
   }
 }
