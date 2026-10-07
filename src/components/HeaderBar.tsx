@@ -5,11 +5,11 @@ import {
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
   ChevronDown, FileCode, FileText, Package, Smartphone,
-  Plus, BookOpen, Proportions,
+  Plus, BookOpen, Proportions, Copy,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useProjects } from '../store/projectsStore'
-import { canShareImage } from '../lib/exportImage'
+import { canCopyImage, canShareImage } from '../lib/exportImage'
 import { clearPersisted } from '../lib/persistence'
 import { useT } from '../i18n/useLang'
 import { useTheme } from '../i18n/useTheme'
@@ -37,6 +37,7 @@ const SizePresets = lazy(() =>
 export type ExportKind =
   | 'png'
   | 'jpg'
+  | 'copy'
   | 'share'
   | 'share-page'
   | 'png-page'
@@ -60,11 +61,14 @@ export function HeaderBar({
   const [sizesOpen, setSizesOpen] = useState(false)
   const exportButton = useRef<HTMLButtonElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
-  const closeSizes = () => {
-    setSizesOpen(false)
-    // The menu item that opened the sheet is gone; hand focus to whichever trigger is on screen.
+  // The menu item that was used is gone; hand focus to whichever trigger is on screen.
+  const refocusTrigger = () => {
     const trigger = exportButton.current?.offsetParent ? exportButton : moreButton
     trigger.current?.focus()
+  }
+  const closeSizes = () => {
+    setSizesOpen(false)
+    refocusTrigger()
   }
   const t = useT()
   const clearAll = useEditor((s) => s.clearAll)
@@ -92,6 +96,8 @@ export function HeaderBar({
   const handleExport = async (kind: ExportKind) => {
     setExportOpen(false)
     onExport(kind)
+    // Copying leaves nothing on screen to land on, unlike a download or a sheet.
+    if (kind === 'copy') refocusTrigger()
   }
 
   /*
@@ -228,6 +234,11 @@ export function HeaderBar({
                     <MenuItem onClick={() => handleExport('jpg')} icon={<FileImage size={16} />}>
                       {t('export.jpg')}
                     </MenuItem>
+                    {canCopyImage() && (
+                      <MenuItem onClick={() => handleExport('copy')} icon={<Copy size={16} />}>
+                        {t('export.copy')}
+                      </MenuItem>
+                    )}
                     <MenuItem onClick={() => { setExportOpen(false); onExportSVG?.() }} icon={<FileCode size={16} />}>
                       {t('export.svg')}
                     </MenuItem>
