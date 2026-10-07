@@ -1,6 +1,7 @@
 import Konva from 'konva'
 import type { Filter } from 'konva/lib/Node'
-import type { FilterOperation, FilterPreset, PhotoFilters } from '../types'
+import { create } from 'zustand'
+import type { FilterOperation, FilterPreset, PhotoElement, PhotoFilters } from '../types'
 
 export interface FilterConfig {
   filters: Filter[]
@@ -146,9 +147,7 @@ export function computeFilterConfigFromStack(
   }
 }
 
-/** Backwards-compatible: compute from v1 PhotoFilters. */
-export function computeFilterConfig(f: PhotoFilters): FilterConfig {
-  // Convert v1 to stack then compute
+function v1Stack(f: PhotoFilters): FilterOperation[] {
   const stack: FilterOperation[] = [
     { type: 'brightness', value: f.brightness },
     { type: 'contrast', value: f.contrast },
@@ -157,7 +156,91 @@ export function computeFilterConfig(f: PhotoFilters): FilterConfig {
   ]
   if (f.blur > 0) stack.push({ type: 'blur', radius: f.blur })
   if (f.vignette > 0) stack.push({ type: 'vignette', strength: f.vignette })
-  return computeFilterConfigFromStack(stack)
+  return stack
+}
+
+/** Backwards-compatible: compute from v1 PhotoFilters. */
+export function computeFilterConfig(f: PhotoFilters): FilterConfig {
+  return computeFilterConfigFromStack(v1Stack(f))
+}
+
+/** A photo's filter stack: the v2 stack, or one derived from its v1 filters. */
+export function photoStack(
+  filterStack: PhotoElement['filterStack'],
+  filters: PhotoFilters,
+): FilterOperation[] {
+  return filterStack ?? v1Stack(filters)
+}
+
+/** The photo whose filters are hidden while "hold to compare" is pressed. */
+export const useFilterCompare = create<{ id: string | null }>(() => ({ id: null }))
+
+const isAdvanced = (op: FilterOperation) =>
+  op.type === 'levels' || op.type === 'curves' || op.type === 'hsl' || op.type === 'lut'
+
+const pending = new Set<Promise<void>>()
+const failed = new Set<Konva.Image>()
+
+/**
+ * Resolves once every photo's levels/curves/HSL/LUT filters are on its node;
+ * throws while any photo is drawn without them. Call it a frame after the
+ * photos' images are set, so their effects have queued the work.
+ */
+export async function filtersSettled(): Promise<void> {
+  while (pending.size) await Promise.allSettled(pending)
+  if (failed.size)
+    throw new Error(
+      `${failed.size} photo(s) are missing their adjustments because the filter code failed to load. Reload the app and try again.`,
+    )
+}
+
+/**
+ * Caches the node and applies a filter stack to it. Levels, curves, HSL and
+ * LUTs live in a lazy chunk, so they join the node a moment later — export
+ * waits for them through `filtersSettled()`. Returns the effect cleanup.
+ */
+export function applyPhotoFilters(
+  node: Konva.Image,
+  stack: FilterOperation[],
+  cache?: Parameters<Konva.Image['cache']>[0],
+): () => void {
+  let live = true
+  const cfg = computeFilterConfigFromStack(stack)
+  node.cache(cache)
+  node.filters(cfg.filters)
+  node.brightness(cfg.brightness)
+  node.contrast(cfg.contrast)
+  node.hue(cfg.hue)
+  node.saturation(cfg.saturation)
+  node.luminance(cfg.luminance)
+  node.blurRadius(cfg.blurRadius)
+  node.getLayer()?.batchDraw()
+
+  if (stack.some(isAdvanced)) {
+    const loading: Promise<void> = import('./adjustments')
+      .then(({ advancedFilters }) => {
+        if (!live) return
+        const extra = advancedFilters(stack)
+        const blur = cfg.filters.indexOf(Konva.Filters.Blur)
+        const at = blur < 0 ? cfg.filters.length : blur
+        node.filters([...cfg.filters.slice(0, at), ...extra, ...cfg.filters.slice(at)])
+        node.getLayer()?.batchDraw()
+      })
+      .catch((err: unknown) => {
+        if (!live) return
+        failed.add(node)
+        console.error('Photo adjustments (levels/curves/HSL/LUT) failed to load', err)
+      })
+      .finally(() => pending.delete(loading))
+    pending.add(loading)
+  }
+
+  return () => {
+    live = false
+    failed.delete(node)
+    node.clearCache()
+    node.filters([])
+  }
 }
 
 function clamp(v: number, min: number, max: number): number {

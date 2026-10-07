@@ -23,7 +23,7 @@ import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
 import { tracePhotoFrame, traceRoundRect } from '../lib/shapes'
 import { SHADOW_OPACITY, resolveStyling } from '../lib/photoStyling'
-import { computeFilterConfig, computeFilterConfigFromStack } from '../lib/filters'
+import { applyPhotoFilters, photoStack, useFilterCompare } from '../lib/filters'
 import { cropBasisScale, scaleCrop, straightenScale } from '../lib/photoCrop'
 import { commonHandlers, lockProps, toBlend, type NodeProps } from './nodes/shared'
 import { TextNode } from './nodes/TextNode'
@@ -52,29 +52,19 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
   const shape = el.shape ?? 'rect'
   const tilt = el.straighten ?? 0
   const cover = straightenScale(tilt, el.width, el.height)
+  const comparing = useFilterCompare((s) => s.id === el.id)
 
   useEffect(() => {
     const node = ref.current
     if (!node || !image) return
-    const cfg = el.filterStack
-      ? computeFilterConfigFromStack(el.filterStack)
-      : computeFilterConfig(el.filters)
     // The cache is sized to the node's own frame; a straightened photo is drawn
     // `cover` times larger than that, so the cache needs as many more pixels.
-    node.cache(cover > 1 ? { pixelRatio: Konva.pixelRatio * cover } : undefined)
-    node.filters(cfg.filters)
-    node.brightness(cfg.brightness)
-    node.contrast(cfg.contrast)
-    node.hue(cfg.hue)
-    node.saturation(cfg.saturation)
-    node.luminance(cfg.luminance)
-    node.blurRadius(cfg.blurRadius)
-    node.getLayer()?.batchDraw()
-    return () => {
-      node.clearCache()
-      node.filters([])
-    }
-  }, [image, el.filters, el.filterStack, crop?.x, crop?.y, crop?.width, crop?.height, el.width, el.height, cover])
+    return applyPhotoFilters(
+      node,
+      comparing ? [] : photoStack(el.filterStack, el.filters),
+      cover > 1 ? { pixelRatio: Konva.pixelRatio * cover } : undefined,
+    )
+  }, [image, el.filters, el.filterStack, comparing, crop?.x, crop?.y, crop?.width, crop?.height, el.width, el.height, cover])
 
   const v = el.filters.vignette
   const { radius, border, shadow, card } = resolveStyling(el)

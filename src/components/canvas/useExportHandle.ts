@@ -4,6 +4,7 @@ import { useEditor } from '../../store/editorStore'
 import { exportBoard, type ExportFormat } from '../../lib/exportImage'
 import type { ViewTransform } from './useViewTransform'
 import type { Box } from '../../lib/align'
+import { filtersSettled } from '../../lib/filters'
 
 export interface EditorHandle {
   /** Async: the export has to wait a frame for the full-resolution photo
@@ -70,6 +71,8 @@ export function useExportHandle(
         // A pack font still loading would be snapshotted as the fallback face,
         // with chips and curves measured for it.
         await document.fonts.ready
+        await nextFrame()
+        await filtersSettled()
         await nextFrame()
         const state = useEditor.getState()
         return exportBoard(board, boardWidth, boardHeight, format, {
