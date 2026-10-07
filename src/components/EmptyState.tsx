@@ -1,14 +1,17 @@
 import { ImagePlus, Camera, ChevronDown } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
 import { importFiles } from '../lib/importFiles'
 import { resolveLayoutById } from '../lib/grids'
 import { track } from '../lib/analytics'
 import { LayoutGallery } from './LayoutGallery'
-import { TemplateGallery } from './TemplateGallery'
 import { PhotoAssignmentSheet } from './PhotoAssignmentSheet'
 import { m, AnimatePresence } from './motion'
+
+const TemplateGallery = lazy(() =>
+  import('./TemplateGallery').then((mod) => ({ default: mod.TemplateGallery })),
+)
 
 const GALLERY_ID = 'empty-gallery-input'
 const CAMERA_ID = 'empty-camera-input'
@@ -171,7 +174,11 @@ export function EmptyState() {
                     />
                   </button>
                 </h3>
-                {showTemplates && <TemplateGallery />}
+                {showTemplates && (
+                  <Suspense fallback={<p className="min-h-[44px] text-sm text-muted">{t('tpl.loading')}</p>}>
+                    <TemplateGallery />
+                  </Suspense>
+                )}
               </section>
 
               {/* Secondary: direct photo add buttons */}
