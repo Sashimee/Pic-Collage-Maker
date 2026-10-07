@@ -369,7 +369,7 @@ const de: Dict = {
   'project.rename': 'Umbenennen',
   'project.duplicate': 'Duplizieren',
   'project.delete': 'Löschen',
-  'project.deleteConfirm': 'Dieses Projekt löschen? Das kann nicht rückgängig gemacht werden.',
+  'project.deleted': 'Projekt gelöscht.',
   'project.save': 'Speichern',
   'project.open': 'Öffnen',
   'header.projects': 'Projekte',
@@ -383,7 +383,8 @@ const de: Dict = {
   'page.add': 'Seite hinzufügen',
   'page.duplicate': 'Seite duplizieren',
   'page.delete': 'Seite löschen',
-  'page.deleteConfirm': 'Diese Seite löschen? Das kann nicht rückgängig gemacht werden.',
+  'page.deleted': 'Seite gelöscht.',
+  'element.deleted': 'Gelöscht.',
 
   'layer.title': 'Ebenen',
   'layer.show': 'Anzeigen',

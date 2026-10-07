@@ -383,7 +383,7 @@ export const en: Dict = {
   'project.rename': 'Rename',
   'project.duplicate': 'Duplicate',
   'project.delete': 'Delete',
-  'project.deleteConfirm': 'Delete this project? This cannot be undone.',
+  'project.deleted': 'Project deleted.',
   'project.save': 'Save',
   'project.open': 'Open',
   'header.projects': 'Projects',
@@ -397,7 +397,8 @@ export const en: Dict = {
   'page.add': 'Add page',
   'page.duplicate': 'Duplicate page',
   'page.delete': 'Delete page',
-  'page.deleteConfirm': 'Delete this page? This cannot be undone.',
+  'page.deleted': 'Page deleted.',
+  'element.deleted': 'Deleted.',
 
   'layer.title': 'Layers',
   'layer.show': 'Show',

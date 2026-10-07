@@ -194,11 +194,29 @@ test.describe('page strip', () => {
     await addButton(page).click()
     await expect(tiles(page)).toHaveCount(2)
 
-    page.on('dialog', (d) => d.accept())
     await page.getByRole('button', { name: 'Delete page' }).click()
 
     await expect(tiles(page)).toHaveCount(1)
     // The last page can't be deleted — the button is the honest place to say so.
     await expect(page.getByRole('button', { name: 'Delete page' })).toBeDisabled()
+  })
+
+  test('a deleted page comes back, with its work, from the toast', async ({ page }) => {
+    await openApp(page)
+    await skipGallery(page)
+    await addPhoto(page, 'first.png')
+    await addButton(page).click()
+    await expect(tiles(page)).toHaveCount(2)
+    await tiles(page).first().click()
+    await expect.poll(() => activePage(page)).toBe(0)
+
+    await page.getByRole('button', { name: 'Delete page' }).click()
+    await expect(tiles(page)).toHaveCount(1)
+    await expect.poll(() => countElements(page, 'photo')).toBe(0)
+
+    await page.getByRole('status').getByRole('button', { name: 'Undo' }).click()
+    await expect(tiles(page)).toHaveCount(2)
+    await expect.poll(() => activePage(page)).toBe(0)
+    await expect.poll(() => countElements(page, 'photo')).toBe(1)
   })
 })

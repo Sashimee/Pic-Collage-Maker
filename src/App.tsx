@@ -26,6 +26,7 @@ import { useIsDesktop } from './hooks/useMediaQuery'
 import { useVersionCheck } from './hooks/useVersionCheck'
 import { useMemoryPressure } from './hooks/useMemoryPressure'
 import { useShortcuts } from './hooks/useShortcuts'
+import { useDeleteUndo } from './hooks/useDeleteUndo'
 import { useImportFiles } from './hooks/useImportFiles'
 import { useLaunchFiles } from './hooks/useLaunchFiles'
 import { UpdateBanner } from './components/UpdateBanner'
@@ -220,6 +221,7 @@ export default function App() {
     )
   }
 
+  useDeleteUndo()
   useShortcuts({
     onExport: () => handleExport('png'),
     onSave: handleSave,

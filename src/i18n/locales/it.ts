@@ -352,7 +352,7 @@ const it: Dict = {
   'project.rename': 'Rinomina',
   'project.duplicate': 'Duplica',
   'project.delete': 'Elimina',
-  'project.deleteConfirm': 'Eliminare questo progetto? Questa azione non può essere annullata.',
+  'project.deleted': 'Progetto eliminato.',
   'project.save': 'Salva',
   'project.open': 'Apri',
   'header.projects': 'Progetti',
@@ -366,7 +366,8 @@ const it: Dict = {
   'page.add': 'Aggiungi pagina',
   'page.duplicate': 'Duplica pagina',
   'page.delete': 'Elimina pagina',
-  'page.deleteConfirm': 'Eliminare questa pagina? L’operazione non può essere annullata.',
+  'page.deleted': 'Pagina eliminata.',
+  'element.deleted': 'Eliminato.',
 
   'layer.title': 'Livelli',
   'layer.show': 'Mostra',

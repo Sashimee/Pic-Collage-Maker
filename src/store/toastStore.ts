@@ -54,3 +54,18 @@ export const useToast = create<ToastState>((set) => ({
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
   },
 }))
+
+/** A toast offering to take back what just happened. The undo runs at most once and takes the toast with it. */
+export function addUndoToast(message: string, label: string, onUndo: () => void, duration = 6000) {
+  let used = false
+  const id = useToast.getState().add(message, 'info', duration, {
+    label,
+    onClick: () => {
+      if (used) return
+      used = true
+      useToast.getState().remove(id)
+      onUndo()
+    },
+  })
+  return id
+}
