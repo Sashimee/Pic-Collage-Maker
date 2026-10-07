@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 import { useTheme } from '../i18n/useTheme'
 import { useEditor } from '../store/editorStore'
+import { useSettings } from '../store/settingsStore'
 import type { PanelTab } from './panels.config'
 import { canCopyImage } from '../lib/exportImage'
 import type { ExportKind } from './HeaderBar'
@@ -52,6 +53,7 @@ export function useCommands({
   const t = useT()
   const theme = useTheme((s) => s.theme)
   const toggleTheme = useTheme((s) => s.toggleTheme)
+  const exportFormat = useSettings((s) => s.exportFormat)
   const hasSelection = useEditor((s) => s.selectedId !== null)
   const canUndo = useEditor((s) => s.past.length > 0)
   const canRedo = useEditor((s) => s.future.length > 0)
@@ -155,8 +157,18 @@ export function useCommands({
       keys: ['Escape'],
       run: () => editor().select(null),
     },
-    { id: 'export-png', label: t('export.png'), keys: ['Mod', 'E'], run: () => onExport('png') },
-    { id: 'export-jpg', label: t('export.jpg'), run: () => onExport('jpg') },
+    {
+      id: 'export-png',
+      label: t('export.png'),
+      keys: exportFormat === 'png' ? ['Mod', 'E'] : undefined,
+      run: () => onExport('png'),
+    },
+    {
+      id: 'export-jpg',
+      label: t('export.jpg'),
+      keys: exportFormat === 'jpg' ? ['Mod', 'E'] : undefined,
+      run: () => onExport('jpg'),
+    },
     { id: 'export-pdf', label: t('export.pdf'), run: () => onExport('pdf') },
     { id: 'export-svg', label: t('export.svg'), run: onExportSVG },
     { id: 'export-book', label: t('export.book'), run: () => onExport('book') },

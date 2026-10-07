@@ -4,6 +4,7 @@ import { Slider, ColorField, Section, Chip } from './ui'
 import { m, SPRING } from './motion'
 import type { WatermarkPosition } from '../types'
 import { WorkspacePresets } from './WorkspacePresets'
+import { GeneralSettings } from './GeneralSettings'
 import { RefreshCcw } from 'lucide-react'
 import { resetTips } from '../lib/firstUse'
 import { useToasts } from './ToastContainer'
@@ -206,6 +207,7 @@ function TipsPanel() {
 export function SettingsPanel() {
   return (
     <div className="flex flex-col gap-6">
+      <GeneralSettings />
       <WorkspacePresets />
       <WatermarkPanel />
       <PrintPanel />
