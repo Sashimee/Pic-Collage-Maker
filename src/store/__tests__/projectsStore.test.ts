@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useProjects } from '../projectsStore'
 import { useEditor } from '../editorStore'
 import { loadProject } from '../../services/localProjects'
@@ -100,5 +100,21 @@ describe('projectsStore', () => {
 
   it('deleting a project that is not there returns null', async () => {
     expect(await useProjects.getState().deleteProject('missing')).toBeNull()
+  })
+
+  it('saves a pending edit as soon as the page is hidden', async () => {
+    const id = await useProjects.getState().createProject('Hidden')
+    useEditor.getState().addText()
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+    try {
+      document.dispatchEvent(new Event('visibilitychange'))
+      await vi.waitFor(async () => {
+        const stored = toProjectDocument((await loadProject(id))?.data)
+        expect(stored?.pages[stored.activePage].elements).toHaveLength(1)
+      }, 1000)
+    } finally {
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+    }
   })
 })

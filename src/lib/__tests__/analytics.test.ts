@@ -94,6 +94,20 @@ describe('opt-out signals', () => {
     expect(scripts()).toHaveLength(0)
   })
 
+  it('honours the opt-out in Settings, saved from an earlier visit', async () => {
+    localStorage.setItem(
+      'pic-collage-settings',
+      JSON.stringify({ state: { analyticsOptOut: true } }),
+    )
+    try {
+      const { initAnalytics } = await load()
+      initAnalytics()
+      expect(scripts()).toHaveLength(0)
+    } finally {
+      localStorage.removeItem('pic-collage-settings')
+    }
+  })
+
   it('does not count local development sessions', async () => {
     setHost('localhost')
     const { initAnalytics, track } = await load()

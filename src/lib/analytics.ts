@@ -11,6 +11,8 @@
  * entry point is wrapped, and a blocked or failed script is a silent no-op.
  */
 
+import { useSettings } from '../store/settingsStore'
+
 // Both are public — they show up in the script URL on every page load.
 const ENDPOINT = 'https://sashimee.goatcounter.com/count'
 const SCRIPT = 'https://gc.zgo.at/count.js'
@@ -46,6 +48,7 @@ declare global {
  */
 function optedOut(): boolean {
   if (typeof navigator === 'undefined' || typeof window === 'undefined') return true
+  if (useSettings.getState().analyticsOptOut) return true
   if (navigator.globalPrivacyControl) return true
   const dnt = navigator.doNotTrack ?? window.doNotTrack ?? navigator.msDoNotTrack
   return dnt === '1' || dnt === 'yes'

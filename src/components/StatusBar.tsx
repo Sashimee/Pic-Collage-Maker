@@ -1,5 +1,6 @@
 import { BetweenVerticalStart, Crosshair, Ruler, Scan } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
+import { formatLength, useSettings } from '../store/settingsStore'
 import { useGuides, type Guides } from '../store/guidesStore'
 import { useT } from '../i18n/useLang'
 
@@ -17,6 +18,7 @@ export function StatusBar() {
   const elements = useEditor((s) => s.elements)
   const selected = useEditor((s) => s.selected?.())
   const guides = useGuides()
+  const units = useSettings((s) => s.units)
 
   const selectedInfo = selected
     ? `${selected.type === 'photo' ? '📷' : selected.type === 'text' ? '🔤' : selected.type === 'sticker' ? '🙂' : '🖊'} ${Math.round(selected.x)},${Math.round(selected.y)}`
@@ -25,7 +27,9 @@ export function StatusBar() {
   return (
     <footer className="hidden sm:flex items-center justify-between gap-4 border-t border-border/60 bg-surface/80 px-4 py-1.5 text-[11px] text-muted backdrop-blur-xl">
       <div className="flex items-center gap-3">
-        <span>{boardWidth} × {boardHeight} px</span>
+        <span>
+          {formatLength(boardWidth, units)} × {formatLength(boardHeight, units)} {units}
+        </span>
         <span className="h-3 w-px bg-border" />
         <span>{elements.length} {elements.length === 1 ? 'layer' : 'layers'}</span>
         <span className="h-3 w-px bg-border" />
