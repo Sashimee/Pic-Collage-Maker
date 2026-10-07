@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import {
   Copy,
   SendToBack,
@@ -94,6 +94,7 @@ interface SelectionBarProps {
 // Floating contextual actions for the currently selected element.
 export function SelectionBar({ measure }: SelectionBarProps) {
   const t = useT()
+  const opacityId = useId()
   const toast = useToasts()
   const selectedId = useEditor((s) => s.selectedId)
   const multiSelected = useEditor((s) => s.multiSelected)
@@ -257,8 +258,11 @@ export function SelectionBar({ measure }: SelectionBarProps) {
                 exit={{ opacity: 0, y: 10 }}
                 className="pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-full bg-surface/80 px-3 py-1.5 shadow-xl ring-1 ring-border backdrop-blur"
               >
-                <label className="text-xs text-muted">{t('common.opacity')}</label>
+                <label htmlFor={opacityId} className="text-xs text-muted">
+                  {t('common.opacity')}
+                </label>
                 <input
+                  id={opacityId}
                   type="range"
                   min={0}
                   max={1}
@@ -271,6 +275,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
                   className="w-24 accent-accent"
                 />
                 <select
+                  aria-label={t('common.blend')}
                   value={el?.blendMode ?? 'normal'}
                   onChange={(e) =>
                     selectedId &&

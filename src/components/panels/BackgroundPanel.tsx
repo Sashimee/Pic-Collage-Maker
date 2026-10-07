@@ -52,6 +52,9 @@ export function BackgroundPanel() {
               {PALETTE.map((c) => (
                 <button
                   key={c}
+                  type="button"
+                  aria-label={`${t('common.color')} ${c.toUpperCase()}`}
+                  aria-pressed={bg.color === c}
                   onClick={() => setBg({ color: c })}
                   style={{ background: c }}
                   className={`h-11 w-11 rounded-full border transition active:scale-90 ${

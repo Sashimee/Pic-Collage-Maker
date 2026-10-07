@@ -31,7 +31,7 @@ test.describe('templates', () => {
   test('template → photos into its frames → export', async ({ page }) => {
     await openApp(page)
     await page.getByRole('button', { name: 'Templates' }).click()
-    await page.getByRole('button', { name: 'Happy Birthday!, Square' }).click()
+    await page.getByRole('button', { name: /^Happy Birthday! .*, Square$/ }).click()
 
     await expect(page.getByText('Template applied')).toBeVisible()
     await expect(page.getByText('Choose a Layout')).toBeHidden()
@@ -69,7 +69,7 @@ test.describe('templates', () => {
       .getByRole('group', { name: 'Templates' })
       .getByRole('button', { name: 'Print', exact: true })
       .click()
-    await page.getByRole('button', { name: /\d{4}, Portrait$/ }).click()
+    await page.getByRole('button', { name: new RegExp(`${new Date().getFullYear()}.*, Portrait$`) }).click()
 
     await expect
       .poll(() => editor(page))
@@ -89,7 +89,7 @@ test.describe('templates', () => {
     await page.locator('#empty-gallery-input').setInputFiles(pngFile())
     await waitForElements(page, 'photo')
     await page.getByRole('button', { name: 'Layout', exact: true }).click()
-    await page.getByRole('button', { name: 'Happy Birthday!, Square' }).click()
+    await page.getByRole('button', { name: /^Happy Birthday! .*, Square$/ }).click()
     await expect.poll(() => editor(page)).toMatchObject({ gridId: 'polaroid-2' })
 
     const gallery = page.getByRole('group', { name: 'Templates' })
@@ -97,7 +97,7 @@ test.describe('templates', () => {
     await expect(page.getByText('Templates you save show up here.')).toBeVisible()
     await page.getByRole('button', { name: 'Save as my template' }).click()
     await expect(page.getByText('Saved to your templates.')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Happy Birthday!', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Happy Birthday! Make a wish', exact: true })).toBeVisible()
 
     await page.reload()
     await page.waitForFunction(() => !!window.__editor, undefined, { timeout: 10_000 })
@@ -113,7 +113,7 @@ test.describe('templates', () => {
     // The reload restores the open Layout panel; clicking its tab now would close it.
     await expect(gallery).toBeVisible()
     await gallery.getByRole('button', { name: 'Mine', exact: true }).click()
-    await page.getByRole('button', { name: 'Happy Birthday!', exact: true }).click()
+    await page.getByRole('button', { name: 'Happy Birthday! Make a wish', exact: true }).click()
     await expect
       .poll(() => editor(page))
       .toMatchObject({

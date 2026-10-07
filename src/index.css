@@ -88,7 +88,9 @@
      the 4.5:1 WCAG AA minimum for the small text it is used for. Same hue,
      slightly darker: 5.44 / 5.04 / 4.62 across surface, surface-2, surface-3. */
   --muted: #616984;
-  --accent: #6d5cf5;
+  /* #6d5cf5 made only 3.85:1 as text on the accent/15 tint of active chips and
+     4.11:1 on the accent/10 buttons. Same hue, darker: 4.86 / 5.18, 5.89 on white. */
+  --accent: #5b4ae6;
   --accent-2: #ec4899;
   --accent-fg: #ffffff;
   --danger: #e11d48;
