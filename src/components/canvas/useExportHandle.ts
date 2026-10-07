@@ -67,6 +67,9 @@ export function useExportHandle(
       // second for Konva to redraw with the decoded originals.
       useEditor.getState().setExporting(true)
       try {
+        // A pack font still loading would be snapshotted as the fallback face,
+        // with chips and curves measured for it.
+        await document.fonts.ready
         await nextFrame()
         const state = useEditor.getState()
         return exportBoard(board, boardWidth, boardHeight, format, {

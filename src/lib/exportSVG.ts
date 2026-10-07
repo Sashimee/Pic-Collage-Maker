@@ -52,6 +52,13 @@ function textToSVG(el: TextElement): string {
     attrs['text-anchor'] =
       el.align === 'center' ? 'middle' : el.align === 'right' ? 'end' : 'start'
   }
+  if (
+    typeof el.letterSpacing === 'number' &&
+    Number.isFinite(el.letterSpacing) &&
+    el.letterSpacing
+  ) {
+    attrs['letter-spacing'] = String(el.letterSpacing)
+  }
   if (el.strokeWidth && el.stroke) {
     attrs.stroke = el.stroke
     attrs['stroke-width'] = String(el.strokeWidth)

@@ -168,6 +168,61 @@ test.describe('visual', () => {
     await expectBoard(page, 'text-styles.png')
   })
 
+  test('text from the font pack, with spacing and alignment', async ({ page }) => {
+    const get = await editor(page)
+    const styles: Record<string, unknown>[] = [
+      {
+        text: 'BEBAS SPACED',
+        fontFamily: 'Bebas Neue, system-ui, sans-serif',
+        fontSize: 110,
+        letterSpacing: 18,
+        y: 140,
+        chip: { color: '#fde68a', padding: 16, radius: 10 },
+      },
+      {
+        text: 'Playfair, centred\nacross two lines',
+        fontFamily: 'Playfair Display, system-ui, sans-serif',
+        fontSize: 72,
+        align: 'center',
+        lineHeight: 1.6,
+        y: 420,
+      },
+      {
+        text: 'Lobster on the right\nshort',
+        fontFamily: 'Lobster, system-ui, sans-serif',
+        fontSize: 64,
+        align: 'right',
+        y: 780,
+        fill: '#db2777',
+      },
+      { text: 'Caveat, tight', fontFamily: 'Caveat', fontSize: 90, letterSpacing: -3, y: 1080 },
+    ]
+    for (const style of styles) {
+      await page.evaluate(
+        ({ get, style }) => {
+          get().addText()
+          const els = get().elements
+          get().updateElement(els[els.length - 1].id, { x: 100, ...style })
+        },
+        { get, style },
+      )
+    }
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts]
+            .filter((f) => f.status === 'loaded')
+            .map((f) => f.family.replace(/"/g, ''))
+            .sort(),
+        ),
+      )
+      .toEqual(expect.arrayContaining(['Bebas Neue', 'Caveat', 'Lobster', 'Playfair Display']))
+    await page.evaluate(
+      () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))),
+    )
+    await expectBoard(page, 'text-pro.png')
+  })
+
   test('PNG and PDF export renders', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-01-01T00:00:00Z'))
     await addPhotos(page, 4)

@@ -1,14 +1,21 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Group, Rect, Text as KonvaText, TextPath } from 'react-konva'
 import type Konva from 'konva'
 import type { TextElement } from '../../types'
 import { toBlend, commonHandlers, lockProps, type NodeProps } from './shared'
+import { loadPackFont, primaryFamily } from '../../lib/fontPack'
 
-function measureText(text: string, fontSize: number, fontFamily: string, fontStyle: string): number {
+function measureText(
+  text: string,
+  fontSize: number,
+  fontFamily: string,
+  fontStyle: string,
+  letterSpacing: number,
+): number {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
   ctx.font = `${fontStyle} ${fontSize}px ${fontFamily}`
-  return ctx.measureText(text).width
+  return ctx.measureText(text).width + letterSpacing * text.length
 }
 
 function parsePathData(d: string): { type: string; vals: number[] }[] {
@@ -67,14 +74,51 @@ function getPathPoint(
 }
 
 export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: NodeProps<TextElement>) {
+  const groupRef = useRef<Konva.Group>(null)
   const textRef = useRef<Konva.Text>(null)
   const [dims, setDims] = useState({ w: 0, h: 0 })
+  const [fontsLoaded, setFontsLoaded] = useState(0)
   const curve = el.curve ?? 0
+  const letterSpacing =
+    typeof el.letterSpacing === 'number' && Number.isFinite(el.letterSpacing) ? el.letterSpacing : 0
+  const family = primaryFamily(el.fontFamily)
+
+  // Konva measures text when its attrs change, not when a font arrives, so a
+  // pack font that loads after the first draw has to re-measure every node.
+  useEffect(() => {
+    const load = loadPackFont(family)
+    if (!load) return
+    let live = true
+    load.then(
+      () => {
+        if (!live) return
+        groupRef.current
+          ?.find<Konva.Text | Konva.TextPath>('Text, TextPath')
+          .forEach((n) => n._setTextData())
+        groupRef.current?.getLayer()?.batchDraw()
+        setFontsLoaded((n) => n + 1)
+      },
+      (err: unknown) => console.error(err),
+    )
+    return () => {
+      live = false
+    }
+  }, [family])
 
   useLayoutEffect(() => {
     const n = textRef.current
     if (n) setDims({ w: n.width(), h: n.height() })
-  }, [el.text, el.fontSize, el.fontFamily, el.fontStyle, el.strokeWidth, el.spans])
+  }, [
+    el.text,
+    el.fontSize,
+    el.fontFamily,
+    el.fontStyle,
+    el.strokeWidth,
+    el.spans,
+    el.lineHeight,
+    letterSpacing,
+    fontsLoaded,
+  ])
 
   const basePaint = {
     fontFamily: el.fontFamily,
@@ -89,6 +133,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
     shadowOpacity: el.shadowBlur ? 0.85 : 0,
     width: el.width,
     lineHeight: el.lineHeight ?? 1.2,
+    letterSpacing,
     align: el.align ?? 'left',
   }
 
@@ -124,7 +169,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
       ]
         .filter(Boolean)
         .join(' ') || 'normal'
-      const w = measureText(span.text, fs, el.fontFamily, style || el.fontStyle)
+      const w = measureText(span.text, fs, el.fontFamily, style || el.fontStyle, letterSpacing)
       const item = { x: offsetX, w, span }
       offsetX += w
       return item
@@ -193,6 +238,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
                 fontFamily={el.fontFamily}
                 fontSize={s.fontSize ?? el.fontSize}
                 fontStyle={style}
+                letterSpacing={letterSpacing}
                 {...fillProps}
                 stroke={el.strokeWidth ? el.stroke : undefined}
                 strokeWidth={el.strokeWidth ?? 0}
@@ -267,6 +313,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
 
   return (
     <Group
+      ref={groupRef}
       id={el.id}
       name="element"
       x={el.x}

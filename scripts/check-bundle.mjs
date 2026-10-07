@@ -5,7 +5,7 @@
 // Needs a build with hidden sourcemaps — the maps are how we see which modules
 // went into each chunk:
 //   npm run build -- --sourcemap hidden && npm run check:bundle
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
@@ -69,6 +69,27 @@ if (totalKb > BUDGET_GZIP_KB) {
     `✗ Eager JS is over budget by ${(totalKb - BUDGET_GZIP_KB).toFixed(1)} kB gzip. ` +
       'Lazy-load the new code (dynamic import) or, if it must be eager, raise BUDGET_GZIP_KB in its own commit.',
   )
+}
+
+// Font-pack files load on first use; the service worker must not precache them.
+const packFonts = readdirSync(join(dist, 'assets')).filter((f) => /^pack-.+\.woff2$/.test(f))
+if (!packFonts.length) {
+  failed = true
+  console.error('✗ No font-pack files (assets/pack-*.woff2) in the build — were they inlined or renamed?')
+}
+const swPath = join(dist, 'sw.js')
+if (!existsSync(swPath)) {
+  failed = true
+  console.error(`✗ ${swPath} is missing — the PWA build did not run.`)
+} else {
+  const sw = readFileSync(swPath, 'utf8')
+  const precached = packFonts.filter((f) => sw.includes(`assets/${f}`))
+  if (precached.length) {
+    failed = true
+    console.error(`✗ Font-pack files are in the service-worker precache:\n    ${precached.join('\n    ')}`)
+  } else {
+    console.log(`Font pack: ${packFonts.length} files, none precached`)
+  }
 }
 
 process.exit(failed ? 1 : 0)

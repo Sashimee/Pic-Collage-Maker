@@ -77,6 +77,15 @@ export default defineConfig({
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for WASM models
         globPatterns: ['**/*.{js,css,html,png,jpg,svg,ico,woff2}'],
+        // The font pack is cached when a text first uses a family, not at install.
+        globIgnores: ['**/assets/pack-*.woff2'],
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/pack-[^/]+\.woff2$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'font-pack', cacheableResponse: { statuses: [200] } },
+          },
+        ],
       },
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'og-image.png'],
       manifest: {

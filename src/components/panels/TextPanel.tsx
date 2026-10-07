@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { AlignCenter, AlignLeft, AlignRight } from 'lucide-react'
 import { useEditor } from '../../store/editorStore'
 import { FontUploader } from '../FontUploader'
 import { loadCustomFonts } from '../../lib/fonts'
+import { FONT_PACK } from '../../lib/fontPack'
 import { analyzePhoto, getSuggestions } from '../../ai/textSuggestions'
 import type { PhotoElement, TextElement, TextSpan } from '../../types'
 import { ColorField, PrimaryButton, Section, Slider } from '../ui'
@@ -21,6 +23,12 @@ const FONTS = [
   'Comic Sans MS',
   'Brush Script MT',
 ]
+
+const ALIGNS = [
+  { id: 'left', Icon: AlignLeft, label: 'text.alignLeft' },
+  { id: 'center', Icon: AlignCenter, label: 'text.alignCenter' },
+  { id: 'right', Icon: AlignRight, label: 'text.alignRight' },
+] as const
 
 const inputClass =
   'min-h-[44px] rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm text-text'
@@ -63,7 +71,10 @@ export function TextPanel() {
     loadCustomFonts().then((f) => setCustomFonts(f.map((x) => x.family)))
   }, [])
   useEffect(() => reloadFonts(), [reloadFonts])
-  const fontOptions = [...FONTS, ...customFonts.filter((f) => !FONTS.includes(f))]
+  const fontOptions = [
+    ...FONTS,
+    ...customFonts.filter((f) => !FONTS.includes(f) && !FONT_PACK.some((p) => p.family === f)),
+  ]
 
   // AI caption suggestions from the selected photo (or the first photo).
   const elements = useEditor((s) => s.elements)
@@ -148,6 +159,13 @@ export function TextPanel() {
                     {f}
                   </option>
                 ))}
+                <optgroup label={t('font.pack')}>
+                  {FONT_PACK.map(({ family }) => (
+                    <option key={family} value={family}>
+                      {family}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
               <button
                 onClick={() =>
@@ -218,6 +236,42 @@ export function TextPanel() {
               max={240}
               value={text.fontSize}
               onChange={(v) => update(selectedId, { fontSize: v })}
+            />
+            <div role="group" aria-label={t('text.align')} className="flex gap-2">
+              {ALIGNS.map(({ id, Icon, label }) => {
+                const on = (text.align ?? 'left') === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-label={t(label)}
+                    aria-pressed={on}
+                    onClick={() => update(selectedId, { align: id })}
+                    className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg border transition active:scale-95 ${
+                      on
+                        ? 'border-accent bg-accent text-accent-fg'
+                        : 'border-border bg-surface-2 text-text/80 hover:bg-surface-3'
+                    }`}
+                  >
+                    <Icon size={18} aria-hidden />
+                  </button>
+                )
+              })}
+            </div>
+            <Slider
+              label={t('text.lineHeight')}
+              min={0.8}
+              max={2.5}
+              step={0.05}
+              value={text.lineHeight ?? 1.2}
+              onChange={(v) => update(selectedId, { lineHeight: v })}
+            />
+            <Slider
+              label={t('text.letterSpacing')}
+              min={-5}
+              max={40}
+              value={text.letterSpacing ?? 0}
+              onChange={(v) => update(selectedId, { letterSpacing: v })}
             />
             {/* Span mode */}
             <div className="flex items-center gap-2 pt-1">
