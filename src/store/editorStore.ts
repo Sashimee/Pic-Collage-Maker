@@ -212,7 +212,11 @@ interface EditorState {
   addText: () => void
   addSticker: (emoji: string) => void
   addDrawing: (points: number[], stroke: string, strokeWidth: number) => void
-  addShape: (shapeType: import('../types').ShapeType, fill?: string) => void
+  addShape: (
+    shapeType: import('../types').ShapeType,
+    fill?: string,
+    custom?: { path: string; libraryId: string },
+  ) => void
   setTool: (tool: 'select' | 'draw') => void
   setBrush: (patch: { color?: string; size?: number }) => void
   updateElement: (id: string, patch: Partial<CanvasElement>) => void
@@ -453,15 +457,16 @@ export const useEditor = create<EditorState>((set, get) => ({
       return { elements: [...s.elements, drawing], ...record(s, 'history.draw') }
     }),
 
-  addShape: (shapeType, fill = '#6366f1') =>
+  addShape: (shapeType, fill = '#6366f1', custom) =>
     set((s) => {
       const shape: ShapeElement = {
         id: uid(),
         type: 'shape',
         shapeType,
         fill,
+        ...custom,
         x: s.boardWidth / 2 - 60,
-        y: s.boardHeight / 2 - 40,
+        y: s.boardHeight / 2 - (custom ? 60 : 40),
         rotation: 0,
         scaleX: 1,
         scaleY: 1,

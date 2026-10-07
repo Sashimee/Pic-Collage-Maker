@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useEditor } from '../../store/editorStore'
 import { EMOJI_CATEGORIES } from '../../lib/emojis'
+import { ShapeLibrary } from './ShapeLibrary'
 
 export function StickerPanel() {
   const addSticker = useEditor((s) => s.addSticker)
@@ -9,6 +10,7 @@ export function StickerPanel() {
 
   return (
     <div className="flex flex-col gap-2">
+      <ShapeLibrary />
       <div className="scroll-x flex gap-1 overflow-x-auto pb-1">
         {EMOJI_CATEGORIES.map((c, i) => (
           <button

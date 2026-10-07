@@ -85,6 +85,7 @@ function getHeight(el: CanvasElement): number {
     if (el.shapeType === 'arrow') return 12 // thin
     if (el.shapeType === 'star' || el.shapeType === 'triangle') return 120
     if (el.shapeType === 'circle') return 100
+    if (el.shapeType === 'custom') return 120
     return 80 // rect default
   }
   return 100

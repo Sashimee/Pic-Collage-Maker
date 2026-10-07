@@ -337,6 +337,25 @@ describe('editorStore', () => {
     })
   })
 
+  describe('addShape', () => {
+    it('adds a library shape with its path and library id, centred on the board', () => {
+      useEditor
+        .getState()
+        .addShape('custom', '#ff0000', { path: 'M0,0 L120,0 L60,120 Z', libraryId: 'arrowRight' })
+      const { elements, selectedId, boardWidth, boardHeight } = useEditor.getState()
+      expect(elements[0]).toMatchObject({
+        type: 'shape',
+        shapeType: 'custom',
+        fill: '#ff0000',
+        path: 'M0,0 L120,0 L60,120 Z',
+        libraryId: 'arrowRight',
+        x: boardWidth / 2 - 60,
+        y: boardHeight / 2 - 60,
+      })
+      expect(selectedId).toBe(elements[0].id)
+    })
+  })
+
   describe('canvas zoom floor', () => {
     it('clamps the zoom to 0.25 by default', () => {
       useEditor.getState().setCanvasZoom(0.05)
