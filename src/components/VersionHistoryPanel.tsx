@@ -5,6 +5,7 @@ import { useProjects } from '../store/projectsStore'
 import { useT } from '../i18n/useLang'
 import { useToasts } from './ToastContainer'
 import { Clock, RotateCcw, Trash2 } from 'lucide-react'
+import { StepHistory } from './StepHistory'
 
 function formatDate(ts: number) {
   const d = new Date(ts)
@@ -69,6 +70,7 @@ export default function VersionHistoryPanel() {
 
   return (
     <div className="flex flex-col gap-3">
+      <StepHistory />
       <div className="flex items-center justify-between">
         <h3 className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted">
           {t('version.title')}
