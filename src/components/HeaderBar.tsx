@@ -82,6 +82,7 @@ export function HeaderBar({
   // single-page ones only earn their space when there is more than one page.
   const multiPage = useProjects((s) => s.pages.length) > 1
   const saveActiveProject = useProjects((s) => s.saveActiveProject)
+  const closeProject = useProjects((s) => s.closeProject)
   const toast = useToasts()
   // Hidden once installed, and on browsers with no install route at all
   // (Firefox), where an entry point would only lead nowhere.
@@ -109,8 +110,22 @@ export function HeaderBar({
     window.location.reload()
   }
 
-  const handleNew = () => {
+  // A second New while the first awaits its save would clear the canvas before that save reads it.
+  const clearing = useRef(false)
+  const handleNew = async () => {
+    if (clearing.current) return
     if (hasElements && window.confirm(t('header.clearConfirm'))) {
+      clearing.current = true
+      try {
+        // Still attached, the project autosave would write the blank canvas over the open project.
+        await closeProject()
+      } catch (err) {
+        console.error('Saving the project before New failed', err)
+        toast.error(t('project.saveFailed'))
+        return
+      } finally {
+        clearing.current = false
+      }
       clearAll()
       void clearPersisted()
       toast.info(t('toast.canvasCleared'))

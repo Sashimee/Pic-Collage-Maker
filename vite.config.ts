@@ -99,6 +99,21 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: BASE,
         scope: BASE,
+        file_handlers: [
+          {
+            action: BASE,
+            accept: {
+              'application/x-piccollage': ['.piccollage'],
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+              'image/webp': ['.webp'],
+              'image/gif': ['.gif'],
+              'image/avif': ['.avif'],
+              'image/heic': ['.heic'],
+              'image/heif': ['.heif'],
+            },
+          },
+        ],
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
