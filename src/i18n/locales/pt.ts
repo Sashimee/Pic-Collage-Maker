@@ -706,6 +706,13 @@ const pt: Dict = {
   'tpl.text.youreInvited': 'Você está convidado',
   'tpl.text.joinUs': 'Venha comemorar com a gente',
   'tpl.text.ourYear': 'Nosso ano em fotos',
+  'cmd.title': 'Paleta de comandos',
+  'cmd.placeholder': 'Digite um comando…',
+  'cmd.empty': 'Nenhum comando correspondente',
+  'cmd.shortcuts': 'Atalhos de teclado',
+  'cmd.deselect': 'Desmarcar',
+  'cmd.openPanel': 'Abrir painel',
+  'cmd.nudge': 'Mover a seleção (Shift: 10×)',
 }
 
 export default pt

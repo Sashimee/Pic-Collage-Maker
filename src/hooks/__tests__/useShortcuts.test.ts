@@ -187,4 +187,49 @@ describe('useShortcuts', () => {
       expect(JSON.parse(writeText.mock.calls[0][0])).toMatchObject({ id: a })
     })
   })
+
+  describe('command palette', () => {
+    it('ctrl+k opens the palette', () => {
+      const onCommandPalette = vi.fn()
+      renderHook(() => useShortcuts({ onCommandPalette }))
+      press('k', { ctrl: true })
+      expect(onCommandPalette).toHaveBeenCalledOnce()
+    })
+
+    it('? opens the shortcut list, and a plain k does nothing', () => {
+      const onCommandPalette = vi.fn()
+      const onShortcutHelp = vi.fn()
+      renderHook(() => useShortcuts({ onCommandPalette, onShortcutHelp }))
+      press('k')
+      press('?', { shift: true })
+      expect(onCommandPalette).not.toHaveBeenCalled()
+      expect(onShortcutHelp).toHaveBeenCalledOnce()
+    })
+
+    it('leaves ? and ctrl+k to a dialog that is already open', () => {
+      const onCommandPalette = vi.fn()
+      const onShortcutHelp = vi.fn()
+      renderHook(() => useShortcuts({ onCommandPalette, onShortcutHelp }))
+      const dialog = document.createElement('div')
+      dialog.setAttribute('role', 'dialog')
+      const button = document.createElement('button')
+      dialog.appendChild(button)
+      document.body.appendChild(dialog)
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))
+      button.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))
+      dialog.remove()
+      expect(onCommandPalette).not.toHaveBeenCalled()
+      expect(onShortcutHelp).not.toHaveBeenCalled()
+    })
+
+    it('? typed into a text field stays a character', () => {
+      const onShortcutHelp = vi.fn()
+      renderHook(() => useShortcuts({ onShortcutHelp }))
+      const input = document.createElement('input')
+      document.body.appendChild(input)
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true }))
+      input.remove()
+      expect(onShortcutHelp).not.toHaveBeenCalled()
+    })
+  })
 })
