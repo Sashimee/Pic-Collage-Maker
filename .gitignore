@@ -23,3 +23,4 @@ playwright-report/
 
 # Session resume state (working file, not project docs)
 RESUME.md
+coverage/
