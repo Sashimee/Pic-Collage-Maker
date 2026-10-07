@@ -7,6 +7,7 @@ import type {
   PhotoElement,
   Background,
 } from '../types'
+import { SHADOW_OPACITY, resolveStyling, type ResolvedStyling } from './photoStyling'
 
 /** Escape XML special characters for safe SVG text content. */
 function xmlEscape(str: string): string {
@@ -144,6 +145,10 @@ function photoToSVG(el: PhotoElement): string {
     // but for simplicity we rely on the underlying image already being cropped by Konva.
     // We preserve the full image here.
   }
+  const styling = resolveStyling(el)
+  if (styling.radius || styling.border || styling.shadow || styling.card) {
+    return styledPhotoToSVG(el, attrs.opacity, styling)
+  }
   const attrStr = Object.entries(attrs)
     .map(([k, v]) => `${k}="${v}"`)
     .join(' ')
@@ -151,6 +156,54 @@ function photoToSVG(el: PhotoElement): string {
   return defs.length > 0
     ? `<defs>${defs.join('')}</defs>${imgTag}`
     : imgTag
+}
+
+function roundRectPath(x: number, y: number, w: number, h: number, radius: number): string {
+  const r = Math.min(radius, w / 2, h / 2)
+  if (r <= 0) return `M ${x},${y} H ${x + w} V ${y + h} H ${x} Z`
+  return (
+    `M ${x + r},${y} H ${x + w - r} A ${r},${r} 0 0 1 ${x + w},${y + r} ` +
+    `V ${y + h - r} A ${r},${r} 0 0 1 ${x + w - r},${y + h} ` +
+    `H ${x + r} A ${r},${r} 0 0 1 ${x},${y + h - r} ` +
+    `V ${y + r} A ${r},${r} 0 0 1 ${x + r},${y} Z`
+  )
+}
+
+/** Mirrors PhotoNode's layering: shadow, polaroid card, clipped photo, inner border. */
+function styledPhotoToSVG(el: PhotoElement, opacity: string, styling: ResolvedStyling): string {
+  const { radius, border, shadow, card } = styling
+  const w = el.width
+  const h = el.height
+  const frame = radius ? roundRectPath(0, 0, w, h, radius) : shapeClipPath(el.shape ?? 'rect', w, h)
+  const clipId = `clip-${el.id}`
+  const defs = [`<clipPath id="${clipId}"><path d="${frame}" /></clipPath>`]
+  const body: string[] = []
+  if (shadow) {
+    const shadowId = `shadow-${el.id}`
+    defs.push(
+      `<filter id="${shadowId}" x="-50%" y="-50%" width="200%" height="200%">` +
+        `<feDropShadow dx="0" dy="${shadow.offset}" stdDeviation="${shadow.blur / 2}" ` +
+        `flood-color="${xmlEscape(shadow.color)}" flood-opacity="${SHADOW_OPACITY}" />` +
+        `<feComposite in2="SourceAlpha" operator="out" /></filter>`,
+    )
+    const outline = card
+      ? roundRectPath(card.x, card.y, card.width, card.height, card.radius)
+      : frame
+    const fill = card ? '#ffffff' : (border?.color ?? '#ffffff')
+    body.push(`<path d="${outline}" fill="${xmlEscape(fill)}" filter="url(#${shadowId})" />`)
+  }
+  if (card) {
+    body.push(
+      `<path d="${roundRectPath(card.x, card.y, card.width, card.height, card.radius)}" fill="#ffffff" />`,
+    )
+  }
+  body.push(`<image href="${el.src}" width="${w}" height="${h}" clip-path="url(#${clipId})" />`)
+  if (border) {
+    body.push(
+      `<path d="${frame}" fill="none" stroke="${xmlEscape(border.color)}" stroke-width="${border.width * 2}" clip-path="url(#${clipId})" />`,
+    )
+  }
+  return `<defs>${defs.join('')}</defs><g transform="${buildTransform(el)}" opacity="${opacity}">${body.join('')}</g>`
 }
 
 /** Produce an SVG clip-path `d` string for a given photo shape filling a w×h box. */

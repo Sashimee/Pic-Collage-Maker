@@ -69,6 +69,16 @@ export interface CropRect {
   height: number
 }
 
+export interface PhotoStyling {
+  borderWidth?: number
+  borderColor?: string
+  shadowBlur?: number
+  shadowOffset?: number
+  shadowColor?: string
+  radius?: number // rect shape only
+  polaroid?: boolean // rect shape only: a white card around the photo, deeper at the bottom
+}
+
 export interface PhotoElement extends BaseElement {
   type: 'photo'
   src: string // display source (usually the preview variant)
@@ -85,6 +95,7 @@ export interface PhotoElement extends BaseElement {
   straighten?: number // degrees, free mode only; the photo zooms to keep its frame covered
   flipX?: boolean
   flipY?: boolean
+  styling?: PhotoStyling // free mode only
   // Per-cell framing in grid mode (ignored in free mode):
   /**
    * Grid slot this photo is pinned to. Unpinned photos fill the remaining
