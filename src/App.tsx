@@ -44,6 +44,7 @@ import { useEditor, type LoadedDocument } from './store/editorStore'
 import { useT } from './i18n/useLang'
 import { useProjects, defaultProjectName } from './store/projectsStore'
 import { useWorkspace } from './store/workspaceStore'
+import { useSettings } from './store/settingsStore'
 import {
   canCopyImage,
   copyImage,
@@ -223,7 +224,7 @@ export default function App() {
 
   useDeleteUndo()
   useShortcuts({
-    onExport: () => handleExport('png'),
+    onExport: () => handleExport(useSettings.getState().exportFormat),
     onSave: handleSave,
     onOpenProject: () => setProjectManagerOpen(true),
     onCopyImage: canCopyImage() ? copyBoard : undefined,
@@ -337,6 +338,9 @@ export default function App() {
     // It also folds the live page into the page list, which is what makes the
     // other pages readable below.
     if (sharing) await ensureProjectSaved()
+    // The page list lags the page on screen until the autosave runs, up to its delay
+    // setting after the last edit, so an export straight after an edit would miss it.
+    else if (wholeProject && useProjects.getState().activeProjectId) await ensureProjectSaved()
 
     const urls = wholeProject
       ? await renderAllPages(format)

@@ -17,6 +17,7 @@ import {
   type ProjectDocument,
 } from '../lib/projectSchema'
 import { hasCrashed } from '../lib/crashState'
+import { useSettings } from './settingsStore'
 
 export interface ProjectMeta {
   id: string
@@ -191,6 +192,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   createProject: async (name) => {
     if (typeof indexedDB === 'undefined') return ''
+    await flushPendingSave()
     const id = uid()
     const now = Date.now()
     const snapshot = singlePage(getSnapshot())
@@ -214,6 +216,8 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   openProject: async (id) => {
     if (typeof indexedDB === 'undefined') return
+    // The edits still waiting on the autosave belong to the project being left.
+    await flushPendingSave()
     const project = await loadProject(id)
     if (!project) return
     // Migrates a legacy single-document project into a one-page one; returns
@@ -244,6 +248,7 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   duplicateProject: async (id) => {
     if (typeof indexedDB === 'undefined') return ''
+    if (id === get().activeProjectId) await flushPendingSave()
     const project = await loadProject(id)
     if (!project) throw new Error('Project not found')
     const newId = uid()
@@ -318,13 +323,8 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   /* ---- pages ----------------------------------------------------------- */
 
   closeProject: async () => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-      saveTimeout = null
-      if (!hasCrashed()) trackSave().catch(() => {})
-    }
     // A save still under way would set this project's pages again after the detach.
-    await inFlightSave
+    await flushPendingSave()
     set({ activeProjectId: null, pages: [], activePage: 0 })
   },
 
@@ -436,6 +436,15 @@ function trackSave(): Promise<void> {
     if (inFlightSave === save) inFlightSave = null
   })
 }
+/** Save now whatever the autosave is still waiting on, and wait for every save under way. */
+async function flushPendingSave(): Promise<void> {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+    saveTimeout = null
+    if (!hasCrashed()) trackSave().catch(() => {})
+  }
+  await inFlightSave
+}
 useEditor.subscribe(() => {
   if (typeof indexedDB === 'undefined') return
   const { activeProjectId } = useProjects.getState()
@@ -445,8 +454,15 @@ useEditor.subscribe(() => {
     saveTimeout = null
     if (hasCrashed()) return
     trackSave().catch(() => {})
-  }, 1500)
+  }, useSettings.getState().autosaveDelay)
 })
+
+// The autosave delay is a setting, up to 30 s: leaving the page must not drop the edit still waiting on it.
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingSave().catch(() => {})
+  })
+}
 
 // Dev-only test seam, alongside `window.__editor` in editorStore. Lets the e2e
 // suite drive project save/open across a page reload, which is the only way to
