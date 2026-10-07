@@ -109,8 +109,7 @@ Pic-Collage-Maker/
     │   ├── useContextMenu.ts   # right-click / long-press menu state
     │   ├── useMemoryPressure.ts# drops caches when the device is under memory pressure
     │   ├── useVersionCheck.ts  # same-origin version.json poll → UpdateBanner
-    │   ├── useShortcuts.ts     # the main keyboard map (undo, copy/paste, nudge, save/export)
-    │   └── useKeyboard.ts      # a second, overlapping shortcut map — see issue #3
+    │   └── useShortcuts.ts     # the one keyboard map (undo, copy/paste, nudge, layer order, save/export)
     ├── lib/
     │   ├── grids.ts            # grid presets (GRID_LAYOUTS) + cellRect/assignSlots
     │   ├── customLayout.ts     # draw-your-own layouts: polygon zones, stroke → split/circle

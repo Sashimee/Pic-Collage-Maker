@@ -49,7 +49,6 @@ import { track } from './lib/analytics'
 import { InstallSheet } from './components/InstallSheet'
 import { useInstall } from './lib/pwaInstall'
 import { ToastContainer, useToasts } from './components/ToastContainer'
-import { useDefaultShortcuts } from './hooks/useKeyboard'
 import { OnboardingOverlay } from './components/Onboarding'
 import { restoreCustomFonts } from './lib/fonts'
 import { extractFirstExif, injectExifIntoJpeg } from './lib/exifHelpers'
@@ -121,7 +120,6 @@ export default function App() {
 
   useVersionCheck()
   useMemoryPressure()
-  useDefaultShortcuts()
 
   // Restore custom fonts on startup
   useEffect(() => {

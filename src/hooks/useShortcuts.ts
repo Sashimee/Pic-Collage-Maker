@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useEditor } from '../store/editorStore'
+import { useT } from '../i18n/useLang'
 
 export interface ShortcutCallbacks {
   onExport?: () => void
@@ -11,6 +12,9 @@ export interface ShortcutCallbacks {
 export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
   const cbRef = useRef(callbacks)
   cbRef.current = callbacks
+  const t = useT()
+  const tRef = useRef(t)
+  tRef.current = t
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -88,6 +92,27 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
         e.preventDefault()
         const sel = useEditor.getState().selectedId
         if (sel) useEditor.getState().sendToBack(sel)
+        return
+      }
+
+      // Bring forward / Send backward
+      if (mod && !e.shiftKey && key === ']') {
+        e.preventDefault()
+        const sel = useEditor.getState().selectedId
+        if (sel) useEditor.getState().bringForward(sel)
+        return
+      }
+      if (mod && !e.shiftKey && key === '[') {
+        e.preventDefault()
+        const sel = useEditor.getState().selectedId
+        if (sel) useEditor.getState().sendBackward(sel)
+        return
+      }
+
+      // Clear canvas
+      if (mod && e.shiftKey && key === 'c') {
+        e.preventDefault()
+        if (window.confirm(tRef.current('header.clearConfirm'))) useEditor.getState().clearAll()
         return
       }
 
