@@ -16,6 +16,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
+import type { BaseElement } from '../types'
 import { useT } from '../i18n/useLang'
 import { m, AnimatePresence } from './motion'
 import { detectFaces, computeSmartCrop } from '../ai/faceDetection'
@@ -182,7 +183,7 @@ export function SelectionBar() {
                   value={el?.blendMode ?? 'normal'}
                   onChange={(e) =>
                     selectedId &&
-                    updateElement(selectedId, { blendMode: e.target.value as any })
+                    updateElement(selectedId, { blendMode: e.target.value as BaseElement['blendMode'] })
                   }
                   className="min-h-[44px] rounded-lg border border-border bg-surface px-2 py-1 text-xs text-text outline-none"
                 >

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
+import type { CanvasElement } from '../types'
 
 export interface ShortcutCallbacks {
   onExport?: () => void
@@ -75,8 +76,8 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
       if (mod && e.shiftKey && key === 'g') {
         e.preventDefault()
         const sel = useEditor.getState().selected()
-        if (sel && (sel as any).groupId) {
-          useEditor.getState().ungroupElements((sel as any).groupId)
+        if (sel?.groupId) {
+          useEditor.getState().ungroupElements(sel.groupId)
         }
         return
       }
@@ -147,7 +148,7 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
               ? crypto.randomUUID()
               : Math.random().toString(36).slice(2)
             const store = useEditor.getState()
-            const newEl = { ...rest, id: newId, x: (x ?? 0) + 20, y: (y ?? 0) + 20 } as any
+            const newEl = { ...rest, id: newId, x: (x ?? 0) + 20, y: (y ?? 0) + 20 } as CanvasElement
             if (newEl.type === 'photo') {
               store.updateElement(id, newEl) // can't truly add via update, we need addPhoto
               // Instead: manually insert into elements array

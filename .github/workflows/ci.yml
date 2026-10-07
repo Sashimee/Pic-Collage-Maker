@@ -20,7 +20,7 @@ jobs:
       # "out of sync" under npm ci. See CLAUDE.md → Known gotchas.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Lint (TypeScript)
+      - name: Lint (tsc + ESLint)
         run: npm run lint
       - name: Test (Vitest)
         run: npx vitest run

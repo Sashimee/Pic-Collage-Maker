@@ -1,0 +1,7 @@
+dist
+dist-lh
+dev-dist
+test-results
+playwright-report
+.lighthouseci
+package-lock.json

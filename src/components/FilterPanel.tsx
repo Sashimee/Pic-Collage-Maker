@@ -3,7 +3,7 @@ import { Trash2, GripVertical, Plus, Wand2, Sparkles } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { FILTER_PRESETS, computeFilterConfigFromStack } from '../lib/filters'
 import { useT } from '../i18n/useLang'
-import type { FilterOperation } from '../types'
+import type { FilterOperation, FilterPreset } from '../types'
 import { Chip, Section, Slider } from './ui'
 import { useToasts } from './ToastContainer'
 import { autoEnhance } from '../ai/autoEnhance'
@@ -67,7 +67,7 @@ export function FilterPanel() {
     toast.info(t('filter.removed'))
   }
 
-  const addOp = (type: string) => {
+  const addOp = (type: (typeof FILTER_OPS)[number]['type']) => {
     const def = FILTER_OPS.find((o) => o.type === type)
     if (!def) return
     const newOp: FilterOperation =
@@ -75,15 +75,15 @@ export function FilterPanel() {
         ? { type: 'blur', radius: def.default }
         : type === 'vignette'
           ? { type: 'vignette', strength: def.default }
-          : { type: type as any, value: def.default }
+          : { type, value: def.default }
     updateStack([...stack, newOp])
     setExpanded((prev) => new Set(prev).add(stack.length))
   }
 
-  const addPreset = (id: string) => {
+  const addPreset = (id: FilterPreset) => {
     const next = stack.filter((op) => op.type !== 'preset') as FilterOperation[]
     if (id !== 'none') {
-      next.push({ type: 'preset', id: id as any })
+      next.push({ type: 'preset', id })
     }
     updateStack(next)
   }
@@ -93,7 +93,7 @@ export function FilterPanel() {
       { type: 'brightness', value: 0 },
       { type: 'contrast', value: 0 },
       { type: 'saturation', value: 0 },
-      { type: 'preset', id: 'none' } as any,
+      { type: 'preset', id: 'none' },
     ])
     updateFilters(selectedId, { brightness: 0, contrast: 0, saturation: 0, preset: 'none', blur: 0, vignette: 0 })
     toast.success(t('filter.resetAll'))

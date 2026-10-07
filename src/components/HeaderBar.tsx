@@ -359,7 +359,7 @@ export function HeaderBar({
                     </label>
                   </m.div>
                   {/* Backdrop */}
-                  <div className="fixed inset-0 z-30" onClick={() => setExportOpen(false)} />
+                  <div className="fixed inset-0 z-30" aria-hidden="true" onClick={() => setExportOpen(false)} />
                 </>
               )}
             </AnimatePresence>

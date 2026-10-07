@@ -264,6 +264,7 @@ export function SidePanel({ panels, width }: { panels: PanelsApi; width?: number
         )}
       </AnimatePresence>
       <div
+        aria-hidden="true"
         onMouseDown={handleMouseDown}
         className={`absolute left-0 top-0 h-full w-1.5 cursor-ew-resize transition ${
           isResizing ? 'bg-accent/60' : 'bg-transparent hover:bg-accent/30'

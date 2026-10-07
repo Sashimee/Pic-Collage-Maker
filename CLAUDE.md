@@ -40,7 +40,8 @@ that records anonymous visit + funnel counts. Don't add runtime deps casually.
 npm run dev            # dev server with HMR (http://localhost:5173/<base>/)
 npm run build          # tsc -b && vite build  →  dist/
 npm run preview        # serve the production build locally
-npm run lint           # type-check only (tsc -b --noEmit)
+npm run lint           # tsc -b --noEmit + eslint (flat config: eslint.config.js)
+npm run format         # prettier --write . (config only; not CI-gated yet)
 npm run test           # vitest run (unit)
 npm run test:e2e       # playwright, e2e/playwright.config.ts (starts its own dev server)
 npm run build:lh       # root-based build into dist-lh/, for Lighthouse only — see gotchas
