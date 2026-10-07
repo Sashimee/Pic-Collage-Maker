@@ -354,6 +354,7 @@ const fr: Dict = {
   'project.open': 'Ouvrir',
   'header.projects': 'Projets',
   'project.saved': 'Projet enregistré',
+  'project.saveFailed': 'Impossible d\'enregistrer le projet, rien n\'a donc été effacé. Réessayez.',
   'page.title': 'Pages',
   'page.label': 'Page',
   'page.add': 'Ajouter une page',

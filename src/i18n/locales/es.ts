@@ -354,6 +354,7 @@ const es: Dict = {
   'project.open': 'Abrir',
   'header.projects': 'Proyectos',
   'project.saved': 'Proyecto guardado',
+  'project.saveFailed': 'No se pudo guardar el proyecto, así que no se borró nada. Inténtalo de nuevo.',
   'page.title': 'Páginas',
   'page.label': 'Página',
   'page.add': 'Añadir página',
