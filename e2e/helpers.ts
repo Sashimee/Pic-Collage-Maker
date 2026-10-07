@@ -291,3 +291,11 @@ export async function loopOnCanvas(page: Page, centre: [number, number], radiusP
   await page.mouse.up()
   await afterFrame(page)
 }
+
+/** Removes the File System Access pickers, as in Firefox and Safari, so project files save as downloads. */
+export async function withoutFilePickers(page: Page) {
+  await page.addInitScript(() => {
+    for (const name of ['showSaveFilePicker', 'showOpenFilePicker'])
+      Object.defineProperty(window, name, { value: undefined, configurable: true })
+  })
+}

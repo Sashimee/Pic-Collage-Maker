@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { test, expect, type Page } from '@playwright/test'
-import { openApp, pngFile, waitForElements } from './helpers'
+import { openApp, pngFile, waitForElements, withoutFilePickers } from './helpers'
 
 interface Launched {
   name: string
@@ -125,6 +125,7 @@ test('a .piccollage opened from the OS replaces the board once confirmed', async
   page,
   browser,
 }) => {
+  await withoutFilePickers(page)
   await openApp(page)
   await page.locator('#empty-gallery-input').setInputFiles(pngFile())
   await waitForElements(page, 'photo', 1)
@@ -147,6 +148,7 @@ test('a .piccollage opened from the OS replaces the board once confirmed', async
 })
 
 test('declining keeps the restored board', async ({ page, browser }) => {
+  await withoutFilePickers(page)
   await openApp(page)
   await page.locator('#empty-gallery-input').setInputFiles(pngFile())
   await waitForElements(page, 'photo', 1)

@@ -5,11 +5,13 @@ import {
   FileCode, Maximize, FileText, Package, Smartphone,
   BookOpen, Proportions, Copy,
 } from 'lucide-react'
+import { useRef } from 'react'
 import { useEditor } from '../../store/editorStore'
 import { useProjects } from '../../store/projectsStore'
 import { useT, useLang } from '../../i18n/useLang'
 import { useTheme } from '../../i18n/useTheme'
 import { useInstall } from '../../lib/pwaInstall'
+import { canPickFiles, useLinkedFileName } from '../../lib/linkedFile'
 import { ActionSheet, ActionItem, ActionDivider, ActionCancel } from '../ActionSheet'
 import type { ExportKind } from '../HeaderBar'
 import { canCopyImage } from '../../lib/exportImage'
@@ -25,7 +27,9 @@ interface Props {
   onNew: () => void
   onBatchExport: () => void
   onSaveAsFile: () => void
+  onSaveAsNewFile: () => void
   onOpenFile: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onPickFile: () => void
   onResize: () => void
 }
 
@@ -41,10 +45,14 @@ export function MobileMenu({
   onNew,
   onBatchExport,
   onSaveAsFile,
+  onSaveAsNewFile,
   onOpenFile,
+  onPickFile,
   onResize,
 }: Props) {
   const t = useT()
+  const linkedName = useLinkedFileName()
+  const openInput = useRef<HTMLInputElement>(null)
   const lang = useLang((s) => s.lang)
   const setLang = useLang((s) => s.setLang)
   const hasElements = useEditor((s) => s.elements.length > 0)
@@ -199,20 +207,34 @@ export function MobileMenu({
       <ActionItem
         onClick={() => { onClose(); onSaveAsFile() }}
         icon={<Upload size={18} />}
-        label={t('export.saveProject')}
+        label={linkedName ? `${t('file.saveTo')} ${linkedName}` : t('export.saveProject')}
       />
-      <label className="flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-text transition hover:bg-surface-3 active:scale-[0.98]">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-3 text-muted">
-          <Upload size={18} />
-        </span>
-        <span>{t('export.openProject')}</span>
-        <input
-          type="file"
-          accept=".piccollage,application/json"
-          onChange={(e) => { onClose(); onOpenFile(e) }}
-          className="sr-only"
+      {linkedName && (
+        <ActionItem
+          onClick={() => { onClose(); onSaveAsNewFile() }}
+          icon={<Upload size={18} />}
+          label={t('file.saveAsNew')}
         />
-      </label>
+      )}
+      <ActionItem
+        onClick={() => {
+          if (canPickFiles()) {
+            onClose()
+            onPickFile()
+          } else openInput.current?.click()
+        }}
+        icon={<Upload size={18} />}
+        label={t('export.openProject')}
+      />
+      <input
+        ref={openInput}
+        type="file"
+        accept=".piccollage,application/json"
+        onChange={(e) => { onClose(); onOpenFile(e) }}
+        tabIndex={-1}
+        aria-hidden="true"
+        className="hidden"
+      />
 
       <ActionCancel onClick={onClose} label={t('menu.cancel')} />
     </ActionSheet>
