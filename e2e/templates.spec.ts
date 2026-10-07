@@ -30,6 +30,7 @@ const imagesOnStage = (page: Page) =>
 test.describe('templates', () => {
   test('template → photos into its frames → export', async ({ page }) => {
     await openApp(page)
+    await page.getByRole('button', { name: 'Templates' }).click()
     await page.getByRole('button', { name: 'Happy Birthday!, Square' }).click()
 
     await expect(page.getByText('Template applied')).toBeVisible()
