@@ -222,7 +222,7 @@ interface EditorState {
   setBrush: (patch: { color?: string; size?: number }) => void
   updateElement: (id: string, patch: Partial<CanvasElement>) => void
   /** Patch several elements as one undo step (a group move or transform). */
-  updateElements: (patches: Record<string, Partial<CanvasElement>>) => void
+  updateElements: (patches: Record<string, Partial<CanvasElement>>, label?: string) => void
   updateFilters: (id: string, patch: Partial<PhotoFilters>) => void
   updateFilterStack: (id: string, stack: FilterOperation[]) => void
   duplicateElement: (id: string) => void
@@ -485,9 +485,12 @@ export const useEditor = create<EditorState>((set, get) => ({
       brushSize: patch.size ?? s.brushSize,
     })),
 
-  updateElements: (patches) =>
+  updateElements: (patches, label) =>
     set((s) => ({
-      ...record(s, Object.values(patches).every(isMove) ? 'history.move' : 'history.transform'),
+      ...record(
+        s,
+        label ?? (Object.values(patches).every(isMove) ? 'history.move' : 'history.transform'),
+      ),
       elements: s.elements.map((e) =>
         patches[e.id] ? ({ ...e, ...patches[e.id] } as CanvasElement) : e,
       ),

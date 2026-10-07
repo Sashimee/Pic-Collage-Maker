@@ -25,7 +25,7 @@ export async function detectFaces(src: string): Promise<FaceBox[]> {
   })
 }
 
-function findFaceRegions(img: HTMLImageElement): FaceBox[] {
+export function findFaceRegions(img: HTMLImageElement): FaceBox[] {
   const w = img.naturalWidth
   const h = img.naturalHeight
 
