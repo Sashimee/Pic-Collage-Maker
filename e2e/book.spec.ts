@@ -97,6 +97,57 @@ test.describe('photo book', () => {
     }
   })
 
+  test('prints every page on a sheet of the chosen size, and nothing else', async ({ page }) => {
+    await openApp(page)
+    await skipGallery(page)
+    await addPhoto(page, 'one.png')
+    await page.getByRole('button', { name: 'Add page' }).click()
+    await expect(tiles(page)).toHaveCount(2)
+    await addPhoto(page, 'two.png')
+
+    await page.evaluate(() => {
+      const w = window as unknown as { __printed?: number }
+      window.print = () => void (w.__printed = (w.__printed ?? 0) + 1)
+    })
+    await openBookSheet(page)
+    await page.getByRole('button', { name: 'A4 portrait' }).click()
+    await page.locator('[data-book-print]').click()
+
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __printed?: number }).__printed), {
+        timeout: 60_000,
+      })
+      .toBe(1)
+    const sheets = page.locator('#print-root .sheet')
+    await expect(sheets).toHaveCount(2)
+    // The cover carries no number; numbering starts on the page after it.
+    await expect(page.locator('#print-root .page-number')).toHaveText(['1'])
+
+    await expect(sheets.first()).toBeHidden()
+    await page.emulateMedia({ media: 'print' })
+    await expect(sheets.first().locator('img')).toBeVisible()
+    await expect(page.locator('#root')).toBeHidden()
+    await page.emulateMedia({ media: null })
+
+    // What the printer would get: every page on its own A4 sheet. index.css
+    // pins body to the viewport, so without the print override only the first
+    // sheet survives.
+    const { PDFDocument } = await import('pdf-lib')
+    const printed = await PDFDocument.load(await page.pdf({ preferCSSPageSize: true }))
+    expect(
+      printed.getPages().map((p) => {
+        const { width, height } = p.getSize()
+        return [Math.round(width), Math.round(height)]
+      }),
+    ).toEqual([
+      [595, 842],
+      [595, 842],
+    ])
+
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')))
+    await expect(page.locator('#print-root')).toHaveCount(0)
+  })
+
   test('renders pages the editor is not showing, and leaves it alone', async ({ page }) => {
     await openApp(page)
     await skipGallery(page)

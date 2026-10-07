@@ -1,13 +1,17 @@
-import { useRef, useState } from 'react'
-import { BookOpen, X } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
+import { BookOpen, Printer, X } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 import {
   BOOK_PAGE_SIZES,
   DEFAULT_BOOK_OPTIONS,
+  bookSizeById,
   buildPhotoBook,
+  renderBook,
   type BookOptions,
 } from '../lib/photoBook'
 import { useEditor, type LoadedDocument } from '../store/editorStore'
+
+type BookTask = 'pdf' | 'print'
 
 /**
  * Options for the photo book, and the progress of building it.
@@ -21,17 +25,24 @@ export function PhotoBookSheet({
   pages,
   onClose,
   onDone,
+  onError,
 }: {
   open: boolean
   /** Fully-committed page documents; the caller saves first. */
   pages: LoadedDocument[]
   onClose: () => void
   onDone: (pdf: Uint8Array) => void
+  onError: () => void
 }) {
   const t = useT()
   const [options, setOptions] = useState<BookOptions>(DEFAULT_BOOK_OPTIONS)
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const [progress, setProgress] = useState<{
+    task: BookTask
+    done: number
+    total: number
+  } | null>(null)
   const signal = useRef({ cancelled: false })
+  const buttons = useRef<Partial<Record<BookTask, HTMLButtonElement | null>>>({})
 
   if (!open) return null
 
@@ -43,24 +54,48 @@ export function PhotoBookSheet({
     onClose()
   }
 
-  const create = async () => {
+  const run = async (task: BookTask) => {
     signal.current = { cancelled: false }
-    setProgress({ done: 0, total: pages.length })
+    setProgress({ task, done: 0, total: pages.length })
     try {
       const editor = useEditor.getState()
-      const pdf = await buildPhotoBook(pages, options, {
-        onProgress: (done, total) => setProgress({ done, total }),
+      const hooks = {
+        onProgress: (done: number, total: number) => setProgress({ task, done, total }),
         signal: signal.current,
         // A book that silently dropped the user's watermark would only be
         // noticed once it was printed.
         watermark: editor.watermark,
         print: editor.print,
-      })
-      if (pdf) onDone(pdf)
+      }
+      if (task === 'pdf') {
+        const pdf = await buildPhotoBook(pages, options, hooks)
+        if (pdf) onDone(pdf)
+        return
+      }
+      const book = await renderBook(pages, options, hooks)
+      if (!book) return
+      const { printBook } = await import('../lib/printBook')
+      if (signal.current.cancelled) return
+      await printBook(book, bookSizeById(options.sizeId))
+    } catch (err) {
+      console.error('[PhotoBookSheet] building the book failed', err)
+      onError()
     } finally {
       setProgress(null)
+      // The button was disabled while it worked, which drops keyboard focus to the page.
+      if (!signal.current.cancelled) requestAnimationFrame(() => buttons.current[task]?.focus())
     }
   }
+
+  const label = (task: BookTask, idle: ReactNode) =>
+    progress?.task === task ? (
+      <>
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        {t('book.rendering')} {progress.done + 1}/{progress.total}
+      </>
+    ) : (
+      idle
+    )
 
   return (
     <>
@@ -132,22 +167,37 @@ export function PhotoBookSheet({
           <p className="text-[0.7rem] leading-relaxed text-muted">{t('book.hint')}</p>
 
           <button
-            onClick={create}
+            ref={(el) => void (buttons.current.pdf = el)}
+            onClick={() => run('pdf')}
             disabled={busy || pages.length === 0}
             data-book-create
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-fg transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
           >
-            {busy ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent-fg border-t-transparent" />
-                {t('book.rendering')} {progress.done + 1}/{progress.total}
-              </>
-            ) : (
+            {label(
+              'pdf',
               <>
                 <BookOpen size={16} /> {t('book.create')}
-              </>
+              </>,
             )}
           </button>
+
+          <button
+            ref={(el) => void (buttons.current.print = el)}
+            onClick={() => run('print')}
+            disabled={busy || pages.length === 0}
+            data-book-print
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-text transition hover:bg-surface-3 active:scale-[0.99] disabled:opacity-60"
+          >
+            {label(
+              'print',
+              <>
+                <Printer size={16} /> {t('book.print')}
+              </>,
+            )}
+          </button>
+          <p role="status" className="sr-only">
+            {progress ? `${t('book.rendering')} ${progress.done + 1}/${progress.total}` : ''}
+          </p>
         </div>
       </div>
     </>

@@ -545,6 +545,7 @@ export default function App() {
                 fireConfetti()
                 maybeNudgeInstall()
               }}
+              onError={() => toast.error(t('book.failed'))}
             />
           </Suspense>
         )}
