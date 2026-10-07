@@ -26,6 +26,7 @@ import { useIsDesktop } from './hooks/useMediaQuery'
 import { useVersionCheck } from './hooks/useVersionCheck'
 import { useMemoryPressure } from './hooks/useMemoryPressure'
 import { useShortcuts } from './hooks/useShortcuts'
+import { useImportFiles } from './hooks/useImportFiles'
 import { useLaunchFiles } from './hooks/useLaunchFiles'
 import { UpdateBanner } from './components/UpdateBanner'
 import { ZoomControls } from './components/ZoomControls'
@@ -39,6 +40,8 @@ import { useT } from './i18n/useLang'
 import { useProjects, defaultProjectName } from './store/projectsStore'
 import { useWorkspace } from './store/workspaceStore'
 import {
+  canCopyImage,
+  copyImage,
   downloadDataURL,
   shareFileName,
   shareImages,
@@ -121,6 +124,7 @@ export default function App() {
   const sidePanelWidth = panelSizes['side'] ?? 336
   const t = useT()
   const toast = useToasts()
+  const importPhotos = useImportFiles()
 
   useVersionCheck()
   useMemoryPressure()
@@ -180,10 +184,36 @@ export default function App() {
     }
   }
 
+  const copyBoard = () => {
+    if (!canCopyImage()) return
+    copyImage(async () => {
+      select(null)
+      await nextFrame()
+      const url = await editorRef.current?.exportImage('png')
+      if (!url) throw new Error('The board could not be rendered for the clipboard')
+      return url
+    }).then(
+      () => toast.success(t('clipboard.copied')),
+      (err: unknown) => {
+        console.error('[copy]', err)
+        toast.error(t('clipboard.copyFailed'))
+      },
+    )
+  }
+
   useShortcuts({
     onExport: () => handleExport('png'),
     onSave: handleSave,
     onOpenProject: () => setProjectManagerOpen(true),
+    onCopyImage: canCopyImage() ? copyBoard : undefined,
+    onPasteImages: (files) =>
+      importPhotos(files, useEditor.getState().addPhoto).then(
+        ({ added }) => added && toast.success(t('clipboard.pasted')),
+        (err: unknown) => {
+          console.error('[paste]', err)
+          toast.error(t('error.loadImages'))
+        },
+      ),
   })
 
   // Release any leftover object URLs when the page is torn down.
@@ -236,6 +266,7 @@ export default function App() {
   }
 
   const handleExport = async (kind: ExportKind) => {
+    if (kind === 'copy') return copyBoard()
     // Drop the selection so transform handles / grid highlight aren't captured,
     // then wait a frame for the canvas to redraw before snapshotting.
     select(null)

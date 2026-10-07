@@ -12,9 +12,15 @@ import {
   Upload,
 } from 'lucide-react'
 import { useProjects } from '../store/projectsStore'
-import { useT } from '../i18n/useLang'
 import { useToasts } from './ToastContainer'
 import { hasCrashed } from '../lib/crashState'
+import { useLang, useT } from '../i18n/useLang'
+import {
+  formatBytes,
+  requestPersistentStorage,
+  storageStatus,
+  type StorageStatus,
+} from '../lib/storage'
 
 interface Props {
   open: boolean
@@ -30,6 +36,9 @@ export default function ProjectManager({ open, onClose }: Props) {
   const [busy, setBusy] = useState(false)
   const restoreInput = useRef<HTMLInputElement>(null)
   const toast = useToasts()
+  const [storage, setStorage] = useState<StorageStatus | null>(null)
+  const [storageCheck, setStorageCheck] = useState(0)
+  const lang = useLang((s) => s.lang)
 
   const {
     projects,
@@ -48,6 +57,19 @@ export default function ProjectManager({ open, onClose }: Props) {
     if (open) loadProjectList()
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    storageStatus()
+      .then((status) => {
+        if (live) setStorage(status)
+      })
+      .catch((err: unknown) => console.error('Could not read how much storage is in use', err))
+    return () => {
+      live = false
+    }
+  }, [open, projects.length, storageCheck])
+
   if (!open) return null
 
   const handleCreate = async () => {
@@ -55,6 +77,11 @@ export default function ProjectManager({ open, onClose }: Props) {
     await createProject(name)
     setNewName('')
     setCreateOpen(false)
+    requestPersistentStorage()
+      .catch((err: unknown) =>
+        console.error('Could not ask the browser to keep the saved projects', err),
+      )
+      .finally(() => setStorageCheck((n) => n + 1))
   }
 
   const handleBackup = async () => {
@@ -276,6 +303,34 @@ export default function ProjectManager({ open, onClose }: Props) {
             />
           </div>
         </div>
+
+        {storage && storage.quota > 0 && (
+          <div className="border-t border-border px-4 py-3 text-xs text-muted">
+            <div className="flex items-center justify-between gap-2">
+              <span id="storage-used-label">{t('project.storageUsed')}</span>
+              <span aria-hidden="true">
+                {formatBytes(storage.usage, lang)} / {formatBytes(storage.quota, lang)}
+              </span>
+            </div>
+            <div
+              role="meter"
+              aria-labelledby="storage-used-label"
+              aria-valuemin={0}
+              aria-valuemax={storage.quota}
+              aria-valuenow={Math.min(storage.usage, storage.quota)}
+              aria-valuetext={`${formatBytes(storage.usage, lang)} / ${formatBytes(storage.quota, lang)}`}
+              className="mt-1.5 h-1.5 overflow-hidden rounded-full border border-border bg-surface-3"
+            >
+              <div
+                className={`h-full rounded-full bg-accent ${storage.usage > 0 ? 'min-w-1' : ''}`}
+                style={{ width: `${Math.min(100, (storage.usage / storage.quota) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-1.5">
+              {t(storage.persisted ? 'project.storagePersistent' : 'project.storageBestEffort')}
+            </p>
+          </div>
+        )}
       </div>
     </>
   )
