@@ -16,7 +16,7 @@ import { useTheme } from '../i18n/useTheme'
 import { LangDropdown } from './LangSwitcher'
 import { IconButton } from './ui'
 import ProjectManager from './ProjectManager'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, FADE } from './motion'
 import { useToasts } from './ToastContainer'
 import { FullScreenButton } from './FullScreen'
 import { useInstall } from '../lib/pwaInstall'
@@ -156,7 +156,7 @@ export function HeaderBar({
   }
 
   const accentBtn =
-    'bg-grad-accent flex min-h-[36px] sm:min-h-[40px] items-center gap-1.5 rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 active:scale-95 cursor-pointer'
+    'bg-grad-accent flex min-h-[36px] sm:min-h-[40px] items-center gap-1.5 rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-accent transition hover:brightness-110 active:scale-95 cursor-pointer'
 
   return (
     <>
@@ -167,7 +167,7 @@ export function HeaderBar({
       <header className="relative z-50 flex items-center justify-between gap-2 border-b border-border/60 bg-surface/80 px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] backdrop-blur-xl select-none">
         {/* Brand */}
         <h1 className="flex items-center gap-2 shrink-0 min-w-0">
-          <BrandMark className="h-8 w-8 shrink-0 rounded-xl shadow-[var(--shadow-accent)]" />
+          <BrandMark className="h-8 w-8 shrink-0 rounded-xl shadow-accent" />
           <span className="text-grad-accent hidden sm:inline text-sm font-bold truncate">
             Pic Collage
           </span>
@@ -227,7 +227,7 @@ export function HeaderBar({
                     initial={{ opacity: 0, y: -4, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
+                    transition={FADE.fast}
                     className="absolute right-0 top-full z-40 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface-2 shadow-2xl"
                     role="menu"
                   >

@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import type { GridLayout } from '../types'
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, SPRING } from './motion'
 import { Plus, Images, SkipForward, Check, X } from 'lucide-react'
 import { useIsDesktop } from '../hooks/useMediaQuery'
 
@@ -105,7 +105,7 @@ export function PhotoAssignmentSheet({
 
           {/* Panel */}
           <m.div
-            className={`fixed z-[70] flex flex-col bg-surface shadow-[var(--shadow-card)] max-h-[90vh] ${
+            className={`fixed z-[70] flex flex-col bg-surface shadow-card max-h-[90vh] ${
               isDesktop
                 ? 'right-0 top-0 h-full w-80 border-l border-border'
                 : 'bottom-0 left-0 right-0 rounded-t-3xl border-t border-border'
@@ -121,7 +121,7 @@ export function PhotoAssignmentSheet({
                 ? { x: '100%', y: 0, opacity: 0.8 }
                 : { x: 0, y: '100%', opacity: 0.8 }
             }
-            transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+            transition={SPRING.sheet}
             drag={isDesktop ? undefined : 'y'}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.04, bottom: 0.4 }}
@@ -224,7 +224,7 @@ export function PhotoAssignmentSheet({
                 <m.button
                   whileTap={{ scale: 0.96 }}
                   onClick={onDone || onClose}
-                  className="bg-grad-accent flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110"
+                  className="bg-grad-accent flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-accent transition hover:brightness-110"
                 >
                   <Check size={16} strokeWidth={2.5} />
                   {t('assignment.done')}

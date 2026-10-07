@@ -29,7 +29,7 @@ import {
 import { useEditor } from '../store/editorStore'
 import type { BaseElement } from '../types'
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, SPRING } from './motion'
 import { useToasts } from './ToastContainer'
 import { alignOffsets, unionBox, type AlignOp, type Box } from '../lib/align'
 
@@ -320,7 +320,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
               initial={{ opacity: 0, y: 16, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.9 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 340 }}
+              transition={SPRING.pop}
               className="order-2 pointer-events-auto flex max-w-full flex-wrap justify-center gap-2 rounded-full bg-surface/80 p-1.5 shadow-xl ring-1 ring-border backdrop-blur sm:flex-nowrap"
             >
               {mode === 'free' && (

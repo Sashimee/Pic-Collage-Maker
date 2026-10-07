@@ -1,4 +1,4 @@
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, SPRING } from './motion'
 import { X, Download, WifiOff, Maximize2, Zap } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 import { useInstall } from '../lib/pwaInstall'
@@ -107,8 +107,8 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 z-[100] max-h-[88vh] w-[min(23rem,92vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-card)]"
+            transition={SPRING.pop}
+            className="fixed left-1/2 top-1/2 z-[100] max-h-[88vh] w-[min(23rem,92vw)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-card"
             role="dialog"
             aria-modal="true"
             aria-labelledby="install-title"
@@ -138,7 +138,7 @@ export function InstallSheet({ open, onClose }: { open: boolean; onClose: () => 
             {canPrompt ? (
               <button
                 onClick={handleInstall}
-                className="bg-grad-accent mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 active:scale-95"
+                className="bg-grad-accent mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white shadow-accent transition hover:brightness-110 active:scale-95"
               >
                 <Download size={17} strokeWidth={2.5} />
                 {t('install.cta')}

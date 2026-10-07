@@ -4,7 +4,7 @@ import { PICKER_LAYOUTS } from '../lib/grids'
 import { loadCustomLayouts } from '../lib/customLayoutStorage'
 import { LayoutPreview } from './LayoutPreview'
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, FADE } from './motion'
 import { Wand2, SkipForward } from 'lucide-react'
 
 const CATEGORIES = ['all', 'classic', 'editorial', 'social', 'creative', 'custom'] as const
@@ -125,7 +125,7 @@ export function LayoutGallery({
   )
 
   return (
-    <div className="flex w-full flex-col gap-4 rounded-2xl bg-surface-2/80 p-4 shadow-[var(--shadow-card)] backdrop-blur-sm border border-border/30">
+    <div className="flex w-full flex-col gap-4 rounded-2xl bg-surface-2/80 p-4 shadow-card backdrop-blur-sm border border-border/30">
       <div className="text-center">
         <h2 className="text-base font-bold text-text">{t('gallery.title')}</h2>
         <p className="mt-1 text-xs text-muted">{t('gallery.subtitle')}</p>
@@ -139,7 +139,7 @@ export function LayoutGallery({
             onClick={() => setActiveCategory(cat)}
             className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               activeCategory === cat
-                ? 'bg-grad-accent text-white shadow-[var(--shadow-accent)]'
+                ? 'bg-grad-accent text-white shadow-accent'
                 : 'bg-surface-2 text-text/80 hover:bg-surface-3'
             }`}
           >
@@ -179,7 +179,7 @@ export function LayoutGallery({
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.15 }}
+              transition={FADE.fast}
               onClick={() => handleSelect(layout.id)}
               className="flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition active:scale-95 hover:bg-surface-2"
               aria-label={`${layout.label} photos`}
