@@ -72,7 +72,7 @@ Pic-Collage-Maker/
 │   ├── user-guide.md           # end-user documentation
 │   ├── api.md                  # module/API notes
 │   └── adr/                    # 0001 client-only architecture, 0002 konva stays
-├── e2e/                        # playwright: 19 specs + helpers.ts + playwright.config.ts;
+├── e2e/                        # playwright: 20 specs + helpers.ts + playwright.config.ts;
 │                               #   visual.spec.ts pixel baselines are made in the Playwright container (visual-regression agent)
 ├── .github/
 │   ├── lighthouserc.json       # LHCI thresholds (see gotchas: needs `npm run build:lh`)
@@ -398,6 +398,11 @@ untranslated.
   catches inside the stage and rethrows on the DOM side; once the root
   `ErrorBoundary` trips, `markCrashed()` (`src/lib/crashState.ts`) stops every
   autosave. A new save path must check `hasCrashed()` too.
+- **Konva drops every stage touchmove while it is dragging or transforming.**
+  A finger that lands on an element arms its drag, and one on a Transformer
+  anchor (easy on a small element) starts a transform; either then swallows the
+  gesture. A stage-level multi-touch gesture has to disarm both when it starts —
+  see `twistElement` in `canvas/useStageGestures.tsx`.
 - **Dev-only test seams**, exposed under `import.meta.env.DEV`: `window.__editor`
   (editorStore), `__projects`, `__versions`, and `__boardRect()` (the board's
   on-screen rect, from `canvas/useExportHandle.ts`). The e2e suite drives flows through these
@@ -451,7 +456,9 @@ nothing on screen can hint at, on one first-use registry).
 
 Next up: nothing is committed. Candidates below.
 
-Other ideas: richer touch gestures (two-finger rotate) · more grid layouts +
+**two-finger pinch-and-twist** on the selected element (15° snap, haptic tick).
+
+Other ideas: more grid layouts +
 adjustable gutter/corner radius · crop tool polish · a real animation/export-video
 pipeline (the half-baked one was removed) · **Capacitor** wrapper for App Store /
 Play Store (structure is ready; not installed).
