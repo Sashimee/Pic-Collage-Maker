@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   applyPhotoFilters,
+  cachePixelRatio,
   computeFilterConfigFromStack,
   computeFilterConfig,
   filtersSettled,
@@ -8,7 +9,7 @@ import {
 } from '../filters'
 import Konva from 'konva'
 import type { Filter } from 'konva/lib/Node'
-import type { FilterOperation } from '../../types'
+import { DEFAULT_FILTERS, type FilterOperation } from '../../types'
 
 describe('computeFilterConfigFromStack', () => {
   it('returns defaults for empty stack', () => {
@@ -223,7 +224,7 @@ describe('computeFilterConfig (v1 backward-compat)', () => {
 })
 
 describe('applyPhotoFilters', () => {
-  const fakeNode = () => {
+  const fakeNode = (source?: CanvasImageSource) => {
     const calls: Filter[][] = []
     const node = {
       cache: vi.fn(),
@@ -236,6 +237,10 @@ describe('applyPhotoFilters', () => {
       luminance: vi.fn(),
       blurRadius: vi.fn(),
       getLayer: () => null,
+      cropWidth: () => 0,
+      width: () => 400,
+      height: () => 300,
+      image: () => source,
     }
     return { node: node as unknown as Konva.Image, calls }
   }
@@ -269,6 +274,29 @@ describe('applyPhotoFilters', () => {
     expect(calls).toHaveLength(1)
   })
 
+  it('leaves an unedited photo uncached', () => {
+    const { node, calls } = fakeNode()
+    applyPhotoFilters(node, photoStack(undefined, DEFAULT_FILTERS))
+    expect(node.cache).not.toHaveBeenCalled()
+    expect(calls).toEqual([[]])
+  })
+
+  it('caches an edited photo at no more pixels than its source has', () => {
+    const source = document.createElement('canvas')
+    source.width = 800
+    const { node } = fakeNode(source)
+    applyPhotoFilters(node, [{ type: 'brightness', value: 0.2 }], { pixelRatio: 3 })
+    expect(node.cache).toHaveBeenCalledWith({ pixelRatio: 2 })
+  })
+
+  it('keeps the full ratio for a blur, whose radius is counted in cache pixels', () => {
+    const source = document.createElement('canvas')
+    source.width = 400
+    const { node } = fakeNode(source)
+    applyPhotoFilters(node, [{ type: 'blur', radius: 4 }], { pixelRatio: 3 })
+    expect(node.cache).toHaveBeenCalledWith({ pixelRatio: 3 })
+  })
+
   it('makes export fail while a photo is drawn without its adjustments', async () => {
     vi.resetModules()
     vi.doMock('../adjustments', () => {
@@ -287,6 +315,27 @@ describe('applyPhotoFilters', () => {
       error.mockRestore()
       vi.doUnmock('../adjustments')
     }
+  })
+})
+
+describe('cachePixelRatio', () => {
+  it('keeps the requested ratio while the source has the pixels for it', () => {
+    expect(cachePixelRatio(4000, 1000, 800, 3)).toBe(3)
+  })
+
+  it('stops at the source resolution', () => {
+    expect(cachePixelRatio(1080, 1080, 1350, 3)).toBe(1)
+    expect(cachePixelRatio(256, 512, 512, 2)).toBe(0.5)
+  })
+
+  it('never shrinks the cache below a pixel on its short side', () => {
+    const ratio = cachePixelRatio(2, 1000, 10, 3)
+    expect(Math.floor(10 * ratio)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('falls back to the requested ratio when a size is unknown', () => {
+    expect(cachePixelRatio(0, 1000, 800, 2)).toBe(2)
+    expect(cachePixelRatio(1000, 0, 800, 2)).toBe(2)
   })
 })
 

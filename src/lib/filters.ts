@@ -194,6 +194,39 @@ export async function filtersSettled(): Promise<void> {
     )
 }
 
+const isIdentity = (cfg: FilterConfig) =>
+  cfg.filters.length === 3 &&
+  cfg.brightness === 0 &&
+  cfg.contrast === 0 &&
+  cfg.hue === 0 &&
+  cfg.saturation === 0 &&
+  cfg.luminance === 0 &&
+  cfg.blurRadius === 0
+
+const sourceWidth = (image: CanvasImageSource | undefined) =>
+  image instanceof HTMLImageElement
+    ? image.naturalWidth
+    : image instanceof HTMLCanvasElement
+      ? image.width
+      : 0
+
+/**
+ * The cache's pixel ratio: what was asked for, but never more pixels than the source has —
+ * those would only be interpolated, and at the device pixel ratio a full-board photo on an
+ * iPhone costs ~50 MB.
+ */
+export function cachePixelRatio(
+  sourcePx: number,
+  nodeWidth: number,
+  nodeHeight: number,
+  requested: number,
+) {
+  if (!(sourcePx > 0 && nodeWidth > 0 && nodeHeight > 0)) return requested
+  // A cache under one pixel on either side is a zero-sized canvas, and drawing it throws.
+  const floor = 1 / Math.min(nodeWidth, nodeHeight)
+  return Math.min(requested, Math.max(sourcePx / nodeWidth, floor))
+}
+
 /**
  * Caches the node and applies a filter stack to it. Levels, curves, HSL and
  * LUTs live in a lazy chunk, so they join the node a moment later — export
@@ -204,9 +237,30 @@ export function applyPhotoFilters(
   stack: FilterOperation[],
   cache?: Parameters<Konva.Image['cache']>[0],
 ): () => void {
-  let live = true
   const cfg = computeFilterConfigFromStack(stack)
-  node.cache(cache)
+  // A cache is a second full bitmap per photo; iOS kills the tab once those add up.
+  if (isIdentity(cfg) && !stack.some(isAdvanced)) {
+    node.clearCache()
+    node.filters([])
+    node.getLayer()?.batchDraw()
+    return () => {}
+  }
+  let live = true
+  const requested = cache?.pixelRatio ?? Konva.pixelRatio
+  node.cache({
+    ...cache,
+    // Blur's radius is counted in cache pixels, and the export swaps in a larger source; a
+    // ratio that followed the source would blur the export less than the screen.
+    pixelRatio:
+      cfg.blurRadius > 0
+        ? requested
+        : cachePixelRatio(
+            node.cropWidth() || sourceWidth(node.image()),
+            node.width(),
+            node.height(),
+            requested,
+          ),
+  })
   node.filters(cfg.filters)
   node.brightness(cfg.brightness)
   node.contrast(cfg.contrast)
