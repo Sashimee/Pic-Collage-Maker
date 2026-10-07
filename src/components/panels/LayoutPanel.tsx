@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useEditor } from '../../store/editorStore'
-import { GRID_LAYOUTS, maxGridMargin } from '../../lib/grids'
+import { PICKER_LAYOUTS, maxGridMargin } from '../../lib/grids'
 import { ColorField, Section, Slider } from '../ui'
 import { LayoutPreview } from '../LayoutPreview'
 import { useT } from '../../i18n/useLang'
 import { PHOTO_SHAPES } from '../../lib/shapes'
 import { EXPORT_PRESETS } from '../../lib/exportPresets'
+import { TemplateGallery } from '../TemplateGallery'
 
 const ASPECTS = [
   { key: 'square', w: 1080, h: 1080 },
@@ -134,8 +135,8 @@ export function LayoutPanel() {
 
   const filteredLayouts =
     catFilter === 'all'
-      ? GRID_LAYOUTS
-      : GRID_LAYOUTS.filter((g) => g.category === catFilter || (!g.category && catFilter === 'classic'))
+      ? PICKER_LAYOUTS
+      : PICKER_LAYOUTS.filter((g) => g.category === catFilter || (!g.category && catFilter === 'classic'))
 
   return (
     <div className="flex flex-col gap-4">
@@ -191,6 +192,10 @@ export function LayoutPanel() {
             }`}
           />
         </div>
+      </Section>
+
+      <Section title={t('tpl.title')}>
+        <TemplateGallery />
       </Section>
 
       <Section title={t('layout.grids')}>

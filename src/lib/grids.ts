@@ -1010,6 +1010,69 @@ export const GRID_LAYOUTS: GridLayout[] = [
 
   // ---- Template-specific asymmetric layouts ----
   {
+    id: 'tpl-hero',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['template'],
+    cells: [{ x: 0.08, y: 0.2, width: 0.84, height: 0.58 }],
+  },
+  {
+    id: 'tpl-top',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['template'],
+    cells: [{ x: 0, y: 0, width: 1, height: 0.6 }],
+  },
+  {
+    id: 'tpl-side',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['template'],
+    cells: [{ x: 0.46, y: 0, width: 0.54, height: 1 }],
+  },
+  {
+    id: 'tpl-arch',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['template'],
+    cells: [{ x: 0.15, y: 0.19, width: 0.7, height: 0.56, shape: 'ellipse' }],
+  },
+  {
+    id: 'tpl-duo-top',
+    label: '2',
+    count: 2,
+    category: 'creative',
+    tags: ['template'],
+    cells: [
+      { x: 0.06, y: 0.06, width: 0.43, height: 0.6 },
+      { x: 0.51, y: 0.06, width: 0.43, height: 0.6 },
+    ],
+  },
+  {
+    id: 'tpl-trio',
+    label: '3',
+    count: 3,
+    category: 'creative',
+    tags: ['template'],
+    cells: [
+      { x: 0.05, y: 0.24, width: 0.29, height: 0.52 },
+      { x: 0.355, y: 0.24, width: 0.29, height: 0.52 },
+      { x: 0.66, y: 0.24, width: 0.29, height: 0.52 },
+    ],
+  },
+  {
+    id: 'tpl-calendar',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['template'],
+    cells: [{ x: 0.06, y: 0.04, width: 0.88, height: 0.45 }],
+  },
+  {
     id: 'moodboard',
     label: '5',
     count: 5,
@@ -1036,6 +1099,9 @@ export const GRID_LAYOUTS: GridLayout[] = [
     ],
   },
 ]
+
+/** The layouts offered in the pickers; `template` layouts only make sense with their template's text. */
+export const PICKER_LAYOUTS = GRID_LAYOUTS.filter((g) => !g.tags?.includes('template'))
 
 export function getGridById(id: string): GridLayout | undefined {
   return GRID_LAYOUTS.find((g) => g.id === id)

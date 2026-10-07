@@ -6,6 +6,8 @@ import { importFiles } from '../lib/importFiles'
 import { resolveLayoutById } from '../lib/grids'
 import { track } from '../lib/analytics'
 import { LayoutGallery } from './LayoutGallery'
+import { TemplateGallery } from './TemplateGallery'
+import { Section } from './ui'
 import { PhotoAssignmentSheet } from './PhotoAssignmentSheet'
 import { m, AnimatePresence } from './motion'
 
@@ -152,6 +154,13 @@ export function EmptyState() {
                 onCustomLayout={handleCustomLayout}
                 onSkip={handleSkip}
               />
+
+              <Section
+                title={t('tpl.title')}
+                className="rounded-2xl border border-border/30 bg-surface-2/80 p-4 shadow-[var(--shadow-card)] backdrop-blur-sm"
+              >
+                <TemplateGallery />
+              </Section>
 
               {/* Secondary: direct photo add buttons */}
               <div className="flex justify-center gap-3">

@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import type { GridLayout } from '../types'
-import { GRID_LAYOUTS } from '../lib/grids'
+import { PICKER_LAYOUTS } from '../lib/grids'
 import { loadCustomLayouts } from '../lib/customLayoutStorage'
 import { LayoutPreview } from './LayoutPreview'
 import { useT } from '../i18n/useLang'
@@ -95,7 +95,7 @@ export function LayoutGallery({
       })),
   )
 
-  const allLayouts = useMemo(() => [...savedLayouts, ...GRID_LAYOUTS], [savedLayouts])
+  const allLayouts = useMemo(() => [...savedLayouts, ...PICKER_LAYOUTS], [savedLayouts])
 
   const filtered = useMemo(() => {
     let layouts = allLayouts.filter((l) => {
