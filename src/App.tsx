@@ -25,6 +25,7 @@ import { MotionProvider } from './components/motion'
 import { useIsDesktop } from './hooks/useMediaQuery'
 import { useVersionCheck } from './hooks/useVersionCheck'
 import { useMemoryPressure } from './hooks/useMemoryPressure'
+import { useShareTarget } from './hooks/useShareTarget'
 import { useShortcuts } from './hooks/useShortcuts'
 import { UpdateBanner } from './components/UpdateBanner'
 import { ZoomControls } from './components/ZoomControls'
@@ -163,6 +164,7 @@ export default function App() {
       clearTimeout(timer)
     }
   }, [hydrated])
+  useShareTarget(hydrated)
 
   const activeProjectId = useProjects((s) => s.activeProjectId)
   const saveActiveProject = useProjects((s) => s.saveActiveProject)
