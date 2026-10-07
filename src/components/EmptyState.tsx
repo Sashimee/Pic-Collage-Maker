@@ -7,7 +7,7 @@ import { resolveLayoutById } from '../lib/grids'
 import { track } from '../lib/analytics'
 import { LayoutGallery } from './LayoutGallery'
 import { PhotoAssignmentSheet } from './PhotoAssignmentSheet'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, FADE, SPRING } from './motion'
 
 const TemplateGallery = lazy(() =>
   import('./TemplateGallery').then((mod) => ({ default: mod.TemplateGallery })),
@@ -31,7 +31,7 @@ function Disclosure({
 }) {
   const [open, setOpen] = useState(false)
   return (
-    <section className="flex flex-col gap-2.5 rounded-2xl border border-border/30 bg-surface-2/80 p-2 shadow-[var(--shadow-card)] backdrop-blur-sm">
+    <section className="flex flex-col gap-2.5 rounded-2xl border border-border/30 bg-surface-2/80 p-2 shadow-card backdrop-blur-sm">
       <h3>
         <button
           onClick={() => setOpen((v) => !v)}
@@ -168,7 +168,7 @@ export function EmptyState() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.25 }}
+            transition={FADE.base}
           >
             <input
               id={GALLERY_ID}
@@ -191,7 +191,7 @@ export function EmptyState() {
               className="m-auto flex w-full max-w-lg shrink-0 flex-col gap-4 py-1"
               initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+              transition={SPRING.pop}
             >
               {/* Layout Gallery */}
               <LayoutGallery

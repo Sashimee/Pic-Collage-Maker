@@ -115,6 +115,7 @@
   --color-danger: var(--danger);
   --shadow-accent: var(--shadow-accent);
   --shadow-card: var(--shadow-card);
+  --shadow-sheet: 0 -12px 40px -16px rgb(0 0 0 / 0.6);
 }
 
 /* Reusable gradient helpers driven by the active theme's --grad-accent. */

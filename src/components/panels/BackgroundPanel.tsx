@@ -160,7 +160,7 @@ export function BackgroundPanel() {
                 />
                 <label
                   htmlFor="bg-photo-input"
-                  className="bg-grad-accent flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 active:scale-95"
+                  className="bg-grad-accent flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-accent transition hover:brightness-110 active:scale-95"
                 >
                   <ImagePlus size={16} strokeWidth={2.5} />
                   {t('photos.add')}

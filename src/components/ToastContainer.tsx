@@ -1,4 +1,4 @@
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, SPRING } from './motion'
 import { CheckCircle, AlertCircle, Info } from 'lucide-react'
 import { useToast, type ToastAction } from '../store/toastStore'
 import type { ReactNode } from 'react'
@@ -32,8 +32,8 @@ export function ToastContainer() {
             initial={{ opacity: 0, y: -12, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-            className="pointer-events-auto flex min-w-[12rem] max-w-md items-center gap-2.5 rounded-xl border border-border bg-surface/95 px-4 py-2.5 text-sm font-medium text-text shadow-[var(--shadow-card)] backdrop-blur"
+            transition={SPRING.pop}
+            className="pointer-events-auto flex min-w-[12rem] max-w-md items-center gap-2.5 rounded-xl border border-border bg-surface/95 px-4 py-2.5 text-sm font-medium text-text shadow-card backdrop-blur"
           >
             {ICONS[toast.type]}
             <span className="flex-1">{toast.message}</span>
