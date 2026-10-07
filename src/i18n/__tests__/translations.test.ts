@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { LANGS, translations } from '../translations'
+import { type Dict, type Lang, LANGS, en } from '../translations'
+import de from '../locales/de'
+import es from '../locales/es'
+import fr from '../locales/fr'
+import italian from '../locales/it'
+import pt from '../locales/pt'
+
+const translations: Record<Lang, Dict> = { en, de, es, fr, it: italian, pt }
 
 const SRC = join(import.meta.dirname, '../..')
 
@@ -18,7 +25,7 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 /**
- * `translations` is a `Record<Lang, Record<string, string>>`, so a key that
+ * Each language is a `Record<string, string>`, so a key that
  * exists nowhere is not a type error — `t()` just renders the raw key. That is
  * how `export.facebook` and `header.newCanvas` shipped to production as visible
  * button labels reading "export.facebook". These tests are the only thing that
