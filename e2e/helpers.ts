@@ -93,10 +93,11 @@ export const getZones = (page: Page) =>
   )
 
 /**
- * A layout card in the start-up gallery. Scoped to buttons on purpose: the
- * cards are labelled "<name> photos", and other things carry labels containing
- * "photos" too (the empty-cell file input is "Add photos"), so a bare
- * [aria-label*="photos"] would match whichever comes first in the DOM.
+ * A layout card in the start-up gallery — the first one for more than one photo,
+ * since the cards are labelled "1 photo", "2 photos"… Scoped to buttons on
+ * purpose: other things carry labels containing "photos" too (the empty-cell
+ * file input is "Add photos"), so a bare [aria-label*="photos"] would match
+ * whichever comes first in the DOM.
  */
 export const layoutCard = (page: Page) =>
   page.locator('button[aria-label*="photos"]').first()
