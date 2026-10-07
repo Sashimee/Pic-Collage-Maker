@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { initAnalytics } from './lib/analytics'
+import { startActionLog } from './lib/diagnostics'
 import { initPwaInstall } from './lib/pwaInstall'
 import './index.css'
 
@@ -12,6 +13,7 @@ import './index.css'
 // misses it for the rest of the page's life.
 initAnalytics()
 initPwaInstall()
+startActionLog()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

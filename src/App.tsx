@@ -53,6 +53,7 @@ import { OnboardingOverlay } from './components/Onboarding'
 import { restoreCustomFonts } from './lib/fonts'
 import { extractFirstExif, injectExifIntoJpeg } from './lib/exifHelpers'
 import { loadDoc, saveDoc, type StoredDoc } from './lib/persistence'
+import { hasCrashed } from './lib/crashState'
 import {
   rehydrateBackground,
   rehydratePhotos,
@@ -151,7 +152,9 @@ export default function App() {
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsub = useEditor.subscribe(() => {
       clearTimeout(timer)
-      timer = setTimeout(() => void saveDoc(toStoredDoc()), 500)
+      timer = setTimeout(() => {
+        if (!hasCrashed()) void saveDoc(toStoredDoc())
+      }, 500)
     })
     return () => {
       unsub()

@@ -72,7 +72,7 @@ Pic-Collage-Maker/
 │   ├── user-guide.md           # end-user documentation
 │   ├── api.md                  # module/API notes
 │   └── adr/                    # 0001 client-only architecture, 0002 konva stays
-├── e2e/                        # playwright: 18 specs + helpers.ts + playwright.config.ts;
+├── e2e/                        # playwright: 19 specs + helpers.ts + playwright.config.ts;
 │                               #   visual.spec.ts pixel baselines are made in the Playwright container (visual-regression agent)
 ├── .github/
 │   ├── lighthouserc.json       # LHCI thresholds (see gotchas: needs `npm run build:lh`)
@@ -392,6 +392,12 @@ untranslated.
   the list. Skip that and adding a page discards whatever you just drew. For the
   same reason the page strip draws its active tile from the live editor state,
   not from `pages`.
+- **react-konva errors never reach a DOM error boundary.** The stage renders
+  through its own reconciler, so a node that throws just blanks the board while
+  the autosaves keep writing the state that broke it. `canvas/CanvasErrorBridge`
+  catches inside the stage and rethrows on the DOM side; once the root
+  `ErrorBoundary` trips, `markCrashed()` (`src/lib/crashState.ts`) stops every
+  autosave. A new save path must check `hasCrashed()` too.
 - **Dev-only test seams**, exposed under `import.meta.env.DEV`: `window.__editor`
   (editorStore), `__projects`, `__versions`, and `__boardRect()` (the board's
   on-screen rect, from `canvas/useExportHandle.ts`). The e2e suite drives flows through these
