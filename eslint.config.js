@@ -6,7 +6,7 @@ import prettier from 'eslint-config-prettier'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['dist', 'dist-lh', 'dev-dist', 'test-results', 'playwright-report', '.lighthouseci'] },
+  { ignores: ['dist', 'dist-lh', 'dev-dist', 'test-results', 'playwright-report', '.lighthouseci', 'coverage'] },
   js.configs.recommended,
   tseslint.configs.recommended,
   jsxA11y.flatConfigs.recommended,
