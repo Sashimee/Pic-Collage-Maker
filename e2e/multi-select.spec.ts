@@ -173,3 +173,54 @@ test('shift adds a rubber band to the selection', async ({ page }) => {
   expect(s.multiSelected).toEqual([a, c])
   expect(s.multiSelected).not.toContain(b)
 })
+
+/** Drawn bounds of an element's node, in board units. */
+const boundsOf = (page: Page, id: string) =>
+  page.evaluate((id) => {
+    const konva = (window as unknown as { Konva: { stages: import('konva/lib/Stage').Stage[] } })
+      .Konva
+    const node = konva.stages[0].findOne('#' + id)!
+    return node.getClientRect({ relativeTo: node.getParent()! })
+  }, id)
+
+test('align and distribute line the group up in one undo step each', async ({ page }) => {
+  await openApp(page)
+  await skipGallery(page)
+  const ids = await threeStickers(page)
+  await page.evaluate(
+    (ids) =>
+      (window.__editor as unknown as { getState: () => { selectMany: (ids: string[]) => void } })
+        .getState()
+        .selectMany(ids),
+    ids,
+  )
+  const past = (await editor(page)).past
+
+  await page.getByRole('button', { name: 'Align', exact: true }).click()
+  await page.getByRole('button', { name: 'Align left' }).click()
+  await expect
+    .poll(
+      async () =>
+        new Set(await Promise.all(ids.map(async (id) => Math.round((await boundsOf(page, id)).x))))
+          .size,
+    )
+    .toBe(1)
+  expect((await editor(page)).past).toBe(past + 1)
+
+  await page.getByRole('button', { name: 'Distribute vertically' }).click()
+  await expect
+    .poll(async () => {
+      const [a, b, c] = await Promise.all(ids.map((id) => boundsOf(page, id)))
+      return Math.round(b.y - (a.y + a.height)) - Math.round(c.y - (b.y + b.height))
+    })
+    .toBe(0)
+
+  await page.getByRole('button', { name: 'To board' }).click()
+  await page.getByRole('button', { name: 'Align right' }).click()
+  await expect
+    .poll(async () => {
+      const b = await boundsOf(page, ids[0])
+      return Math.round(b.x + b.width)
+    })
+    .toBe(1080)
+})
