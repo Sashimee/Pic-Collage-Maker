@@ -621,6 +621,7 @@ export const en: Dict = {
   'toast.copied': 'Copied!',
   'toast.exportDone': 'Export complete',
   'toast.imageTooLarge': 'Image too large',
+  'memory.low': "Memory is running low. Save your project and reload the app.",
   'toast.maxPhotos': 'Max photos reached',
   'toast.noFaceDetected': 'No face detected',
   'toast.pasted': 'Pasted!',

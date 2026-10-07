@@ -607,6 +607,7 @@ const de: Dict = {
   'toast.copied': 'Kopiert!',
   'toast.exportDone': 'Export abgeschlossen',
   'toast.imageTooLarge': 'Bild zu groß',
+  'memory.low': "Der Speicher wird knapp. Speichere dein Projekt und lade die App neu.",
   'toast.maxPhotos': 'Maximale Fotosanzahl erreicht',
   'toast.noFaceDetected': 'Kein Gesicht erkannt',
   'toast.pasted': 'Eingefügt!',

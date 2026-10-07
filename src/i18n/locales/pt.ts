@@ -363,6 +363,7 @@ const pt: Dict = {
   'toast.exportDone': 'Exportação concluída',
   'toast.maxPhotos': 'Máximo de fotos atingido',
   'toast.imageTooLarge': 'Imagem muito grande',
+  'memory.low': "A memória está acabando. Salve seu projeto e recarregue o app.",
   'toast.bgRemoved': 'Fundo removido!',
   'toast.bgRemoveFailed': 'Falha na remoção do fundo',
   'toast.noFaceDetected': 'Nenhum rosto detectado',
