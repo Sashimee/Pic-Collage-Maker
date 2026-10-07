@@ -32,6 +32,10 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { ZoomControls } from './components/ZoomControls'
 import { StatusBar } from './components/StatusBar'
 import { PageStrip } from './components/PageStrip'
+import type { CommandView } from './components/CommandPalette'
+const CommandOverlay = lazy(() =>
+  import('./components/CommandPalette').then((m) => ({ default: m.CommandOverlay })),
+)
 const PhotoBookSheet = lazy(() =>
   import('./components/PhotoBookSheet').then((m) => ({ default: m.PhotoBookSheet })),
 )
@@ -105,11 +109,26 @@ function toStoredDoc(): StoredDoc {
   }
 }
 
+// Holds the keyboard while the palette's chunk loads, so typing ahead (a Backspace,
+// an arrow) can't edit the board behind it.
+function KeyGuard({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      e.stopPropagation()
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onClose])
+  return null
+}
+
 export default function App() {
   const editorRef = useRef<EditorHandle>(null)
   const measure = (ids: string[]) => editorRef.current?.measure(ids) ?? {}
   const [installOpen, setInstallOpen] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
+  const [commandView, setCommandView] = useState<CommandView | null>(null)
   const [bookPages, setBookPages] = useState<LoadedDocument[]>([])
   const select = useEditor((s) => s.select)
   const loadDocument = useEditor((s) => s.loadDocument)
@@ -206,6 +225,8 @@ export default function App() {
     onSave: handleSave,
     onOpenProject: () => setProjectManagerOpen(true),
     onCopyImage: canCopyImage() ? copyBoard : undefined,
+    onCommandPalette: () => setCommandView((v) => (v === 'palette' ? null : 'palette')),
+    onShortcutHelp: () => setCommandView('shortcuts'),
     onPasteImages: (files) =>
       importPhotos(files, useEditor.getState().addPhoto).then(
         ({ added }) => added && toast.success(t('clipboard.pasted')),
@@ -525,6 +546,20 @@ export default function App() {
                 maybeNudgeInstall()
               }}
               onError={() => toast.error(t('book.failed'))}
+            />
+          </Suspense>
+        )}
+        {commandView && (
+          <Suspense fallback={<KeyGuard onClose={() => setCommandView(null)} />}>
+            <CommandOverlay
+              view={commandView}
+              tabs={panels.tabs}
+              onClose={() => setCommandView(null)}
+              onExport={(kind) => void handleExport(kind)}
+              onExportSVG={handleExportSVG}
+              onOpenPanel={(id) => panels.active !== id && panels.select(id)}
+              onShortcutHelp={() => setCommandView('shortcuts')}
+              onPalette={() => setCommandView('palette')}
             />
           </Suspense>
         )}

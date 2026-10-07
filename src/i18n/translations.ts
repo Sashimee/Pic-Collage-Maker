@@ -740,4 +740,11 @@ export const en: Dict = {
   'tpl.text.youreInvited': "You're invited",
   'tpl.text.joinUs': 'Join us to celebrate',
   'tpl.text.ourYear': 'Our year in photos',
+  'cmd.title': 'Command palette',
+  'cmd.placeholder': 'Type a command…',
+  'cmd.empty': 'No matching commands',
+  'cmd.shortcuts': 'Keyboard shortcuts',
+  'cmd.deselect': 'Deselect',
+  'cmd.openPanel': 'Open panel',
+  'cmd.nudge': 'Move the selection (Shift: 10×)',
 }

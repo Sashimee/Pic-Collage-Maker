@@ -12,6 +12,8 @@ export interface ShortcutCallbacks {
   /** Ctrl/Cmd+C with nothing selected. */
   onCopyImage?: () => void
   onPasteImages?: (files: FileList) => void
+  onCommandPalette?: () => void
+  onShortcutHelp?: () => void
 }
 
 export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
@@ -28,6 +30,20 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
 
       const key = e.key.toLowerCase()
+
+      // Another dialog in front keeps the keyboard; a palette over it would act on the board behind both.
+      const inDialog = target instanceof Element && !!target.closest('[role="dialog"]')
+      if (mod && key === 'k' && cbRef.current.onCommandPalette && !inDialog) {
+        e.preventDefault()
+        cbRef.current.onCommandPalette()
+        return
+      }
+      // By the character, not the key code: "?" sits on a different key in every layout.
+      if (e.key === '?' && !mod && cbRef.current.onShortcutHelp && !inDialog) {
+        e.preventDefault()
+        cbRef.current.onShortcutHelp()
+        return
+      }
 
       // Undo
       if (mod && key === 'z' && !e.shiftKey) {
@@ -142,7 +158,6 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
         const el = useEditor.getState().selected()
         // Highlighted text, or a dialog in front of the board, keeps the browser's own copy.
         const textSelected = window.getSelection()?.isCollapsed === false
-        const inDialog = target instanceof Element && !!target.closest('[role="dialog"]')
         if (!el && (!cbRef.current.onCopyImage || textSelected || inDialog)) return
         e.preventDefault()
         if (!el) cbRef.current.onCopyImage?.()
