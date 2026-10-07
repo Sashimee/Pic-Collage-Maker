@@ -311,6 +311,7 @@ const pt: Dict = {
   'export.book': 'Álbum de fotografias (PDF)',
   'export.rendering': 'A processar página',
   'import.adding': 'A adicionar foto',
+  'import.heicUnsupported': "Fotos HEIC ignoradas: este navegador não as consegue abrir. Guarde-as primeiro como JPEG ou use o Safari.",
   'export.packing': 'A compactar foto',
   'tips.title': 'Dicas',
   'tips.hint': 'Demonstrações curtas aparecem na primeira vez que abre uma ferramenta com gestos.',

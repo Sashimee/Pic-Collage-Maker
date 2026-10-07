@@ -1,5 +1,6 @@
 import { loadPhotoMeta } from './importPhotos'
 import { track } from './analytics'
+import { HeicUnsupportedError } from './heic'
 
 export interface ImportHooks {
   onProgress?: (done: number, total: number) => void
@@ -25,6 +26,7 @@ export async function importFiles(
   // Counted once per import action rather than per file, so the number reads as
   // "people who added photos" instead of "photos added".
   let added = 0
+  let skippedHeic = 0
   const list = Array.from(files)
   for (let i = 0; i < list.length; i++) {
     if (hooks.signal?.cancelled) break
@@ -47,10 +49,17 @@ export async function importFiles(
       })
       added++
     } catch (err) {
+      // One iPhone photo the browser cannot read should not cost the user the rest of the pick.
+      if (err instanceof HeicUnsupportedError) {
+        console.warn('[importFiles]', err.message)
+        skippedHeic++
+        continue
+      }
       console.error('[importFiles] FAILED to process file:', file.name, err)
       // DO NOT swallow the error — let it propagate so the UI can show feedback
       throw err
     }
   }
   if (added > 0) track('photo-added')
+  return { added, skippedHeic }
 }
