@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   Copy,
   SendToBack,
@@ -14,15 +14,83 @@ import {
   Scissors,
   Sparkles,
   Zap,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
+  AlignHorizontalSpaceBetween,
+  AlignVerticalSpaceBetween,
+  AlignVerticalJustifyCenter,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import type { BaseElement } from '../types'
 import { useT } from '../i18n/useLang'
 import { m, AnimatePresence } from './motion'
 import { useToasts } from './ToastContainer'
+import { alignOffsets, unionBox, type AlignOp, type Box } from '../lib/align'
+
+const ALIGN_ACTIONS: { op: AlignOp; icon: ReactNode; label: string }[] = [
+  { op: 'left', icon: <AlignStartVertical size={18} />, label: 'align.left' },
+  { op: 'centerX', icon: <AlignCenterVertical size={18} />, label: 'align.centerX' },
+  { op: 'right', icon: <AlignEndVertical size={18} />, label: 'align.right' },
+  { op: 'top', icon: <AlignStartHorizontal size={18} />, label: 'align.top' },
+  { op: 'centerY', icon: <AlignCenterHorizontal size={18} />, label: 'align.centerY' },
+  { op: 'bottom', icon: <AlignEndHorizontal size={18} />, label: 'align.bottom' },
+  {
+    op: 'distributeX',
+    icon: <AlignHorizontalSpaceBetween size={18} />,
+    label: 'align.distributeX',
+  },
+  { op: 'distributeY', icon: <AlignVerticalSpaceBetween size={18} />, label: 'align.distributeY' },
+]
+
+// Module-level so it keeps its DOM node, and with it keyboard focus, across
+// re-renders: the align row is pressed several times in a row.
+function Btn({
+  onClick,
+  children,
+  label,
+  danger,
+  expanded,
+  controls,
+}: {
+  onClick: () => void
+  children: ReactNode
+  label?: string
+  danger?: boolean
+  expanded?: boolean
+  controls?: string
+}) {
+  return (
+    <m.button
+      whileTap={{ scale: 0.88 }}
+      onClick={onClick}
+      aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      title={label}
+      className={`flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center rounded-full shadow-lg backdrop-blur transition ${
+        danger
+          ? 'bg-danger/90 text-white'
+          : expanded
+            ? 'bg-accent text-accent-fg'
+            : 'bg-surface-2/90 text-text hover:bg-surface-3'
+      }`}
+    >
+      {children}
+    </m.button>
+  )
+}
+
+interface SelectionBarProps {
+  /** Drawn bounds of elements in board units, from the live canvas. */
+  measure: (ids: string[]) => Record<string, Box>
+}
 
 // Floating contextual actions for the currently selected element.
-export function SelectionBar() {
+export function SelectionBar({ measure }: SelectionBarProps) {
   const t = useT()
   const toast = useToasts()
   const selectedId = useEditor((s) => s.selectedId)
@@ -37,11 +105,44 @@ export function SelectionBar() {
   const setCropping = useEditor((s) => s.setCropping)
   const groupElements = useEditor((s) => s.groupElements)
   const clearMultiSelect = useEditor((s) => s.clearMultiSelect)
+  const updateElements = useEditor((s) => s.updateElements)
+  const elements = useEditor((s) => s.elements)
+  const boardWidth = useEditor((s) => s.boardWidth)
+  const boardHeight = useEditor((s) => s.boardHeight)
+  const [aligning, setAligning] = useState(false)
+  const [alignToBoard, setAlignToBoard] = useState(false)
+  const [lastSelectedId, setLastSelectedId] = useState(selectedId)
+  if (selectedId !== lastSelectedId) {
+    setLastSelectedId(selectedId)
+    if (!selectedId) {
+      setAligning(false)
+      setAlignToBoard(false)
+    }
+  }
 
   const el = selected()
   const isGridPhoto = mode === 'grid' && el?.type === 'photo'
   const isFreePhoto = mode === 'free' && el?.type === 'photo'
   const hasMulti = multiSelected.length > 1
+  const alignIds = (hasMulti ? multiSelected : selectedId ? [selectedId] : []).filter((id) => {
+    const e = elements.find((x) => x.id === id)
+    return e && !e.locked && !e.hidden && !(mode === 'grid' && e.type === 'photo')
+  })
+
+  const align = (op: AlignOp) => {
+    const boxes = measure(alignIds)
+    const board = { x: 0, y: 0, width: boardWidth, height: boardHeight }
+    const ref = alignIds.length === 1 || alignToBoard ? board : unionBox(Object.values(boxes))
+    if (!ref) return
+    const offsets = alignOffsets(boxes, op, ref)
+    const patches = Object.fromEntries(
+      elements.flatMap((e) => {
+        const o = offsets[e.id]
+        return o && (o.dx || o.dy) ? [[e.id, { x: e.x + o.dx, y: e.y + o.dy }]] : []
+      }),
+    )
+    if (Object.keys(patches).length) updateElements(patches)
+  }
 
   const stepZoom = (delta: number) => {
     if (el?.type !== 'photo') return
@@ -117,32 +218,6 @@ export function SelectionBar() {
       toast.error(t('toast.enhanceFailed'))
     }
   }
-
-  const Btn = ({
-    onClick,
-    children,
-    label,
-    danger,
-  }: {
-    onClick: () => void
-    children: ReactNode
-    label?: string
-    danger?: boolean
-  }) => (
-    <m.button
-      whileTap={{ scale: 0.88 }}
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={`flex h-12 w-12 sm:h-11 sm:w-11 items-center justify-center rounded-full shadow-lg backdrop-blur transition ${
-        danger
-          ? 'bg-danger/90 text-white'
-          : 'bg-surface-2/90 text-text hover:bg-surface-3'
-      }`}
-    >
-      {children}
-    </m.button>
-  )
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 flex flex-col items-center gap-2 px-2 z-20">
@@ -230,7 +305,7 @@ export function SelectionBar() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.9 }}
               transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-              className="pointer-events-auto flex max-w-full flex-wrap justify-center gap-2 rounded-full bg-surface/80 p-1.5 shadow-xl ring-1 ring-border backdrop-blur sm:flex-nowrap"
+              className="order-2 pointer-events-auto flex max-w-full flex-wrap justify-center gap-2 rounded-full bg-surface/80 p-1.5 shadow-xl ring-1 ring-border backdrop-blur sm:flex-nowrap"
             >
               {mode === 'free' && (
                 <>
@@ -244,6 +319,16 @@ export function SelectionBar() {
                     <BringToFront size={18} />
                   </Btn>
                 </>
+              )}
+              {alignIds.length > 0 && (
+                <Btn
+                  onClick={() => setAligning((v) => !v)}
+                  label={t('sel.align')}
+                  expanded={aligning}
+                  controls="align-row"
+                >
+                  <AlignVerticalJustifyCenter size={18} />
+                </Btn>
               )}
               {isFreePhoto && (
                 <Btn onClick={() => setCropping(selectedId)} label={t('sel.cropShape')}>
@@ -285,6 +370,40 @@ export function SelectionBar() {
                 <Trash2 size={18} />
               </Btn>
             </m.div>
+
+            {aligning && alignIds.length > 0 && (
+              <m.div
+                key="align"
+                id="align-row"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                role="group"
+                aria-label={t('sel.align')}
+                className="order-1 pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-3xl bg-surface/80 p-1.5 shadow-xl ring-1 ring-border backdrop-blur"
+              >
+                {ALIGN_ACTIONS.filter(
+                  (a) => alignIds.length >= 3 || !a.op.startsWith('distribute'),
+                ).map((a) => (
+                  <Btn key={a.op} onClick={() => align(a.op)} label={t(a.label)}>
+                    {a.icon}
+                  </Btn>
+                ))}
+                {alignIds.length > 1 && (
+                  <button
+                    onClick={() => setAlignToBoard((v) => !v)}
+                    aria-pressed={alignToBoard}
+                    className={`min-h-[44px] rounded-full px-3 text-xs font-medium transition ${
+                      alignToBoard
+                        ? 'bg-accent font-semibold text-accent-fg'
+                        : 'bg-surface-2/90 text-text ring-1 ring-border hover:bg-surface-3'
+                    }`}
+                  >
+                    {t('align.toBoard')}
+                  </button>
+                )}
+              </m.div>
+            )}
           </>
         )}
       </AnimatePresence>

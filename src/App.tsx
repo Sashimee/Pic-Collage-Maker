@@ -102,6 +102,7 @@ function toStoredDoc(): StoredDoc {
 
 export default function App() {
   const editorRef = useRef<EditorHandle>(null)
+  const measure = (ids: string[]) => editorRef.current?.measure(ids) ?? {}
   const [installOpen, setInstallOpen] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
   const [bookPages, setBookPages] = useState<LoadedDocument[]>([])
@@ -424,7 +425,7 @@ export default function App() {
                 <Suspense fallback={null}>
                   <EditorCanvas ref={editorRef} />
                 </Suspense>
-                <SelectionBar />
+                <SelectionBar measure={measure} />
                 <EmptyState />
                 <Suspense fallback={null}><CropOverlay /></Suspense>
                 <ZoomControls />
@@ -453,7 +454,7 @@ export default function App() {
               <Suspense fallback={null}>
                 <EditorCanvas ref={editorRef} bottomInset={panels.current ? 0.46 : 0} />
               </Suspense>
-              <SelectionBar />
+              <SelectionBar measure={measure} />
               <EmptyState />
               <MobileSheet panels={panels} />
               <Suspense fallback={null}><CropOverlay /></Suspense>

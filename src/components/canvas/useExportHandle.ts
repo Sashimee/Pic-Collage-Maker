@@ -3,11 +3,14 @@ import type Konva from 'konva'
 import { useEditor } from '../../store/editorStore'
 import { exportBoard, type ExportFormat } from '../../lib/exportImage'
 import type { ViewTransform } from './useViewTransform'
+import type { Box } from '../../lib/align'
 
 export interface EditorHandle {
   /** Async: the export has to wait a frame for the full-resolution photo
    *  sources to be swapped in before the canvas is snapshotted. */
   exportImage: (format: ExportFormat) => Promise<string | null>
+  /** Each element's drawn bounds in board units, rotation included. */
+  measure: (ids: string[]) => Record<string, Box>
 }
 
 /** Two rAFs: one for React to commit, one for Konva to redraw. */
@@ -42,6 +45,16 @@ export function useExportHandle(
   }, [hostRef, tf, boardWidth, boardHeight])
 
   useImperativeHandle(ref, () => ({
+    measure: (ids) => {
+      const board = boardRef.current
+      if (!board) return {}
+      return Object.fromEntries(
+        ids.flatMap((id) => {
+          const node = board.findOne('#' + id)
+          return node ? [[id, node.getClientRect({ relativeTo: board, skipShadow: true })]] : []
+        }),
+      )
+    },
     exportImage: async (format) => {
       const board = boardRef.current
       if (!board) return null
