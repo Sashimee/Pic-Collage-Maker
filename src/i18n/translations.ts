@@ -141,6 +141,8 @@ export const en: Dict = {
   'aspect.pin': 'Pin',
   'aspect.wide': 'Wide',
   'aspect.custom': 'Custom',
+  'aspect.width': 'Width',
+  'aspect.height': 'Height',
   'cell.zoomIn': 'Zoom photo in',
   'cell.zoomOut': 'Zoom photo out',
   'cell.reset': 'Reset photo position',

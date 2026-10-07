@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useLang, useT } from '../i18n/useLang'
@@ -29,6 +29,19 @@ const PREVIEW_BACKGROUND: Background = {
   gradientAngle: 0,
   patternId: 'dots',
   patternColor: '#000000',
+}
+
+// The thumbnail draws the template's text, so the button's name has to contain all of
+// it (WCAG 2.5.3, label in name), not just the title it is filed under.
+const thumbText = (doc: TemplateDocument) =>
+  doc.elements
+    .flatMap((el) => (el.type === 'text' ? [el.text.replace(/\s+/g, ' ').trim()] : []))
+    .join(' ')
+
+const mineLabel = (name: string, doc: TemplateDocument) => {
+  const text = thumbText(doc)
+  if (!text || name.includes(text)) return name
+  return text.includes(name) ? text : `${name}: ${text}`
 }
 
 function TemplateThumb({ doc }: { doc: TemplateDocument }) {
@@ -65,28 +78,31 @@ function TemplateThumb({ doc }: { doc: TemplateDocument }) {
       })}
       {doc.elements.map((el, i) =>
         el.type === 'text' ? (
-          <span
-            key={i}
-            className="absolute whitespace-pre-wrap"
-            style={{
-              left: el.x * scale,
-              top: el.y * scale,
-              width: el.width !== undefined ? el.width * scale : undefined,
-              textAlign: el.align,
-              fontFamily: el.fontFamily,
-              fontSize: el.fontSize * scale,
-              fontWeight: el.fontStyle.includes('bold') ? 700 : 400,
-              fontStyle: el.fontStyle.includes('italic') ? 'italic' : undefined,
-              lineHeight: el.lineHeight ?? 1,
-              color: el.fill,
-              background: el.chip?.color,
-              padding: el.chip ? el.chip.padding * scale : undefined,
-              transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
-              transformOrigin: 'top left',
-            }}
-          >
-            {el.text}
-          </span>
+          // The space keeps adjacent lines apart in the text the label is checked against.
+          <Fragment key={i}>
+            {' '}
+            <span
+              className="absolute whitespace-pre-wrap"
+              style={{
+                left: el.x * scale,
+                top: el.y * scale,
+                width: el.width !== undefined ? el.width * scale : undefined,
+                textAlign: el.align,
+                fontFamily: el.fontFamily,
+                fontSize: el.fontSize * scale,
+                fontWeight: el.fontStyle.includes('bold') ? 700 : 400,
+                fontStyle: el.fontStyle.includes('italic') ? 'italic' : undefined,
+                lineHeight: el.lineHeight ?? 1,
+                color: el.fill,
+                background: el.chip?.color,
+                padding: el.chip ? el.chip.padding * scale : undefined,
+                transform: el.rotation ? `rotate(${el.rotation}deg)` : undefined,
+                transformOrigin: 'top left',
+              }}
+            >
+              {el.text}
+            </span>
+          </Fragment>
         ) : (
           <span
             key={i}
@@ -228,7 +244,7 @@ function MyTemplates({ apply }: { apply: (doc: TemplateDocument) => void }) {
                   else itemButtons.current.delete(tpl.id)
                 }}
                 onClick={() => apply(tpl.doc)}
-                aria-label={tpl.name}
+                aria-label={mineLabel(tpl.name, tpl.doc)}
                 title={tpl.name}
                 className="flex h-[112px] w-[112px] items-center justify-center rounded-xl bg-surface-2 transition hover:bg-surface-3 active:scale-95"
               >
@@ -355,8 +371,9 @@ export function TemplateGallery({ onApplied }: { onApplied?: () => void }) {
           className="scroll-x flex gap-2 overflow-x-auto p-1"
         >
           {built.map(({ tpl, doc }) => {
-            const title = doc.elements.find((e) => e.type === 'text')
-            const name = `${title?.type === 'text' ? title.text.split('\n')[0] : ''}, ${t(`aspect.${tpl.size}`)}`
+            const text = thumbText(doc)
+            const aspect = t(`aspect.${tpl.size}`)
+            const name = text ? `${text}, ${aspect}` : aspect
             return (
               <li key={tpl.id} className="shrink-0">
                 <button

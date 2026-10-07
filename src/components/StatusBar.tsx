@@ -50,7 +50,7 @@ export function StatusBar() {
           ))}
         </div>
         <span className="h-3 w-px bg-border" />
-        <span className="opacity-60">Pic Collage v2</span>
+        <span>Pic Collage v2</span>
       </div>
     </footer>
   )

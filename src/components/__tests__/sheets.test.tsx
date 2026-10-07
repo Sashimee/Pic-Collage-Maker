@@ -39,7 +39,7 @@ describe('ActionSheet', () => {
         </ActionSheet>
       </MotionProvider>,
     )
-    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('dialog', { name: 'Export' })).toHaveAttribute('aria-modal', 'true')
     expect(screen.getByRole('heading', { name: 'Export' })).toBeInTheDocument()
     expect(screen.getByText('body')).toBeInTheDocument()
   })

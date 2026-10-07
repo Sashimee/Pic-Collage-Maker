@@ -123,6 +123,8 @@ const pt: Dict = {
   'aspect.pin': 'Pin',
   'aspect.wide': 'Largo',
   'aspect.custom': 'Personalizado',
+  'aspect.width': 'Largura',
+  'aspect.height': 'Altura',
   'cell.zoomIn': 'Aumentar zoom',
   'cell.zoomOut': 'Diminuir zoom',
   'cell.reset': 'Redefinir posição',

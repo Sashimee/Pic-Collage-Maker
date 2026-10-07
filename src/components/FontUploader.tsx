@@ -43,6 +43,8 @@ export function FontUploader({ onFontsChange }: { onFontsChange?: () => void }) 
         ref={inputRef}
         type="file"
         accept=".ttf,.otf,.woff,.woff2"
+        aria-label={t('font.upload')}
+        tabIndex={-1}
         className="sr-only"
         onChange={handleFile}
       />

@@ -127,6 +127,8 @@ const de: Dict = {
   'aspect.pin': 'Pin',
   'aspect.wide': 'Breit',
   'aspect.custom': 'Eigene',
+  'aspect.width': 'Breite',
+  'aspect.height': 'Höhe',
   'cell.zoomIn': 'Foto vergrößern',
   'cell.zoomOut': 'Foto verkleinern',
   'cell.reset': 'Fotoposition zurücksetzen',

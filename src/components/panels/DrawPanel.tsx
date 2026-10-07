@@ -17,6 +17,9 @@ export function DrawPanel() {
         {DRAW_COLORS.map((c) => (
           <button
             key={c}
+            type="button"
+            aria-label={`${t('common.color')} ${c.toUpperCase()}`}
+            aria-pressed={brushColor === c}
             onClick={() => setBrush({ color: c })}
             style={{ background: c }}
             className={`h-11 w-11 rounded-full border transition active:scale-90 ${

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { m, AnimatePresence } from './motion'
 import { ChevronDown } from 'lucide-react'
 import { useScrollOverflow } from '../hooks/useScrollOverflow'
@@ -13,6 +13,7 @@ interface ActionSheetProps {
 
 export function ActionSheet({ open, onClose, title, children }: ActionSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   // `open` is a dep because the scroller only exists while the sheet is
   // mounted — the first measurement has to wait for that.
   const {
@@ -42,7 +43,12 @@ export function ActionSheet({ open, onClose, title, children }: ActionSheetProps
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-0 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
+        >
           {/* Backdrop */}
           <m.div
             initial={{ opacity: 0 }}
@@ -69,7 +75,7 @@ export function ActionSheet({ open, onClose, title, children }: ActionSheetProps
               </div>
 
               {title && (
-                <h3 className="px-4 pb-2 pt-1 text-center text-sm font-semibold text-muted">
+                <h3 id={titleId} className="px-4 pb-2 pt-1 text-center text-sm font-semibold text-muted">
                   {title}
                 </h3>
               )}

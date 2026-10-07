@@ -110,6 +110,8 @@ const es: Dict = {
   'aspect.pin': 'Pin',
   'aspect.wide': 'Panorámico',
   'aspect.custom': 'Personalizado',
+  'aspect.width': 'Ancho',
+  'aspect.height': 'Alto',
   'cell.zoomIn': 'Acercar foto',
   'cell.zoomOut': 'Alejar foto',
   'cell.reset': 'Restablecer posición de la foto',
