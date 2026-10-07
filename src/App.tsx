@@ -26,6 +26,7 @@ import { useIsDesktop } from './hooks/useMediaQuery'
 import { useVersionCheck } from './hooks/useVersionCheck'
 import { useMemoryPressure } from './hooks/useMemoryPressure'
 import { useShortcuts } from './hooks/useShortcuts'
+import { useLaunchFiles } from './hooks/useLaunchFiles'
 import { UpdateBanner } from './components/UpdateBanner'
 import { ZoomControls } from './components/ZoomControls'
 import { StatusBar } from './components/StatusBar'
@@ -163,6 +164,8 @@ export default function App() {
       clearTimeout(timer)
     }
   }, [hydrated])
+
+  useLaunchFiles(hydrated)
 
   const activeProjectId = useProjects((s) => s.activeProjectId)
   const saveActiveProject = useProjects((s) => s.saveActiveProject)

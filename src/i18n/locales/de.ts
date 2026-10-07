@@ -528,6 +528,7 @@ const de: Dict = {
   'toast.restoreFailed': 'Wiederherstellung fehlgeschlagen',
   'toast.projectSavedFile': 'Projekt als Datei gespeichert',
   'toast.projectOpened': 'Projekt geöffnet',
+  'launch.replaceConfirm': 'Dieses Projekt öffnen? Es ersetzt, was gerade auf der Leinwand ist.',
   'toast.noPhotosExport': 'Keine Fotos zum Exportieren',
   'toast.noExportablePhotos': 'Keine exportierbaren Fotos gefunden',
   'toast.batchExportDone': 'Stapel-Export heruntergeladen',

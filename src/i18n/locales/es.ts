@@ -511,6 +511,7 @@ const es: Dict = {
   'toast.restoreFailed': 'Error al restaurar',
   'toast.projectSavedFile': 'Proyecto guardado como archivo',
   'toast.projectOpened': 'Proyecto abierto',
+  'launch.replaceConfirm': '¿Abrir este proyecto? Reemplaza lo que hay ahora en el lienzo.',
   'toast.noPhotosExport': 'No hay fotos para exportar',
   'toast.noExportablePhotos': 'No se encontraron fotos exportables',
   'toast.batchExportDone': 'Exportación por lotes descargada',
