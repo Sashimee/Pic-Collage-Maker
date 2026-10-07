@@ -3,7 +3,7 @@ import {
   Share2, FileImage, Image as ImageIcon,
   FolderOpen, Save, Upload,
   FileCode, Maximize, FileText, Package, Smartphone,
-  BookOpen, Proportions,
+  BookOpen, Proportions, Copy,
 } from 'lucide-react'
 import { useRef } from 'react'
 import { useEditor } from '../../store/editorStore'
@@ -14,6 +14,7 @@ import { useInstall } from '../../lib/pwaInstall'
 import { canPickFiles, useLinkedFileName } from '../../lib/linkedFile'
 import { ActionSheet, ActionItem, ActionDivider, ActionCancel } from '../ActionSheet'
 import type { ExportKind } from '../HeaderBar'
+import { canCopyImage } from '../../lib/exportImage'
 
 interface Props {
   open: boolean
@@ -164,6 +165,13 @@ export function MobileMenu({
         icon={<FileImage size={18} />}
         label={t('export.jpg')}
       />
+      {canCopyImage() && (
+        <ActionItem
+          onClick={() => { onClose(); onExport('copy') }}
+          icon={<Copy size={18} />}
+          label={t('export.copy')}
+        />
+      )}
       <ActionItem
         onClick={() => { onClose(); onExportSVG?.() }}
         icon={<FileCode size={18} />}
