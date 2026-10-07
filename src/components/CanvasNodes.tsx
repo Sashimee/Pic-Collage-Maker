@@ -6,6 +6,7 @@ import {
   Path,
   Rect,
   RegularPolygon,
+  Shape,
   Star,
   Text as KonvaText,
   Arrow,
@@ -20,7 +21,8 @@ import type {
 } from '../types'
 import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
-import { tracePhotoShape } from '../lib/shapes'
+import { tracePhotoFrame, traceRoundRect } from '../lib/shapes'
+import { SHADOW_OPACITY, resolveStyling } from '../lib/photoStyling'
 import { computeFilterConfig, computeFilterConfigFromStack } from '../lib/filters'
 import { cropBasisScale, scaleCrop, straightenScale } from '../lib/photoCrop'
 import { commonHandlers, lockProps, toBlend, type NodeProps } from './nodes/shared'
@@ -75,6 +77,13 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
   }, [image, el.filters, el.filterStack, crop?.x, crop?.y, crop?.width, crop?.height, el.width, el.height, cover])
 
   const v = el.filters.vignette
+  const { radius, border, shadow, card } = resolveStyling(el)
+  const traceFrame = (ctx: Konva.Context) =>
+    tracePhotoFrame(ctx, shape, el.width, el.height, radius)
+  const traceOutline = (ctx: Konva.Context) =>
+    card
+      ? traceRoundRect(ctx, card.x, card.y, card.width, card.height, card.radius)
+      : traceFrame(ctx)
 
   return (
     <Group
@@ -90,46 +99,92 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
       {...lockProps(el)}
       onClick={(e) => onSelect(e)}
       onTap={(e) => onSelect(e)}
-      clipFunc={
-        shape !== 'rect'
-          ? (ctx) => tracePhotoShape(ctx, shape, el.width, el.height)
-          : undefined
-      }
       {...commonHandlers(onChange, onDragMove)}
     >
       <Rect width={el.width} height={el.height} listening={false} />
-      <Group
-        clipWidth={tilt ? el.width : undefined}
-        clipHeight={tilt ? el.height : undefined}
-        ref={measureAsEmpty}
-      >
-        <KonvaImage
-          ref={ref}
-          image={image}
-          width={el.width}
-          height={el.height}
-          crop={crop}
-          x={el.width / 2}
-          y={el.height / 2}
-          offsetX={el.width / 2}
-          offsetY={el.height / 2}
-          rotation={tilt}
-          scaleX={(el.flipX ? -1 : 1) * cover}
-          scaleY={(el.flipY ? -1 : 1) * cover}
-        />
-      </Group>
-      {v > 0 && (
-        <Rect
-          width={el.width}
-          height={el.height}
-          listening={false}
-          fillRadialGradientStartPoint={{ x: el.width / 2, y: el.height / 2 }}
-          fillRadialGradientEndPoint={{ x: el.width / 2, y: el.height / 2 }}
-          fillRadialGradientStartRadius={Math.min(el.width, el.height) * 0.3}
-          fillRadialGradientEndRadius={Math.max(el.width, el.height) * 0.72}
-          fillRadialGradientColorStops={[0, 'rgba(0,0,0,0)', 1, `rgba(0,0,0,${v})`]}
-        />
+      {shadow && (
+        // Snapping and marquee hits measure with the shadow; it must not widen the photo.
+        <Group ref={measureAsEmpty} listening={false}>
+          <Shape
+            sceneFunc={(ctx, node) => {
+              // The fill only casts the shadow; clipping it away keeps it from
+              // showing through a cut-out or semi-transparent photo.
+              const pad = el.width + el.height + shadow.blur + shadow.offset
+              ctx.save()
+              traceOutline(ctx)
+              ctx.rect(-pad, -pad, el.width + 2 * pad, el.height + 2 * pad)
+              ctx.clip('evenodd')
+              traceOutline(ctx)
+              ctx.fillShape(node)
+              ctx.restore()
+            }}
+            fill="#ffffff"
+            shadowColor={shadow.color}
+            shadowBlur={shadow.blur}
+            shadowOffsetY={shadow.offset}
+            shadowOpacity={SHADOW_OPACITY}
+          />
+        </Group>
       )}
+      {card && (
+        // Measured like the photo, so snapping, the transformer and align agree on its edges.
+        <Group ref={measureAsEmpty}>
+          <Rect
+            x={card.x}
+            y={card.y}
+            width={card.width}
+            height={card.height}
+            cornerRadius={card.radius}
+            fill="#ffffff"
+          />
+        </Group>
+      )}
+      <Group clipFunc={shape !== 'rect' || radius > 0 || border ? traceFrame : undefined}>
+        <Group
+          clipWidth={tilt ? el.width : undefined}
+          clipHeight={tilt ? el.height : undefined}
+          ref={measureAsEmpty}
+        >
+          <KonvaImage
+            ref={ref}
+            image={image}
+            width={el.width}
+            height={el.height}
+            crop={crop}
+            x={el.width / 2}
+            y={el.height / 2}
+            offsetX={el.width / 2}
+            offsetY={el.height / 2}
+            rotation={tilt}
+            scaleX={(el.flipX ? -1 : 1) * cover}
+            scaleY={(el.flipY ? -1 : 1) * cover}
+          />
+        </Group>
+        {v > 0 && (
+          <Rect
+            width={el.width}
+            height={el.height}
+            listening={false}
+            fillRadialGradientStartPoint={{ x: el.width / 2, y: el.height / 2 }}
+            fillRadialGradientEndPoint={{ x: el.width / 2, y: el.height / 2 }}
+            fillRadialGradientStartRadius={Math.min(el.width, el.height) * 0.3}
+            fillRadialGradientEndRadius={Math.max(el.width, el.height) * 0.72}
+            fillRadialGradientColorStops={[0, 'rgba(0,0,0,0)', 1, `rgba(0,0,0,${v})`]}
+          />
+        )}
+        {border && (
+          // Twice the width, half of it clipped away: the border sits inside the frame.
+          <Shape
+            sceneFunc={(ctx, node) => {
+              traceFrame(ctx)
+              ctx.strokeShape(node)
+            }}
+            stroke={border.color}
+            strokeWidth={border.width * 2}
+            listening={false}
+          />
+        )}
+      </Group>
     </Group>
   )
 }

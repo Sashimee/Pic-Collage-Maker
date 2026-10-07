@@ -6,6 +6,7 @@ import { useT } from '../i18n/useLang'
 import type { FilterOperation, FilterPreset } from '../types'
 import { Chip, Section, Slider } from './ui'
 import { useToasts } from './ToastContainer'
+import { PhotoStyleSection } from './PhotoStyleSection'
 import { autoEnhance } from '../ai/autoEnhance'
 import { STYLE_OPTIONS, applyStyleTransfer } from '../ai/styleTransfer'
 
@@ -31,6 +32,7 @@ export function FilterPanel() {
   const updateFilterStack = useEditor((s) => s.updateFilterStack)
   const updateElement = useEditor((s) => s.updateElement)
   const updateFilters = useEditor((s) => s.updateFilters)
+  const gridMode = useEditor((s) => s.mode === 'grid')
   const photo = el?.type === 'photo' ? el : null
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
 
@@ -255,6 +257,8 @@ export function FilterPanel() {
           ))}
         </div>
       </Section>
+
+      {!gridMode && <PhotoStyleSection photo={photo} />}
 
       {/* Auto-enhance */}
       <button

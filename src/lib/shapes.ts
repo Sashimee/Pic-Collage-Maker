@@ -212,3 +212,37 @@ export const PHOTO_SHAPES: { id: PhotoShape; glyph: string }[] = [
   { id: 'hexagon', glyph: '⬡' },
   { id: 'triangle', glyph: '▲' },
 ]
+
+/** `tracePhotoShape`, with rounded corners when the shape is a plain rect. */
+export function tracePhotoFrame(
+  ctx: CanvasRenderingContext2D | Konva.Context,
+  shape: PhotoShape,
+  w: number,
+  h: number,
+  radius: number,
+) {
+  if (shape !== 'rect' || radius <= 0) return tracePhotoShape(ctx, shape, w, h)
+  traceRoundRect(ctx as unknown as Path2DLike, 0, 0, w, h, radius)
+}
+
+export function traceRoundRect(
+  c: Path2DLike,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  radius: number,
+) {
+  const r = Math.min(radius, w / 2, h / 2)
+  c.beginPath()
+  c.moveTo(x + r, y)
+  c.lineTo(x + w - r, y)
+  c.arc(x + w - r, y + r, r, -Math.PI / 2, 0)
+  c.lineTo(x + w, y + h - r)
+  c.arc(x + w - r, y + h - r, r, 0, Math.PI / 2)
+  c.lineTo(x + r, y + h)
+  c.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI)
+  c.lineTo(x, y + r)
+  c.arc(x + r, y + r, r, Math.PI, (3 * Math.PI) / 2)
+  c.closePath()
+}

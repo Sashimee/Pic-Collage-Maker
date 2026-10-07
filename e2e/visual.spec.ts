@@ -189,4 +189,58 @@ test.describe('visual', () => {
       expect.soft(await readFile(path)).toMatchSnapshot(file)
     }
   })
+
+  test('photo styling, on the board and in PNG and SVG exports', async ({ page }) => {
+    await addPhotos(page, 3)
+    const [a, b, c] = await photoIds(page)
+    const get = await editor(page)
+    await page.evaluate(
+      ({ get, a, b, c }) => {
+        get().updateElement(a, {
+          x: 90,
+          y: 120,
+          width: 420,
+          height: 315,
+          rotation: -4,
+          styling: { borderWidth: 14, radius: 36, shadowBlur: 30, shadowOffset: 14 },
+        })
+        get().updateElement(b, {
+          x: 560,
+          y: 640,
+          width: 400,
+          height: 300,
+          rotation: 5,
+          styling: { polaroid: true, shadowBlur: 24, shadowOffset: 10 },
+        })
+        get().updateElement(c, {
+          x: 120,
+          y: 820,
+          width: 360,
+          height: 270,
+          opacity: 0.5,
+          styling: { borderWidth: 10, borderColor: '#2563eb', shadowBlur: 20, shadowOffset: 10 },
+        })
+      },
+      { get, a, b, c },
+    )
+    await expectBoard(page, 'photo-styling.png')
+
+    await page.getByRole('button', { name: 'Export' }).click()
+    const [png] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: 'Download PNG' }).click(),
+    ])
+    const { readFile } = await import('node:fs/promises')
+    expect.soft(await readFile(await png.path())).toMatchSnapshot('export-styled.png')
+
+    await page.getByRole('button', { name: 'Export' }).click()
+    const [svg] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('menuitem', { name: 'Export SVG' }).click(),
+    ])
+    const text = await readFile(await svg.path(), 'utf8')
+    expect(text.match(/<feDropShadow/g)).toHaveLength(3)
+    expect(text).toMatch(/stroke-width="28"/)
+    expect(text).toMatch(/fill="#ffffff"/)
+  })
 })
