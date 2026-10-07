@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { exportSVG } from '../exportSVG'
-import type { Background, PhotoElement, PhotoStyling, StickerElement } from '../../types'
+import type {
+  Background,
+  PhotoElement,
+  PhotoStyling,
+  StickerElement,
+  TextElement,
+} from '../../types'
 
 const bg: Background = {
   type: 'solid',
@@ -25,7 +31,35 @@ const sticker = (patch: Partial<StickerElement> = {}): StickerElement => ({
   ...patch,
 })
 
+const text = (patch: Partial<TextElement> = {}): TextElement => ({
+  id: 't1',
+  type: 'text',
+  x: 0,
+  y: 0,
+  rotation: 0,
+  scaleX: 1,
+  scaleY: 1,
+  text: 'Hello',
+  fontFamily: 'Bebas Neue, system-ui, sans-serif',
+  fontSize: 40,
+  fill: '#000000',
+  fontStyle: 'normal',
+  ...patch,
+})
+
 describe('exportSVG', () => {
+  it('carries letter spacing onto the text, and omits it when unset', () => {
+    expect(exportSVG([text({ letterSpacing: 6 })], 100, 100, bg)).toMatch(
+      /<text[^>]* letter-spacing="6"[^>]*>Hello<\/text>/,
+    )
+    expect(exportSVG([text()], 100, 100, bg)).not.toContain('letter-spacing')
+  })
+
+  it('drops a letter spacing that is not a number', () => {
+    const hostile = text({ letterSpacing: '1" onload="x' as unknown as number })
+    expect(exportSVG([hostile], 100, 100, bg)).not.toContain('letter-spacing')
+  })
+
   it('leaves hidden layers out', () => {
     const svg = exportSVG([sticker({ hidden: true })], 100, 100, bg)
     expect(svg).not.toContain('⭐')

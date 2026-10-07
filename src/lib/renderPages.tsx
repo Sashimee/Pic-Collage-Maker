@@ -191,6 +191,9 @@ export async function renderPages(
       stage.position({ x: box.x, y: box.y })
 
       await waitForImages(stage, expectedImageCount(doc))
+      // A text node starts loading its pack font on mount and re-measures once
+      // it arrives; until then it draws in the fallback face.
+      await document.fonts.ready
       await nextFrame()
 
       // Overlays go through the same post-process the live export uses, on a

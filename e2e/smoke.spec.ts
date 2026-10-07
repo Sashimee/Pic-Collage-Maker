@@ -31,6 +31,42 @@ test.describe('smoke', () => {
     await waitForElements(page, 'text')
   })
 
+  test('a font-pack font is fetched from this origin only once a text uses it', async ({
+    page,
+  }) => {
+    const requests: string[] = []
+    const fonts: string[] = []
+    page.on('request', (r) => {
+      requests.push(r.url())
+      if (r.resourceType() === 'font') fonts.push(r.url())
+    })
+    await openApp(page)
+    await skipGallery(page)
+    await page.getByRole('button', { name: 'Text', exact: true }).click()
+    await page.getByRole('button', { name: /Add text/ }).click()
+    await waitForElements(page, 'text')
+    expect(fonts.filter((u) => /\/pack-[^/]*\.woff2/.test(u))).toEqual([])
+
+    await page.locator('select:has(option[value="Lobster"])').selectOption('Lobster')
+    await expect
+      .poll(() => fonts.filter((u) => /\/pack-lobster[^/]*\.woff2/.test(u)).length)
+      .toBe(1)
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.fonts].some(
+            (f) => f.family.replace(/"/g, '') === 'Lobster' && f.status === 'loaded',
+          ),
+        ),
+      )
+      .toBe(true)
+    expect(fonts.filter((u) => /\/pack-[^/]*\.woff2/.test(u))).toHaveLength(1)
+
+    const origin = new URL(page.url()).origin
+    const offsite = requests.filter((u) => /^https?:/.test(u) && new URL(u).origin !== origin)
+    expect(offsite).toEqual([])
+  })
+
   test('export menu opens', async ({ page }) => {
     await openApp(page)
     // Regression guard: the header needs its own stacking context, or this

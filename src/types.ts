@@ -144,6 +144,7 @@ export interface TextElement extends BaseElement {
   // Multi-line support
   width?: number            // wrapping width in design units
   lineHeight?: number       // 1.2 default
+  letterSpacing?: number    // extra px between characters (0 default)
   align?: 'left' | 'center' | 'right'
   // Rich text spans (if provided, render instead of single text string)
   spans?: TextSpan[]
