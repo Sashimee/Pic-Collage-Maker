@@ -16,6 +16,7 @@ const pt: Dict = {
   'empty.title': 'Crie sua colagem',
   'empty.subtitle': 'Adicione suas fotos, organize, estilize e exporte — tudo aqui no seu dispositivo.',
   'empty.startLayout': 'Ou comece com um modelo',
+  'empty.trySamples': 'Experimente com fotos de exemplo',
   'template.2v': '2 Verticais',
   'template.2h': '2 Horizontais',
   'template.3col': '3 Colunas',

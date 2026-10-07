@@ -13,6 +13,7 @@ const es: Dict = {
   'empty.title': 'Crea tu collage',
   'empty.subtitle': 'Añade tus fotos, organízalas, estiliza y exporta — todo aquí en tu dispositivo.',
   'empty.startLayout': 'O empieza con una plantilla',
+  'empty.trySamples': 'Prueba con fotos de ejemplo',
   'template.2v': '2 Vertical',
   'template.2h': '2 Horizontal',
   'template.3col': '3 Columnas',

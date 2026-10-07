@@ -27,6 +27,7 @@ export const en: Dict = {
   'empty.title': 'Create your collage',
   'empty.subtitle': 'Add your photos, then arrange, style and export — all right here on your device.',
   'empty.startLayout': 'Or start from a template',
+  'empty.trySamples': 'Try with sample photos',
   'template.2v': '2 Vertical',
   'template.2h': '2 Horizontal',
   'template.3col': '3 Columns',
