@@ -3,6 +3,13 @@
 
 import type { LoadedDocument } from '../store/editorStore'
 import { getPhoto, putPhoto } from './persistence'
+import {
+  backgroundKey,
+  rehydrateBackground,
+  rehydratePhotos,
+  stripBackgroundUrl,
+  stripPhotoUrls,
+} from './photoRehydrate'
 
 export interface PicCollageFile {
   version: 1
@@ -12,7 +19,7 @@ export interface PicCollageFile {
     updatedAt: number
   }
   doc: LoadedDocument
-  photos: Record<string, string> // photoId → base64 data URL
+  photos: Record<string, string> // photo store key → base64 data URL
 }
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -28,24 +35,14 @@ export async function packProject(
   name: string,
   doc: LoadedDocument,
 ): Promise<Blob> {
-  // Collect all photoIds referenced in the document
-  const photoIds = new Set<string>()
-  for (const el of doc.elements) {
-    if (el.type === 'photo' && el.photoId) {
-      photoIds.add(el.photoId)
-    }
-  }
-  const bg = doc.background
-  if (bg.type === 'photo' && bg.photoId) {
-    photoIds.add(bg.photoId)
-  }
-
   // Fetch blobs from IndexedDB and encode
   const photos: Record<string, string> = {}
-  for (const id of photoIds) {
-    const blob = await getPhoto(id)
+  for (const key of photoKeys(doc)) {
+    const blob = await getPhoto(key)
     if (blob) {
-      photos[id] = await blobToBase64(blob)
+      // Imports keep untyped originals as they came; unpack only accepts data:image/ URLs.
+      const typed = blob.type.startsWith('image/') ? blob : new Blob([blob], { type: 'image/jpeg' })
+      photos[key] = await blobToBase64(typed)
     }
   }
 
@@ -56,11 +53,29 @@ export async function packProject(
       createdAt: Date.now(),
       updatedAt: Date.now(),
     },
-    doc,
+    doc: {
+      ...doc,
+      elements: stripPhotoUrls(doc.elements),
+      background: stripBackgroundUrl(doc.background),
+    },
     photos,
   }
 
   return new Blob([JSON.stringify(file)], { type: 'application/json' })
+}
+
+/** The photo-store keys a document's pixels live under (see photoRehydrate.ts). */
+function photoKeys(doc: LoadedDocument): Set<string> {
+  // Collect all photoIds referenced in the document
+  const keys = new Set<string>()
+  for (const el of doc.elements) {
+    if (el.type === 'photo' && el.photoId) {
+      for (const variant of ['orig', 'prev', 'thumb']) keys.add(`${el.photoId}:${variant}`)
+    }
+  }
+  const bg = doc.background
+  if (bg.type === 'photo' && bg.photoId) keys.add(backgroundKey(bg.photoId))
+  return keys
 }
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -84,6 +99,9 @@ function validatePicCollageFile(raw: unknown): PicCollageFile {
   const doc = raw.doc
   if (!isPlainObject(doc) || !Array.isArray(doc.elements)) {
     throw new Error('Invalid .piccollage: missing doc.elements')
+  }
+  if (!isPlainObject(doc.background)) {
+    throw new Error('Invalid .piccollage: missing doc.background')
   }
 
   // Validate photo URLs are data: images (block HTTP/HTTPS egress)
@@ -109,12 +127,18 @@ export async function unpackProject(
 
   const file = validatePicCollageFile(raw)
 
+  // Only the keys of photos the document itself names; anything else in the file is ignored.
+  const wanted = photoKeys(file.doc)
   // Decode base64 photos and store back into IndexedDB
-  for (const [photoId, dataUrl] of Object.entries(file.photos)) {
+  for (const [key, dataUrl] of Object.entries(file.photos)) {
+    if (!wanted.has(key)) continue
     const response = await fetch(dataUrl)
     const photoBlob = await response.blob()
-    await putPhoto(photoId, photoBlob)
+    await putPhoto(key, photoBlob)
   }
 
-  return { name: file.project.name, doc: file.doc }
+  // Files saved before #137 carry the saving session's dead blob: URLs.
+  const elements = await rehydratePhotos(stripPhotoUrls(file.doc.elements))
+  const background = await rehydrateBackground(stripBackgroundUrl(file.doc.background))
+  return { name: file.project.name, doc: { ...file.doc, elements, background } }
 }
