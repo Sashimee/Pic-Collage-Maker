@@ -20,6 +20,10 @@ jobs:
       # "out of sync" under npm ci. See CLAUDE.md → Known gotchas.
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      # Gates only what ships to users; dev-tool advisories go through Dependabot
+      # so a new one can't fail unrelated PRs.
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
       - name: Lint (tsc + ESLint)
         run: npm run lint
       - name: Test (Vitest, coverage thresholds)
