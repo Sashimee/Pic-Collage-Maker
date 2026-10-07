@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence, useDragControls } from './motion'
+import { m, AnimatePresence, useDragControls, SPRING } from './motion'
 
 // Mobile editing surface: a draggable bottom sheet with two snap points
 // (half / full) plus flick-down-to-dismiss. Drag is initiated from the grab
@@ -43,12 +43,12 @@ export function BottomSheet({
         // photo/cell while a panel is open (e.g. to apply filters). Dismiss via
         // the drag handle, the close button, or re-tapping the active tab.
         <m.div
-          className="absolute inset-x-0 bottom-0 z-30 flex max-h-full flex-col overflow-hidden rounded-t-3xl border-t border-border bg-surface shadow-[0_-12px_40px_-16px_rgba(0,0,0,0.6)]"
+          className="absolute inset-x-0 bottom-0 z-30 flex max-h-full flex-col overflow-hidden rounded-t-3xl border-t border-border bg-surface shadow-sheet"
             style={{ height: expanded ? '86%' : '46%' }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+            transition={SPRING.sheet}
             drag="y"
             dragControls={controls}
             dragListener={false}

@@ -1,5 +1,5 @@
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, FADE } from './motion'
 import { BottomSheet } from './BottomSheet'
 import type { PanelsApi } from './panels.config'
 import { useWorkspace } from '../store/workspaceStore'
@@ -93,7 +93,7 @@ export function MobileTabBar({ panels }: { panels: PanelsApi }) {
               <span
                 className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${
                   isActive
-                    ? 'bg-grad-accent text-white shadow-[var(--shadow-accent)]'
+                    ? 'bg-grad-accent text-white shadow-accent'
                     : ''
                 }`}
               >
@@ -177,7 +177,7 @@ export function ToolRail({ panels }: { panels: PanelsApi }) {
               <span
                 className={`flex h-10 w-10 items-center justify-center rounded-xl transition ${
                   isActive
-                    ? 'bg-grad-accent text-white shadow-[var(--shadow-accent)]'
+                    ? 'bg-grad-accent text-white shadow-accent'
                     : ''
                 }`}
               >
@@ -248,7 +248,7 @@ export function SidePanel({ panels, width }: { panels: PanelsApi; width?: number
             initial={{ opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -12 }}
-            transition={{ duration: 0.18 }}
+            transition={FADE.base}
           >
             <header className="shrink-0 border-b border-border px-5 py-3.5">
               <h2 className="text-grad-accent text-sm font-bold">

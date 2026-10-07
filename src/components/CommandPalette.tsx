@@ -286,7 +286,7 @@ function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className="fixed left-1/2 top-[12vh] z-[100] flex max-h-[76vh] w-[min(34rem,92vw)] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-card)]"
+        className="fixed left-1/2 top-[12vh] z-[100] flex max-h-[76vh] w-[min(34rem,92vw)] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card"
       >
         {children}
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n/useLang'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, SPRING } from './motion'
 import { ImagePlus, Download, X, ChevronRight } from 'lucide-react'
 import { hasSeen, markSeen } from '../lib/firstUse'
 
@@ -83,8 +83,8 @@ export function OnboardingOverlay() {
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            transition={{ type: 'spring', damping: 24, stiffness: 300 }}
-            className="fixed left-1/2 top-1/2 z-[100] w-[min(22rem,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-[var(--shadow-card)]"
+            transition={SPRING.pop}
+            className="fixed left-1/2 top-1/2 z-[100] w-[min(22rem,90vw)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-surface p-6 shadow-card"
             role="dialog"
             aria-modal="true"
             aria-labelledby="onboard-title"
@@ -120,7 +120,7 @@ export function OnboardingOverlay() {
                   if (isLast) dismiss()
                   else setStep((s) => s + 1)
                 }}
-                className="bg-grad-accent flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 active:scale-95"
+                className="bg-grad-accent flex items-center gap-1 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-accent transition hover:brightness-110 active:scale-95"
               >
                 {isLast ? (t('onboard.done')) : (t('onboard.next'))}
                 <ChevronRight size={16} />

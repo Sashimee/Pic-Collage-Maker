@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { m, AnimatePresence } from './motion'
+import { m, AnimatePresence, FADE, SPRING } from './motion'
 import { ChevronDown } from 'lucide-react'
 import { useScrollOverflow } from '../hooks/useScrollOverflow'
 import type { ReactNode } from 'react'
@@ -54,7 +54,7 @@ export function ActionSheet({ open, onClose, title, children }: ActionSheetProps
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={FADE.base}
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
           />
@@ -66,8 +66,8 @@ export function ActionSheet({ open, onClose, title, children }: ActionSheetProps
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full rounded-t-2xl border-t border-border bg-surface shadow-[0_-8px_32px_rgba(0,0,0,0.25)]"
+              transition={SPRING.sheet}
+              className="w-full rounded-t-2xl border-t border-border bg-surface shadow-sheet"
             >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1" onClick={onClose} aria-hidden="true">

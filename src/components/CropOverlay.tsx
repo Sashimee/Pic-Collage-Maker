@@ -290,7 +290,7 @@ function CropPanel({ el, grid }: { el: PhotoElement; grid: boolean }) {
         </button>
         <button
           onClick={apply}
-          className="bg-grad-accent min-h-[44px] rounded-lg px-5 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 active:scale-95"
+          className="bg-grad-accent min-h-[44px] rounded-lg px-5 text-sm font-semibold text-white shadow-accent transition hover:brightness-110 active:scale-95"
         >
           {t('crop.apply')}
         </button>

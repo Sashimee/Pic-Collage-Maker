@@ -132,7 +132,7 @@ export function Chip({
       onClick={onClick}
       className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-medium transition ${
         active
-          ? 'bg-grad-accent text-white shadow-[var(--shadow-accent)]'
+          ? 'bg-grad-accent text-white shadow-accent'
           : 'bg-surface-2 text-text/80 hover:bg-surface-3'
       }`}
     >
@@ -155,7 +155,7 @@ export function PrimaryButton({
   htmlFor?: string
 }) {
   const className =
-    'bg-grad-accent min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-accent)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer inline-flex items-center justify-center'
+    'bg-grad-accent min-h-[44px] rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-accent transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer inline-flex items-center justify-center'
 
   if (as === 'label') {
     return (
@@ -223,7 +223,7 @@ export function IconButton({
     'flex min-h-[40px] min-w-[40px] items-center justify-center rounded-xl px-2.5 text-base font-medium transition disabled:opacity-30'
   const styles =
     variant === 'accent'
-      ? 'bg-grad-accent text-white shadow-[var(--shadow-accent)] hover:brightness-110'
+      ? 'bg-grad-accent text-white shadow-accent hover:brightness-110'
       : active
         ? 'bg-surface-3 text-text'
         : 'text-text/70 hover:bg-surface-2 hover:text-text'

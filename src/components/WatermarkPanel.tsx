@@ -1,7 +1,7 @@
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
 import { Slider, ColorField, Section, Chip } from './ui'
-import { m } from './motion'
+import { m, SPRING } from './motion'
 import type { WatermarkPosition } from '../types'
 import { WorkspacePresets } from './WorkspacePresets'
 import { RefreshCcw } from 'lucide-react'
@@ -36,7 +36,7 @@ export function WatermarkPanel() {
             <m.span
               className="inline-block h-5 w-5 rounded-full bg-white shadow-md"
               animate={{ x: watermark.enabled ? 22 : 4 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={SPRING.toggle}
             />
           </button>
         </label>
@@ -123,7 +123,7 @@ export function PrintPanel() {
             <m.span
               className="inline-block h-5 w-5 rounded-full bg-white shadow-md"
               animate={{ x: print.enabled ? 22 : 4 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={SPRING.toggle}
             />
           </button>
         </label>
@@ -144,7 +144,7 @@ export function PrintPanel() {
                 <m.span
                   className="inline-block h-5 w-5 rounded-full bg-white shadow-md"
                   animate={{ x: print.bleedMarks ? 22 : 4 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  transition={SPRING.toggle}
                 />
               </button>
             </label>
@@ -163,7 +163,7 @@ export function PrintPanel() {
                 <m.span
                   className="inline-block h-5 w-5 rounded-full bg-white shadow-md"
                   animate={{ x: print.cropMarks ? 22 : 4 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  transition={SPRING.toggle}
                 />
               </button>
             </label>
