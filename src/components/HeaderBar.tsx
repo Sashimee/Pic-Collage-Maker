@@ -20,6 +20,7 @@ import { m, AnimatePresence } from './motion'
 import { useToasts } from './ToastContainer'
 import { FullScreenButton } from './FullScreen'
 import { useInstall } from '../lib/pwaInstall'
+import { canPickFiles, useLinkedFileName } from '../lib/linkedFile'
 import { BrandMark } from './header/BrandMark'
 import { MobileMenu } from './header/MobileMenu'
 import { useProjectFileActions } from './header/useProjectFileActions'
@@ -60,6 +61,12 @@ export function HeaderBar({
   const [sizesOpen, setSizesOpen] = useState(false)
   const exportButton = useRef<HTMLButtonElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
+  const openInput = useRef<HTMLInputElement>(null)
+  // The focused menu item unmounts with the menu; without this, focus falls back to <body>.
+  const closeExportMenu = () => {
+    setExportOpen(false)
+    exportButton.current?.focus()
+  }
   const closeSizes = () => {
     setSizesOpen(false)
     // The menu item that opened the sheet is gone; hand focus to whichever trigger is on screen.
@@ -87,7 +94,9 @@ export function HeaderBar({
   // Hidden once installed, and on browsers with no install route at all
   // (Firefox), where an entry point would only lead nowhere.
   const canInstall = useInstall((s) => !s.standalone && s.platform !== 'unsupported')
-  const { handleSaveAsFile, handleOpenFile, handleBatchExport } = useProjectFileActions()
+  const { handleSaveAsFile, handleSaveAsNewFile, handleOpenFile, handlePickFile, handleBatchExport } =
+    useProjectFileActions()
+  const linkedName = useLinkedFileName()
 
   const handleExport = async (kind: ExportKind) => {
     setExportOpen(false)
@@ -263,25 +272,42 @@ export function HeaderBar({
                       {t('export.batch')}
                     </MenuItem>
                     <div className="mx-3 my-1 h-px bg-border" />
-                    <MenuItem onClick={handleSaveAsFile} icon={<Upload size={16} />}>
-                      {t('export.saveProject')}
+                    <MenuItem onClick={() => { closeExportMenu(); void handleSaveAsFile() }} icon={<Upload size={16} />}>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">
+                        {linkedName ? `${t('file.saveTo')} ${linkedName}` : t('export.saveProject')}
+                      </span>
                     </MenuItem>
-                    <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-4 py-3 text-left text-sm text-text/90 transition hover:bg-surface-3">
-                      <Upload size={16} className="text-muted" />
-                      <span>{t('export.openProject')}</span>
-                      <input
-                        type="file"
-                        accept=".piccollage,application/json"
-                        onChange={handleOpenFile}
-                        className="sr-only"
-                      />
-                    </label>
+                    {linkedName && (
+                      <MenuItem onClick={() => { closeExportMenu(); void handleSaveAsNewFile() }} icon={<Upload size={16} />}>
+                        {t('file.saveAsNew')}
+                      </MenuItem>
+                    )}
+                    <MenuItem
+                      onClick={() => {
+                        closeExportMenu()
+                        if (canPickFiles()) handlePickFile()
+                        else openInput.current?.click()
+                      }}
+                      icon={<Upload size={16} />}
+                    >
+                      {t('export.openProject')}
+                    </MenuItem>
                   </m.div>
                   {/* Backdrop */}
                   <div className="fixed inset-0 z-30" aria-hidden="true" onClick={() => setExportOpen(false)} />
                 </>
               )}
             </AnimatePresence>
+            {/* Outside the menu, which unmounts before the file dialog reports back. */}
+            <input
+              ref={openInput}
+              type="file"
+              accept=".piccollage,application/json"
+              onChange={handleOpenFile}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="hidden"
+            />
           </div>
 
           {/* Mobile hamburger */}
@@ -333,7 +359,10 @@ export function HeaderBar({
       {/* Mobile Action Sheet */}
       <MobileMenu
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          setSheetOpen(false)
+          moreButton.current?.focus()
+        }}
         onExport={handleExport}
         onExportSVG={onExportSVG}
         onInstall={onInstall}
@@ -342,7 +371,9 @@ export function HeaderBar({
         onNew={handleNew}
         onBatchExport={handleBatchExport}
         onSaveAsFile={handleSaveAsFile}
+        onSaveAsNewFile={handleSaveAsNewFile}
         onOpenFile={handleOpenFile}
+        onPickFile={handlePickFile}
         onResize={() => setSizesOpen(true)}
       />
 

@@ -3,6 +3,7 @@ import { useEditor } from '../store/editorStore'
 import { useImportFiles } from './useImportFiles'
 import { useToasts } from '../components/ToastContainer'
 import { useT } from '../i18n/useLang'
+import { linkFile } from '../lib/linkedFile'
 
 interface LaunchParams {
   files: readonly FileSystemFileHandle[]
@@ -48,7 +49,8 @@ export function useLaunchFiles(ready: boolean) {
           fail(err)
           return
         }
-        const project = files.find(isProjectFile)
+        const projectAt = files.findIndex(isProjectFile)
+        const project = files[projectAt]
         // On a cold start the restored board may be the user's only copy of their work.
         const boardEmpty = !useEditor.getState().elements.length
         if (project && (boardEmpty || window.confirm(t('launch.replaceConfirm')))) {
@@ -56,6 +58,7 @@ export function useLaunchFiles(ready: boolean) {
             const { unpackProject } = await import('../lib/projectFile')
             const { doc } = await unpackProject(project)
             useEditor.getState().loadDocument(doc)
+            linkFile(params.files[projectAt])
             toast.success(t('toast.projectOpened'))
           } catch (err) {
             fail(err)

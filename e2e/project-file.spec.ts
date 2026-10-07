@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { openApp, pngFile, waitForElements } from './helpers'
+import { openApp, pngFile, waitForElements, withoutFilePickers } from './helpers'
 
 const photoSrcs = (page: Page) =>
   page.evaluate(() =>
@@ -26,6 +26,7 @@ const srcsResolve = async (page: Page) => {
 }
 
 test('a .piccollage file opens with its photos on another device', async ({ page, browser }) => {
+  await withoutFilePickers(page)
   await openApp(page)
   await page.locator('#empty-gallery-input').setInputFiles(pngFile())
   await waitForElements(page, 'photo', 1)

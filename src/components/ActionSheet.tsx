@@ -136,7 +136,7 @@ export function ActionItem({
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted ${active ? 'bg-accent/20' : 'bg-surface-3'}`}>
         {icon}
       </span>
-      {label}
+      <span className="min-w-0 [overflow-wrap:anywhere]">{label}</span>
     </button>
   )
 }
