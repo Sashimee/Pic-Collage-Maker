@@ -78,7 +78,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB for WASM models
         globPatterns: ['**/*.{js,css,html,png,jpg,svg,ico,woff2}'],
         // The font pack is cached when a text first uses a family, not at install.
-        globIgnores: ['**/assets/pack-*.woff2'],
+        // Likewise the install-dialog screenshots: only the browser's install UI fetches them.
+        globIgnores: ['**/assets/pack-*.woff2', '**/screenshots/**'],
         runtimeCaching: [
           {
             urlPattern: /\/assets\/pack-[^/]+\.woff2$/,
@@ -97,8 +98,14 @@ export default defineConfig({
         background_color: '#080b18',
         display: 'standalone',
         orientation: 'portrait',
+        // The id browsers already derived from start_url, so existing installs stay the same app.
+        id: BASE,
         start_url: BASE,
         scope: BASE,
+        categories: ['photo', 'productivity'],
+        // Every window keeps its own editor. Reusing a window would hand a launched file to an
+        // editor that may have a project open, whose autosave would then write it over that project.
+        launch_handler: { client_mode: 'navigate-new' },
         file_handlers: [
           {
             action: BASE,
@@ -122,6 +129,23 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
+          },
+        ],
+        // Regenerate with `npm run generate:screenshots`.
+        screenshots: [
+          {
+            src: 'screenshots/wide.jpg',
+            sizes: '1280x800',
+            type: 'image/jpeg',
+            form_factor: 'wide',
+            label: 'A four-photo grid collage in the desktop editor',
+          },
+          {
+            src: 'screenshots/narrow.jpg',
+            sizes: '824x1784',
+            type: 'image/jpeg',
+            form_factor: 'narrow',
+            label: 'A four-photo grid collage in the phone editor',
           },
         ],
       },

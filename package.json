@@ -17,6 +17,7 @@
     "check:bundle": "node scripts/check-bundle.mjs",
     "generate:icons": "node scripts/generate-icons.mjs",
     "generate:og": "node scripts/generate-og.mjs",
+    "generate:screenshots": "node scripts/generate-screenshots.mjs",
     "test:unit": "vitest run",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "analyze": "vite build --mode analyze"
