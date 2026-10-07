@@ -750,6 +750,12 @@ const de: Dict = {
   'cmd.deselect': 'Auswahl aufheben',
   'cmd.openPanel': 'Bereich öffnen',
   'cmd.nudge': 'Auswahl verschieben (Umschalt: 10×)',
+  'whatsNew.title': 'Neuigkeiten',
+  'whatsNew.done': 'Verstanden',
+  'whatsNew.2026-10.samples': 'Keine Fotos zur Hand? Probiere den Editor mit Beispielfotos vom Startbildschirm aus.',
+  'whatsNew.2026-10.settings': 'Die Einstellungen haben jetzt den Bereich „Allgemein“: Design, Sprache, Einheiten (px, mm oder Zoll), dein Standardformat für Downloads und wie oft automatisch gespeichert wird.',
+  'whatsNew.2026-10.undoDelete': 'Versehentlich ein Element, eine Seite oder ein Projekt gelöscht? Mach es direkt über den Hinweis rückgängig.',
+  'whatsNew.2026-10.palette': 'Drücke Strg+K (⌘K auf dem Mac), um jeden Befehl zu finden, und ? für die Liste der Tastenkürzel.',
 }
 
 export default de

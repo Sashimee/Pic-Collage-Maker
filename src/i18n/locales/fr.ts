@@ -750,6 +750,12 @@ const fr: Dict = {
   'cmd.deselect': 'Désélectionner',
   'cmd.openPanel': 'Ouvrir le panneau',
   'cmd.nudge': 'Déplacer la sélection (Maj : 10×)',
+  'whatsNew.title': 'Nouveautés',
+  'whatsNew.done': 'Compris',
+  'whatsNew.2026-10.samples': 'Pas de photos sous la main ? Essayez l’éditeur avec des photos d’exemple depuis l’écran d’accueil.',
+  'whatsNew.2026-10.settings': 'Les paramètres ont désormais une section Général : thème, langue, unités (px, mm ou pouces), votre format de téléchargement par défaut et la fréquence de l’enregistrement automatique.',
+  'whatsNew.2026-10.undoDelete': 'Supprimé un élément, une page ou un projet par erreur ? Annulez-le directement depuis la notification.',
+  'whatsNew.2026-10.palette': 'Appuyez sur Ctrl+K (⌘K sur Mac) pour trouver n’importe quelle commande, et sur ? pour la liste des raccourcis.',
 }
 
 export default fr

@@ -750,6 +750,12 @@ const es: Dict = {
   'cmd.deselect': 'Deseleccionar',
   'cmd.openPanel': 'Abrir panel',
   'cmd.nudge': 'Mover la selección (Mayús: 10×)',
+  'whatsNew.title': 'Novedades',
+  'whatsNew.done': 'Entendido',
+  'whatsNew.2026-10.samples': '¿No tienes fotos a mano? Prueba el editor con fotos de ejemplo desde la pantalla de inicio.',
+  'whatsNew.2026-10.settings': 'La configuración ahora tiene una sección General: tema, idioma, unidades (px, mm o pulgadas), tu formato de descarga predeterminado y cada cuánto se autoguarda.',
+  'whatsNew.2026-10.undoDelete': '¿Borraste un elemento, una página o un proyecto por error? Deshazlo directamente desde el aviso.',
+  'whatsNew.2026-10.palette': 'Pulsa Ctrl+K (⌘K en Mac) para encontrar cualquier comando, y ? para ver la lista de atajos.',
 }
 
 export default es
