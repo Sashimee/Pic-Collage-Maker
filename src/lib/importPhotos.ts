@@ -1,5 +1,6 @@
 import { putPhoto } from './persistence'
 import { runPixelJob } from '../workers/runPixelJob'
+import { encodableType, HeicUnsupportedError, isHeic } from './heic'
 
 export interface ImportedPhoto {
   src: string // preview variant (1080px) used for display
@@ -71,13 +72,15 @@ interface Variants {
 
 /** Decoding and downscaling a 24 MP photo takes seconds; the worker keeps the page responsive meanwhile. */
 async function variantsOffThread(file: File): Promise<Variants> {
-  const type = file.type || 'image/jpeg'
+  const type = encodableType(file.type)
+  // An original the canvas could not have produced is no stand-in for a preview.
+  const shrinkOnly = type === file.type
   const {
     width,
     height,
     blobs: [preview, thumb],
   } = await runPixelJob(file, null, [
-    { type, quality: 0.92, maxDim: 1080, shrinkOnly: true },
+    { type, quality: 0.92, maxDim: 1080, shrinkOnly },
     { type, quality: 0.85, maxDim: 256 },
   ])
   if (!thumb) throw new Error('Pixel job returned no thumbnail')
@@ -91,6 +94,7 @@ async function variantsOnPage(file: File): Promise<Variants> {
     img = await createImageFromSrc(url)
   } catch {
     URL.revokeObjectURL(url)
+    if (await isHeic(file)) throw new HeicUnsupportedError(file.name)
     const base64 = await blobToBase64(file)
     img = await createImageFromSrc(base64)
   }
@@ -99,11 +103,12 @@ async function variantsOnPage(file: File): Promise<Variants> {
   const naturalH = img.naturalHeight
 
   // Generate scaled variants using canvas
+  const type = encodableType(file.type)
   const [previewBlob, thumbBlob] = await Promise.all([
-    naturalW > 1080 || naturalH > 1080
-      ? canvasBlob(img, 1080, file.type || 'image/jpeg', 0.92)
+    naturalW > 1080 || naturalH > 1080 || type !== file.type
+      ? canvasBlob(img, 1080, type, 0.92)
       : Promise.resolve(file),
-    canvasBlob(img, 256, file.type || 'image/jpeg', 0.85),
+    canvasBlob(img, 256, type, 0.85),
   ])
   URL.revokeObjectURL(url)
   return { width: naturalW, height: naturalH, previewBlob, thumbBlob }

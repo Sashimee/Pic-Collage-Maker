@@ -568,6 +568,7 @@ export const en: Dict = {
   'export.book': 'Photo book (PDF)',
   'export.rendering': 'Rendering page',
   'import.adding': 'Adding photo',
+  'import.heicUnsupported': "HEIC photos skipped: this browser can't open them. Save them as JPEG first, or use Safari.",
   'export.packing': 'Packing photo',
   'tips.title': 'Tips',
   'tips.hint': 'Short demos play the first time you open a tool that uses a gesture.',
