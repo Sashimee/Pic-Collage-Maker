@@ -7,10 +7,19 @@ export interface SnapLine {
   to: number
 }
 
+/** One of the equal gaps an equal-spacing snap lined up, drawn as a measure. */
+export interface SpacingHint {
+  axis: 'x' | 'y'
+  from: number
+  to: number
+  at: number
+}
+
 export interface SnapResult {
   x: number
   y: number
   guides: SnapLine[]
+  spacing: SpacingHint[]
 }
 
 const THRESHOLD = 12 // design units
@@ -85,12 +94,17 @@ function getHeight(el: CanvasElement): number {
 // is the dragged element's current coordinate that should move onto `pos`
 // (so the applied delta is `pos - feature`). `ref` bounds (a neighbour, or the
 // two neighbours of an equal-spacing snap) drive the guide's length; `undefined`
-// means a board edge/centre → the guide spans the whole board.
+// means a board edge/centre → the guide spans the whole board. An
+// equal-spacing target has `gaps` instead of a guide line: given the snapped
+// bounds, the spans that came out equal.
 interface AxisTarget {
   pos: number
   feature: number
   refs: Bounds[]
+  gaps?: (snapped: Bounds) => [number, number][]
 }
+
+const overlaps = (a0: number, a1: number, b0: number, b1: number) => a0 < b1 && b0 < a1
 
 /** Compute snapped position and visible guides for a dragged element. */
 export function computeSnap(
@@ -100,6 +114,7 @@ export function computeSnap(
   boardH: number,
   currentX: number,
   currentY: number,
+  { spacing = true }: { spacing?: boolean } = {},
 ): SnapResult {
   const others = allElements
     .filter((e) => e.id !== dragged.id && !e.hidden)
@@ -140,13 +155,68 @@ export function computeSnap(
     )
   }
 
-  // Equal spacing: centre the dragged element between any pair of neighbours.
-  for (let i = 0; i < others.length; i++) {
-    for (let j = i + 1; j < others.length; j++) {
-      const a = others[i]
-      const b = others[j]
-      xTargets.push({ pos: (a.cx + b.cx) / 2, feature: db.cx, refs: [a, b] })
-      yTargets.push({ pos: (a.cy + b.cy) / 2, feature: db.cy, refs: [a, b] })
+  // Equal spacing, for adjacent neighbours in the dragged element's row (or
+  // column): sit midway between them, or repeat their gap beyond either. Only
+  // adjacent pairs count — a pair with another element between them would
+  // snap the dragged one on top of it.
+  if (spacing) {
+    const row = others
+      .filter((b) => overlaps(b.top, b.bottom, db.top, db.bottom))
+      .sort((p, q) => p.left - q.left)
+    for (let i = 0; i + 1 < row.length; i++) {
+      const [a, b] = [row[i], row[i + 1]]
+      const gap = b.left - a.right
+      if (gap <= 0) continue
+      if (db.width < gap)
+        xTargets.push({
+          pos: (a.right + b.left - db.width) / 2,
+          feature: db.left,
+          refs: [a, b],
+          gaps: (s) => [[a.right, s.left], [s.right, b.left]],
+        })
+      xTargets.push(
+        {
+          pos: b.right + gap,
+          feature: db.left,
+          refs: [a, b],
+          gaps: (s) => [[a.right, b.left], [b.right, s.left]],
+        },
+        {
+          pos: a.left - gap,
+          feature: db.right,
+          refs: [a, b],
+          gaps: (s) => [[s.right, a.left], [a.right, b.left]],
+        },
+      )
+    }
+    const col = others
+      .filter((b) => overlaps(b.left, b.right, db.left, db.right))
+      .sort((p, q) => p.top - q.top)
+    for (let i = 0; i + 1 < col.length; i++) {
+      const [a, b] = [col[i], col[i + 1]]
+      const gap = b.top - a.bottom
+      if (gap <= 0) continue
+      if (db.height < gap)
+        yTargets.push({
+          pos: (a.bottom + b.top - db.height) / 2,
+          feature: db.top,
+          refs: [a, b],
+          gaps: (s) => [[a.bottom, s.top], [s.bottom, b.top]],
+        })
+      yTargets.push(
+        {
+          pos: b.bottom + gap,
+          feature: db.top,
+          refs: [a, b],
+          gaps: (s) => [[a.bottom, b.top], [b.bottom, s.top]],
+        },
+        {
+          pos: a.top - gap,
+          feature: db.bottom,
+          refs: [a, b],
+          gaps: (s) => [[s.bottom, a.top], [a.bottom, b.top]],
+        },
+      )
     }
   }
 
@@ -172,8 +242,11 @@ export function computeSnap(
   // Guides are drawn against the snapped bounds so their extent hugs the element.
   const snapped = getBounds({ ...dragged, x: snapX, y: snapY })
   const guides: SnapLine[] = []
+  const hints: SpacingHint[] = []
 
-  if (bestX) {
+  if (bestX?.gaps) {
+    for (const [from, to] of bestX.gaps(snapped)) hints.push({ axis: 'x', from, to, at: snapped.cy })
+  } else if (bestX) {
     if (bestX.refs.length) {
       const tops = [snapped.top, ...bestX.refs.map((r) => r.top)]
       const bottoms = [snapped.bottom, ...bestX.refs.map((r) => r.bottom)]
@@ -182,7 +255,9 @@ export function computeSnap(
       guides.push({ axis: 'x', pos: bestX.pos, from: 0, to: boardH })
     }
   }
-  if (bestY) {
+  if (bestY?.gaps) {
+    for (const [from, to] of bestY.gaps(snapped)) hints.push({ axis: 'y', from, to, at: snapped.cx })
+  } else if (bestY) {
     if (bestY.refs.length) {
       const lefts = [snapped.left, ...bestY.refs.map((r) => r.left)]
       const rights = [snapped.right, ...bestY.refs.map((r) => r.right)]
@@ -192,5 +267,5 @@ export function computeSnap(
     }
   }
 
-  return { x: snapX, y: snapY, guides }
+  return { x: snapX, y: snapY, guides, spacing: hints }
 }
