@@ -1,5 +1,5 @@
 import { forwardRef, useMemo, useRef, useState } from 'react'
-import { Group, Layer, Line, Stage, Transformer } from 'react-konva'
+import { Group, Layer, Line, Rect, Stage, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useEditor, type LoadedDocument } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
@@ -19,6 +19,10 @@ import { InlineTextEditor, type TextEditState } from './canvas/InlineTextEditor'
 import { CanvasErrorBridge } from './canvas/CanvasErrorBridge'
 
 export type { EditorHandle }
+
+const PLACEMENT_KEYS = new Set(['x', 'y', 'rotation', 'scaleX', 'scaleY'])
+const isPlacement = (patch: Partial<CanvasElement>) =>
+  Object.keys(patch).every((k) => PLACEMENT_KEYS.has(k))
 
 export interface EditorCanvasProps {
   /**
@@ -56,13 +60,15 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const select = useEditor((s) => s.select)
   const toggleMultiSelect = useEditor((s) => s.toggleMultiSelect)
   const updateElement = useEditor((s) => s.updateElement)
+  const updateElements = useEditor((s) => s.updateElements)
+  const multiSelected = useEditor((s) => s.multiSelected)
   const brushColor = useEditor((s) => s.brushColor)
   const brushSize = useEditor((s) => s.brushSize)
   const customLayoutZones = useEditor((s) => s.customLayoutZones)
   const customLayoutPast = useEditor((s) => s.customLayoutPast)
 
   const { size, tf, setTf, zoomAtPoint } = useViewTransform(hostRef, bottomInset)
-  const { drawMode, liveStroke, stageHandlers } = useStageGestures({
+  const { drawMode, liveStroke, marquee, stageHandlers } = useStageGestures({
     stageRef,
     tf,
     setTf,
@@ -77,8 +83,34 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const [editing, setEditing] = useState<TextEditState | null>(null)
   const [canvasError, setCanvasError] = useState<Error | null>(null)
 
+  // The Transformer moves the rest of a multi-selection itself and fires
+  // drag/transform end per node in one synchronous loop; commit the whole
+  // group from the nodes once, so it is one undo step.
+  const groupCommitQueued = useRef(false)
+  const commitGroup = () => {
+    if (groupCommitQueued.current) return
+    groupCommitQueued.current = true
+    queueMicrotask(() => {
+      groupCommitQueued.current = false
+      // Only what the Transformer holds actually moved; a grid cell can share
+      // an element's id, and its cell-local placement must never be written back.
+      const patches: Record<string, Partial<CanvasElement>> = {}
+      for (const node of trRef.current?.nodes() ?? []) {
+        patches[node.id()] = {
+          x: node.x(),
+          y: node.y(),
+          rotation: node.rotation(),
+          scaleX: node.scaleX(),
+          scaleY: node.scaleY(),
+        }
+      }
+      updateElements(patches)
+    })
+  }
+
   const handleDragMove = (el: CanvasElement) => (e: Konva.KonvaEventObject<DragEvent>) => {
-    if (!snapEnabled || e.evt?.shiftKey) return
+    // Snapping one node of a group would shear it away from the others.
+    if (!snapEnabled || e.evt?.shiftKey || multiSelected.length > 1) return
     const node = e.target
     const currentX = node.x()
     const currentY = node.y()
@@ -119,7 +151,10 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
       if (e?.evt?.shiftKey) toggleMultiSelect(id)
       else select(id)
     },
-    onChange: (id, patch) => updateElement(id, patch),
+    onChange: (id, patch) => {
+      if (multiSelected.length > 1 && multiSelected.includes(id) && isPlacement(patch)) commitGroup()
+      else updateElement(id, patch)
+    },
     onEditText: (id) => openTextEditor(id),
     onDragMove: (el) => handleDragMove(el),
     onEmptyCell: cellPicker.open,
@@ -288,6 +323,16 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                 newBox.width < 20 || newBox.height < 20 ? oldBox : newBox
               }
             />
+            {marquee && (
+              <Rect
+                {...marquee}
+                fill="rgba(99,102,241,0.12)"
+                stroke="#6366f1"
+                strokeWidth={1}
+                dash={[4, 4]}
+                listening={false}
+              />
+            )}
             </CanvasErrorBridge>
           </Layer>
         </Stage>

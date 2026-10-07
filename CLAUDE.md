@@ -72,7 +72,7 @@ Pic-Collage-Maker/
 │   ├── user-guide.md           # end-user documentation
 │   ├── api.md                  # module/API notes
 │   └── adr/                    # 0001 client-only architecture, 0002 konva stays
-├── e2e/                        # playwright: 20 specs + helpers.ts + playwright.config.ts;
+├── e2e/                        # playwright: 21 specs + helpers.ts + playwright.config.ts;
 │                               #   visual.spec.ts pixel baselines are made in the Playwright container (visual-regression agent)
 ├── .github/
 │   ├── lighthouserc.json       # LHCI thresholds (see gotchas: needs `npm run build:lh`)
@@ -457,6 +457,9 @@ nothing on screen can hint at, on one first-use registry).
 Next up: nothing is committed. Candidates below.
 
 **two-finger pinch-and-twist** on the selected element (15° snap, haptic tick).
+
+**multi-select** (shift-click, rubber band, Ctrl/Cmd+A; the group moves,
+scales and rotates as one undo step).
 
 Other ideas: more grid layouts +
 adjustable gutter/corner radius · crop tool polish · a real animation/export-video

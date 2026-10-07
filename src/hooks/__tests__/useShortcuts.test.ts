@@ -28,6 +28,37 @@ describe('useShortcuts', () => {
     expect(useEditor.getState().elements).toHaveLength(2)
   })
 
+  it('ctrl+a selects every element', () => {
+    renderHook(() => useShortcuts())
+    press('a', { ctrl: true })
+    expect(useEditor.getState().multiSelected).toEqual(ids())
+  })
+
+  it('delete removes the whole group as one undo step', () => {
+    renderHook(() => useShortcuts())
+    const [a, b, c] = ids()
+    useEditor.getState().selectMany([a, b])
+    useEditor.setState({ past: [] })
+    press('Delete')
+    expect(ids()).toEqual([c])
+    expect(useEditor.getState().multiSelected).toEqual([])
+    expect(useEditor.getState().past).toHaveLength(1)
+  })
+
+  it('an arrow key nudges the whole group and leaves the rest', () => {
+    renderHook(() => useShortcuts())
+    const [a, b] = ids()
+    const before = useEditor.getState().elements.map((e) => e.x)
+    useEditor.getState().selectMany([a, b])
+    press('ArrowRight', { shift: true })
+    expect(useEditor.getState().elements.map((e) => e.x)).toEqual([
+      before[0] + 10,
+      before[1] + 10,
+      before[2],
+    ])
+    expect(useEditor.getState().selectedId).toBe(b)
+  })
+
   it('one duplicate press adds exactly one element', () => {
     renderHook(() => useShortcuts())
     useEditor.getState().select(ids()[0])
