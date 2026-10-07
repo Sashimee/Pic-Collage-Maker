@@ -741,7 +741,24 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => ({ frame: { ...s.frame, ...patch }, ...record(s, 'history.frame', 'frame') })),
 
   setBoardSize: (width, height) =>
-    set((s) => ({ boardWidth: width, boardHeight: height, ...record(s, 'history.boardSize', 'boardSize') })),
+    set((s) => {
+      // Positions are board units, so content keeps its place only if it is fitted and centred on the new board.
+      const k = Math.min(width / s.boardWidth, height / s.boardHeight)
+      const dx = (width - s.boardWidth * k) / 2
+      const dy = (height - s.boardHeight * k) / 2
+      return {
+        boardWidth: width,
+        boardHeight: height,
+        elements: s.elements.map((e) => ({
+          ...e,
+          x: e.x * k + dx,
+          y: e.y * k + dy,
+          scaleX: e.scaleX * k,
+          scaleY: e.scaleY * k,
+        })),
+        ...record(s, 'history.boardSize', 'boardSize'),
+      }
+    }),
 
   clearAll: () =>
     set((s) => {
