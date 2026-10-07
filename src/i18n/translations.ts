@@ -567,6 +567,8 @@ export const en: Dict = {
   'export.batch': 'Batch Export',
   'export.book': 'Photo book (PDF)',
   'export.rendering': 'Rendering page',
+  'import.adding': 'Adding photo',
+  'export.packing': 'Packing photo',
   'tips.title': 'Tips',
   'tips.hint': 'Short demos play the first time you open a tool that uses a gesture.',
   'tips.replay': 'Show tips again',

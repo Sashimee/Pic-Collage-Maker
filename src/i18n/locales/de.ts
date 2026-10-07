@@ -553,6 +553,8 @@ const de: Dict = {
   'export.batch': 'Stapel-Export',
   'export.book': 'Fotobuch (PDF)',
   'export.rendering': 'Seite wird gerendert',
+  'import.adding': 'Foto wird hinzugefügt',
+  'export.packing': 'Foto wird gepackt',
   'tips.title': 'Tipps',
   'tips.hint': 'Kurze Demos laufen, wenn du ein Werkzeug mit Geste zum ersten Mal öffnest.',
   'tips.replay': 'Tipps erneut zeigen',

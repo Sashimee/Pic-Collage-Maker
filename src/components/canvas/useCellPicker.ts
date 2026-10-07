@@ -2,11 +2,12 @@ import { useRef } from 'react'
 import { useEditor } from '../../store/editorStore'
 import { useT } from '../../i18n/useLang'
 import { useToasts } from '../ToastContainer'
-import { importFiles } from '../../lib/importFiles'
+import { useImportFiles } from '../../hooks/useImportFiles'
 
 /** Tapping an empty grid cell picks photos straight into that cell. */
 export function useCellPicker() {
   const t = useT()
+  const importFiles = useImportFiles()
   const toast = useToasts()
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingCell = useRef<number | null>(null)

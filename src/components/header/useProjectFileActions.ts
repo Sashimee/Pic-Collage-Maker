@@ -55,8 +55,19 @@ export function useProjectFileActions() {
       toast.info(t('toast.noPhotosExport'))
       return
     }
+    const signal = { cancelled: false }
+    const label = (n: number) => `${t('export.packing')} ${n}/${elements.length}`
+    const progress = toast.progress(label(1), {
+      label: t('menu.cancel'),
+      onClick: () => {
+        signal.cancelled = true
+        progress.done()
+      },
+    })
     const files: { name: string; dataUrl: string }[] = []
     for (let i = 0; i < elements.length; i++) {
+      if (signal.cancelled) return
+      progress.update(label(i + 1))
       const el = elements[i]
       const dataUrl = el.src
       if (dataUrl && dataUrl.startsWith('data:')) {
@@ -76,11 +87,19 @@ export function useProjectFileActions() {
         } catch { /* skip */ }
       }
     }
+    if (signal.cancelled) return
     if (!files.length) {
+      progress.done()
       toast.info(t('toast.noExportablePhotos'))
       return
     }
-    const zip = await batchExport(files)
+    let zip: Blob
+    try {
+      zip = await batchExport(files)
+    } finally {
+      progress.done()
+    }
+    if (signal.cancelled) return
     const a = document.createElement('a')
     a.href = URL.createObjectURL(zip)
     a.download = `collage-batch-${Date.now()}.zip`

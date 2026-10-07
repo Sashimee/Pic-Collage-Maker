@@ -2,7 +2,7 @@ import { ImagePlus, Camera, ChevronDown } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
-import { importFiles } from '../lib/importFiles'
+import { useImportFiles } from '../hooks/useImportFiles'
 import { resolveLayoutById } from '../lib/grids'
 import { track } from '../lib/analytics'
 import { LayoutGallery } from './LayoutGallery'
@@ -60,6 +60,7 @@ const CAMERA_ID = 'empty-camera-input'
 
 export function EmptyState() {
   const t = useT()
+  const importFiles = useImportFiles()
   const isEmpty = useEditor((s) => s.elements.length === 0)
   const mode = useEditor((s) => s.mode)
   const addPhoto = useEditor((s) => s.addPhoto)
