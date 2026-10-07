@@ -15,9 +15,20 @@ npm run test:e2e -- e2e/visual.spec.ts --workers=1
 npm run test:e2e -- e2e/visual.spec.ts --workers=1 --update-snapshots
 ```
 
-Add `PLAYWRIGHT_CHROMIUM_PATH=/path/to/chromium` if the pinned Chromium is
-missing. Baselines live next to the spec (`e2e/visual.spec.ts-snapshots/`) and
-are platform-suffixed; CI runs on linux.
+Baselines live next to the spec (`e2e/visual.spec.ts-snapshots/`) and are
+platform-suffixed; CI runs on linux. Generate and check them inside the
+Playwright container matching the pinned version (`npx playwright --version`),
+or local font/Chromium differences make every file differ:
+
+```bash
+docker run --rm --ipc=host -u $(id -u):$(id -g) -e HOME=/tmp -v $PWD:$PWD -w $PWD \
+  mcr.microsoft.com/playwright:v1.61.1-noble \
+  npx playwright test -c e2e/playwright.config.ts e2e/visual.spec.ts --workers=1 [--update-snapshots]
+```
+
+On a CI failure, the `e2e-test-results` artifact holds the expected/actual/diff
+PNGs. `export.pdf` is compared byte-for-byte (the clock is frozen so pdf-lib's
+dates are stable).
 
 ## Triage
 
