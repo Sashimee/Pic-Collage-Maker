@@ -131,6 +131,43 @@ test.describe('photos survive a reload', () => {
     expect(await srcsResolve(page)).toBe(true)
   })
 
+  test('New keeps the photos of saved projects', async ({ page }) => {
+    await openApp(page)
+    await page.locator('#empty-gallery-input').setInputFiles(pngFile())
+    await waitForElements(page, 'photo')
+    const projectId = await page.evaluate(() =>
+      window.__projects!.getState().createProject('Keep Me'),
+    )
+    // Still inside the autosave's debounce when New is pressed: New has to save it first.
+    await page.evaluate(() => {
+      const editor = window.__editor!.getState()
+      editor.updateElement(editor.elements[0].id, { x: 123 })
+    })
+
+    page.once('dialog', (d) => d.accept())
+    await page.getByRole('button', { name: 'New canvas' }).click()
+    await expect.poll(() => photoSrcs(page)).toEqual([])
+    // Outlast the project autosave's 1.5 s debounce, so a save of the blank canvas would land.
+    await page.waitForTimeout(2500)
+
+    await page.reload()
+    await page.waitForFunction(() => !!window.__editor)
+    const versionPhotoLoads = await page.evaluate(async (id) => {
+      const vs = window.__versions!.getState()
+      for (const row of await vs.getSnapshots(id)) {
+        const photo = (await vs.restoreSnapshot(row.id))?.elements.find((e) => e.type === 'photo')
+        if (photo && (await fetch((photo as unknown as { src: string }).src)).ok) return true
+      }
+      return false
+    }, projectId)
+    expect(versionPhotoLoads).toBe(true)
+
+    await page.evaluate((id) => window.__projects!.getState().openProject(id), projectId)
+    await waitForElements(page, 'photo')
+    expect(await srcsResolve(page)).toBe(true)
+    expect(await page.evaluate(() => window.__editor!.getState().elements[0].x)).toBe(123)
+  })
+
   test('a project saved by the old single-page version still opens', async ({ page }) => {
     // Projects stored before the page model hold a bare document in `data`.
     // Rewrite a record into that shape to stand in for one already on a user's

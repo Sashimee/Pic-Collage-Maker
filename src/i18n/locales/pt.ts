@@ -389,6 +389,7 @@ const pt: Dict = {
   'project.save': 'Salvar',
   'project.open': 'Abrir',
   'project.saved': 'Salvo',
+  'project.saveFailed': 'Não foi possível salvar o projeto, então nada foi apagado. Tente novamente.',
   'page.title': 'Páginas',
   'page.label': 'Página',
   'page.add': 'Adicionar página',

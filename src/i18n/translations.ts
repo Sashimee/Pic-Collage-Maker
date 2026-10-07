@@ -385,6 +385,7 @@ export const en: Dict = {
   'project.open': 'Open',
   'header.projects': 'Projects',
   'project.saved': 'Project saved',
+  'project.saveFailed': "Couldn't save the project, so nothing was cleared. Try again.",
   'page.title': 'Pages',
   'page.label': 'Page',
   'page.add': 'Add page',

@@ -371,6 +371,7 @@ const de: Dict = {
   'project.open': 'Öffnen',
   'header.projects': 'Projekte',
   'project.saved': 'Projekt gespeichert',
+  'project.saveFailed': 'Das Projekt konnte nicht gespeichert werden, daher wurde nichts geleert. Versuche es erneut.',
   'page.title': 'Seiten',
   'page.label': 'Seite',
   'page.add': 'Seite hinzufügen',
