@@ -1,4 +1,4 @@
-import { ImagePlus, Camera, ChevronDown } from 'lucide-react'
+import { ImagePlus, Camera, ChevronDown, Images } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
@@ -123,6 +123,20 @@ export function EmptyState() {
     setShowAssignment(true)
   }
 
+  const handleSamples = async () => {
+    track('sample-photos')
+    try {
+      const { samplePhotos } = await import('../lib/samplePhotos')
+      const files = new DataTransfer()
+      for (const file of await samplePhotos()) files.items.add(file)
+      applyLayout('4-1big-top')
+      await importFiles(files.files, addPhoto)
+    } catch (err) {
+      console.error('Loading the sample photos failed', err)
+      window.alert(t('error.loadImages'))
+    }
+  }
+
   const handleCustomLayout = () => {
     setAssignLayoutId(null)
     setShowAssignment(false)
@@ -225,6 +239,13 @@ export function EmptyState() {
                   {t('photos.camera')}
                 </label>
               </div>
+              <button
+                onClick={handleSamples}
+                className="mx-auto flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-medium text-muted transition hover:bg-surface-3 hover:text-text active:scale-95"
+              >
+                <Images size={17} strokeWidth={2.5} aria-hidden="true" />
+                {t('empty.trySamples')}
+              </button>
             </m.div>
           </m.div>
         )}

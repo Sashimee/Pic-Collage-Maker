@@ -22,6 +22,15 @@ test.describe('layout-first onboarding', () => {
     expect(geo.titleTop).toBeGreaterThanOrEqual(geo.headerBottom)
   })
 
+  test('sample photos fill a four-photo layout', async ({ page }) => {
+    await page.getByRole('button', { name: 'Try with sample photos' }).click()
+    await waitForElements(page, 'photo', 4)
+    await expect(page.getByText('Choose a Layout')).toBeHidden()
+    expect(await getMode(page)).toBe('grid')
+    const gridId = await page.evaluate(() => window.__editor!.getState().gridId)
+    expect(gridId).toBe('4-1big-top')
+  })
+
   test('tapping a layout opens the photo assignment sheet', async ({ page }) => {
     await layoutCard(page).click()
     await expect(assignmentSheet(page)).toBeVisible()
