@@ -58,6 +58,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const gridGap = useEditor((s) => s.gridGap)
   const setGridGap = useEditor((s) => s.setGridGap)
   const gridRadius = useEditor((s) => s.gridRadius)
+  const gridMargin = useEditor((s) => s.gridMargin)
   const selectedId = useEditor((s) => s.selectedId)
   const select = useEditor((s) => s.select)
   const toggleMultiSelect = useEditor((s) => s.toggleMultiSelect)
@@ -145,10 +146,11 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
       gridId,
       gridGap,
       gridRadius,
+      gridMargin,
       frame,
       elements,
     }),
-    [boardWidth, boardHeight, background, mode, gridId, gridGap, gridRadius, frame, elements],
+    [boardWidth, boardHeight, background, mode, gridId, gridGap, gridRadius, gridMargin, frame, elements],
   )
 
   const interactions: BoardInteractions = {

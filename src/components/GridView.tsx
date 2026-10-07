@@ -257,6 +257,7 @@ export function GridView({
   height,
   gap,
   radius,
+  margin = 0,
   selectedId,
   onSelect,
   onUpdate,
@@ -268,6 +269,7 @@ export function GridView({
   height: number
   gap: number
   radius: number
+  margin?: number
   selectedId: string | null
   onSelect: (id: string) => void
   onUpdate: (id: string, patch: Partial<PhotoElement>) => void
@@ -277,7 +279,7 @@ export function GridView({
   return (
     <>
       {layout.cells.map((cell, i) => {
-        const rect = cellRect(cell, width, height, gap)
+        const rect = cellRect(cell, width, height, gap, margin)
         const photo = slots[i]
         const isSelected = photo && photo.id === selectedId
         return (

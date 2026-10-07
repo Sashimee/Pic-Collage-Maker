@@ -41,6 +41,7 @@ export function PageStrip() {
   const gridId = useEditor((s) => s.gridId)
   const gridGap = useEditor((s) => s.gridGap)
   const gridRadius = useEditor((s) => s.gridRadius)
+  const gridMargin = useEditor((s) => s.gridMargin)
   const frame = useEditor((s) => s.frame)
   const elements = useEditor((s) => s.elements)
 
@@ -53,10 +54,11 @@ export function PageStrip() {
       gridId,
       gridGap,
       gridRadius,
+      gridMargin,
       frame,
       elements,
     }),
-    [boardWidth, boardHeight, background, mode, gridId, gridGap, gridRadius, frame, elements],
+    [boardWidth, boardHeight, background, mode, gridId, gridGap, gridRadius, gridMargin, frame, elements],
   )
 
   // With no project yet there is still exactly one page — the one on screen.

@@ -93,6 +93,7 @@ function toStoredDoc(): StoredDoc {
     gridId: s.gridId,
     gridGap: s.gridGap,
     gridRadius: s.gridRadius,
+    gridMargin: s.gridMargin,
     frame: s.frame,
     watermark: s.watermark,
     print: s.print,
@@ -215,6 +216,7 @@ export default function App() {
       gridId: s.gridId,
       gridGap: s.gridGap,
       gridRadius: s.gridRadius,
+      gridMargin: s.gridMargin,
       frame: s.frame,
       elements: s.elements,
     }

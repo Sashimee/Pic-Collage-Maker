@@ -26,6 +26,7 @@ export interface StoredDoc {
   gridId: string | null
   gridGap: number
   gridRadius: number
+  gridMargin?: number
   frame: Frame
   watermark?: WatermarkSettings
   print?: PrintSettings

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useEditor } from '../../store/editorStore'
-import { GRID_LAYOUTS } from '../../lib/grids'
+import { GRID_LAYOUTS, maxGridMargin } from '../../lib/grids'
 import { ColorField, Section, Slider } from '../ui'
 import { LayoutPreview } from '../LayoutPreview'
 import { useT } from '../../i18n/useLang'
@@ -125,6 +125,8 @@ export function LayoutPanel() {
   const gridRadius = useEditor((s) => s.gridRadius)
   const setGridGap = useEditor((s) => s.setGridGap)
   const setGridRadius = useEditor((s) => s.setGridRadius)
+  const gridMargin = useEditor((s) => s.gridMargin)
+  const setGridMargin = useEditor((s) => s.setGridMargin)
 
   const [catFilter, setCatFilter] = useState('all')
 
@@ -280,6 +282,13 @@ export function LayoutPanel() {
             max={120}
             value={gridRadius}
             onChange={setGridRadius}
+          />
+          <Slider
+            label={t('grid.margin')}
+            min={0}
+            max={maxGridMargin(boardWidth, boardHeight)}
+            value={gridMargin}
+            onChange={setGridMargin}
           />
           <p className="text-xs text-muted">{t('grid.hint')}</p>
         </Section>

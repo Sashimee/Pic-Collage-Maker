@@ -44,7 +44,13 @@ export function previewPhotos(page: LoadedDocument, max = 6): PreviewPhoto[] {
     for (let i = 0; i < layout.cells.length && out.length < max; i++) {
       const el = slots[i]
       if (!el) continue
-      const r = cellRect(layout.cells[i], page.boardWidth, page.boardHeight, page.gridGap)
+      const r = cellRect(
+        layout.cells[i],
+        page.boardWidth,
+        page.boardHeight,
+        page.gridGap,
+        page.gridMargin ?? 0,
+      )
       out.push({ el, x: r.x, y: r.y, w: r.w, h: r.h, rotation: 0, cover: true })
     }
     return out
