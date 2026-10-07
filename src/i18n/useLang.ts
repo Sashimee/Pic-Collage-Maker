@@ -93,17 +93,28 @@ export type TFunc = (key: string, vars?: TVars) => string
  * rule, falling back to `key.other`; `{name}` placeholders take the vars, numbers formatted
  * for the language.
  */
+// Built once per language: the layout gallery alone renders dozens of counts, and
+// constructing these is far from free.
+const pluralRules = new Map<Lang, Intl.PluralRules>()
+const numberFormats = new Map<Lang, Intl.NumberFormat>()
+
+function cached<T>(cache: Map<Lang, T>, lang: Lang, make: (lang: Lang) => T): T {
+  let value = cache.get(lang)
+  if (!value) cache.set(lang, (value = make(lang)))
+  return value
+}
+
 export function translate(lang: Lang, dict: Dict, key: string, vars?: TVars): string {
   const lookup = (k: string) => dict[k] ?? en[k]
   let text: string | undefined
   if (typeof vars?.count === 'number') {
-    const rule = new Intl.PluralRules(lang).select(vars.count)
+    const rule = cached(pluralRules, lang, (l) => new Intl.PluralRules(l)).select(vars.count)
     text = lookup(`${key}.${rule}`) ?? lookup(`${key}.other`)
   }
   text ??= lookup(key)
   if (text === undefined) return key
   if (!vars) return text
-  const numbers = new Intl.NumberFormat(lang)
+  const numbers = cached(numberFormats, lang, (l) => new Intl.NumberFormat(l))
   return text.replace(/\{(\w+)\}/g, (whole, name: string) => {
     const value = vars[name]
     if (value === undefined) return whole
