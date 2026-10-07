@@ -330,8 +330,11 @@ export function SelectionBar({ measure }: SelectionBarProps) {
                   <AlignVerticalJustifyCenter size={18} />
                 </Btn>
               )}
-              {isFreePhoto && (
-                <Btn onClick={() => setCropping(selectedId)} label={t('sel.cropShape')}>
+              {(isFreePhoto || isGridPhoto) && (
+                <Btn
+                  onClick={() => setCropping(selectedId)}
+                  label={t(isGridPhoto ? 'filter.crop' : 'sel.cropShape')}
+                >
                   <Crop size={18} />
                 </Btn>
               )}

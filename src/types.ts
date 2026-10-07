@@ -82,6 +82,9 @@ export interface PhotoElement extends BaseElement {
   filterStack?: FilterOperation[] // non-destructive v2
   shape?: PhotoShape // defaults to 'rect'
   crop?: CropRect // source-pixel crop; undefined = whole image
+  straighten?: number // degrees, free mode only; the photo zooms to keep its frame covered
+  flipX?: boolean
+  flipY?: boolean
   // Per-cell framing in grid mode (ignored in free mode):
   /**
    * Grid slot this photo is pinned to. Unpinned photos fill the remaining

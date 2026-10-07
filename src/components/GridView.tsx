@@ -7,6 +7,7 @@ import { useEditor } from '../store/editorStore'
 import { computeFilterConfig } from '../lib/filters'
 import { assignSlots, cellRect, type CellRect as Rect2 } from '../lib/grids'
 import { getClipBounds, getClipFunc } from '../lib/gridClip'
+import { cropBasisScale, scaleCrop } from '../lib/photoCrop'
 import { toBlend } from './nodes/shared'
 
 function placePhoto(
@@ -58,9 +59,13 @@ function CellPhoto({
   // the same half-resolution bug that was fixed for free photos, still live
   // here because this path never looked at the flag.
   const exporting = useEditor((s) => s.exporting)
-  const image = useImage(
+  const drawn = useImage(
     exporting ? (el.originalSrc ?? el.previewSrc ?? el.src) : (el.previewSrc ?? el.src),
   )
+  const basis = useImage(el.crop && drawn?.src !== el.src ? el.src : '')
+  const k = drawn?.src === el.src ? 1 : cropBasisScale(drawn, basis)
+  const image = el.crop && k === null ? undefined : drawn
+  const crop = el.crop && k !== null ? scaleCrop(el.crop, k) : undefined
   const ref = useRef<Konva.Image>(null)
 
   useEffect(() => {
@@ -80,7 +85,7 @@ function CellPhoto({
       node.clearCache()
       node.filters([])
     }
-  }, [image, el.filters])
+  }, [image, el.filters, crop?.x, crop?.y, crop?.width, crop?.height])
 
   // NOTE: all hooks must run before any early return. `image` starts null and
   // becomes an HTMLImageElement once decoded; a `useMemo` placed after an
@@ -92,8 +97,8 @@ function CellPhoto({
 
   const box = placePhoto(
     rect,
-    image.naturalWidth,
-    image.naturalHeight,
+    crop?.width ?? image.naturalWidth,
+    crop?.height ?? image.naturalHeight,
     el.cellZoom,
     el.cellPan,
   )
@@ -134,6 +139,11 @@ function CellPhoto({
         y={imgY}
         width={dw}
         height={dh}
+        crop={crop}
+        scaleX={el.flipX ? -1 : 1}
+        scaleY={el.flipY ? -1 : 1}
+        offsetX={el.flipX ? dw : 0}
+        offsetY={el.flipY ? dh : 0}
         draggable={selected}
         dragBoundFunc={(pos) => {
           const node = ref.current
