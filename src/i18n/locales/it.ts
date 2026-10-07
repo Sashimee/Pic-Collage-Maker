@@ -585,6 +585,8 @@ const it: Dict = {
   'book.create': 'Crea fotolibro',
   'book.rendering': 'Rendering pagina',
   'book.hint': 'Ogni pagina è renderizzata a 300 DPI e adattata al foglio.',
+  'book.print': 'Stampa',
+  'book.failed': 'Impossibile creare il fotolibro. Riprova.',
   'export.saveProject': 'Salva come .piccollage',
   'export.openProject': 'Apri .piccollage',
   'file.saveTo': 'Salva in',

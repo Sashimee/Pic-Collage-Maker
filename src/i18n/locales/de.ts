@@ -587,6 +587,8 @@ const de: Dict = {
   'book.create': 'Buch erstellen',
   'book.rendering': 'Seite wird gerendert',
   'book.hint': 'Jede Seite wird mit 300 dpi gerendert und auf das Blatt eingepasst.',
+  'book.print': 'Drucken',
+  'book.failed': 'Das Fotobuch konnte nicht erstellt werden. Versuche es noch einmal.',
   'export.saveProject': 'Als .piccollage speichern',
   'export.openProject': '.piccollage öffnen',
   'file.saveTo': 'Speichern in',
