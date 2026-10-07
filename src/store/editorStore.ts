@@ -215,7 +215,7 @@ interface EditorState {
   addShape: (
     shapeType: import('../types').ShapeType,
     fill?: string,
-    custom?: { path: string; name: string },
+    custom?: { path: string; libraryId: string },
   ) => void
   setTool: (tool: 'select' | 'draw') => void
   setBrush: (patch: { color?: string; size?: number }) => void

@@ -338,17 +338,17 @@ describe('editorStore', () => {
   })
 
   describe('addShape', () => {
-    it('adds a library shape with its path and name, centred on the board', () => {
+    it('adds a library shape with its path and library id, centred on the board', () => {
       useEditor
         .getState()
-        .addShape('custom', '#ff0000', { path: 'M0,0 L120,0 L60,120 Z', name: 'Arrows 1' })
+        .addShape('custom', '#ff0000', { path: 'M0,0 L120,0 L60,120 Z', libraryId: 'arrowRight' })
       const { elements, selectedId, boardWidth, boardHeight } = useEditor.getState()
       expect(elements[0]).toMatchObject({
         type: 'shape',
         shapeType: 'custom',
         fill: '#ff0000',
         path: 'M0,0 L120,0 L60,120 Z',
-        name: 'Arrows 1',
+        libraryId: 'arrowRight',
         x: boardWidth / 2 - 60,
         y: boardHeight / 2 - 60,
       })

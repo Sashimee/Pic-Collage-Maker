@@ -26,23 +26,46 @@ export function ShapeLibrary() {
     }
   }, [])
 
-  if (failed) return <p className="text-sm text-muted">{t('library.failed')}</p>
-  if (!packs) return null
+  if (failed) {
+    // A failed dynamic import stays cached for the page's lifetime, so only a reload retries it.
+    return (
+      <div role="alert" className="flex items-center gap-2 text-sm text-muted">
+        <p>{t('library.failed')}</p>
+        <button
+          onClick={() => location.reload()}
+          className="min-h-[44px] shrink-0 rounded-lg bg-surface-2 px-3 font-medium text-text hover:bg-surface-3"
+        >
+          {t('common.refresh')}
+        </button>
+      </div>
+    )
+  }
+  if (!packs) {
+    return (
+      <p role="status" className="min-h-[44px] text-sm text-muted">
+        {t('library.loading')}
+      </p>
+    )
+  }
 
   return (
     <>
       {packs.map((pack) => (
         <Section key={pack.id} title={t(pack.labelKey)}>
-          <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
-            {pack.shapes.map((shape, i) => {
-              const name = `${t(pack.labelKey)} ${i + 1}`
+          <div
+            role="group"
+            aria-label={t(pack.labelKey)}
+            className="grid grid-cols-[repeat(auto-fill,minmax(44px,1fr))] gap-1"
+          >
+            {pack.shapes.map((shape) => {
+              const name = t(`library.${shape.id}`)
               return (
                 <button
                   key={shape.id}
-                  onClick={() => addShape('custom', FILL, { path: shape.d, name })}
+                  onClick={() => addShape('custom', FILL, { path: shape.d, libraryId: shape.id })}
                   aria-label={name}
                   title={name}
-                  className="flex min-h-[44px] items-center justify-center rounded-lg p-1.5 transition hover:bg-surface-2 active:scale-90"
+                  className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg p-1.5 transition hover:bg-surface-2 active:scale-90"
                 >
                   <svg viewBox="-4 -4 128 128" className="h-8 w-8" aria-hidden="true">
                     <path d={shape.d} fill="currentColor" className="text-accent" />

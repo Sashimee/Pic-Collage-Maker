@@ -20,8 +20,9 @@ function absolutePoints(d: string): [number, number][] {
 describe('shape library', () => {
   const shapes = SHAPE_PACKS.flatMap((p) => p.shapes)
 
-  it('gives every pack a translated title and every shape a unique id', () => {
+  it('gives every pack and shape a translated name and every shape a unique id', () => {
     for (const pack of SHAPE_PACKS) expect(en[pack.labelKey]).toBeTruthy()
+    for (const shape of shapes) expect(en[`library.${shape.id}`], shape.id).toBeTruthy()
     expect(new Set(shapes.map((s) => s.id)).size).toBe(shapes.length)
   })
 

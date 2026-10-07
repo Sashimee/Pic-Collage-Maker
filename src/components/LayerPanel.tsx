@@ -28,7 +28,7 @@ function typeIcon(el: CanvasElement): string {
   }
 }
 
-function previewText(el: CanvasElement): string {
+function previewText(el: CanvasElement, t: (key: string) => string): string {
   switch (el.type) {
     case 'photo':
       return 'Photo'
@@ -40,6 +40,7 @@ function previewText(el: CanvasElement): string {
     case 'drawing':
       return 'Drawing'
     case 'shape': {
+      if (el.libraryId) return t(`library.${el.libraryId}`)
       const st = el.shapeType ?? ''
       return st.charAt(0).toUpperCase() + st.slice(1) || 'Shape'
     }
@@ -222,8 +223,8 @@ export default function LayerPanel() {
                     <input
                       autoFocus
                       defaultValue={el.name ?? ''}
-                      placeholder={previewText(el)}
-                      aria-label={`${t('layer.rename')}: ${el.name || previewText(el)}`}
+                      placeholder={previewText(el, t)}
+                      aria-label={`${t('layer.rename')}: ${el.name || previewText(el, t)}`}
                       maxLength={60}
                       onFocus={(e) => e.currentTarget.select()}
                       onKeyDown={(e) => {
@@ -251,7 +252,7 @@ export default function LayerPanel() {
                   >
                     <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
                     <span className="flex-1 truncate text-sm text-text/80 select-none">
-                      {el.name || previewText(el)}
+                      {el.name || previewText(el, t)}
                     </span>
                   </button>
                 )}
@@ -263,7 +264,7 @@ export default function LayerPanel() {
                       setRenaming(el.id)
                     }}
                     title={t('layer.rename')}
-                    aria-label={`${t('layer.rename')}: ${el.name || previewText(el)}`}
+                    aria-label={`${t('layer.rename')}: ${el.name || previewText(el, t)}`}
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-text/60 transition hover:bg-surface-3 hover:text-text"
                   >
                     <Pencil size={14} />

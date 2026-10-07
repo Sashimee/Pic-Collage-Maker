@@ -6,7 +6,7 @@ test('adds a speech bubble from the lazily loaded shape library', async ({ page 
   await skipGallery(page)
   await page.getByRole('button', { name: 'Stickers', exact: true }).click()
 
-  await page.getByRole('button', { name: 'Speech bubbles 1' }).click()
+  await page.getByRole('button', { name: 'Speech bubble', exact: true }).click()
   await settleCanvas(page)
 
   const shape = await page.evaluate(() => {
@@ -16,14 +16,14 @@ test('adds a speech bubble from the lazily loaded shape library', async ({ page 
       type: string
       shapeType?: string
       path?: string
-      name?: string
+      libraryId?: string
     }
     return { ...el, selected: selectedId === el.id }
   })
   expect(shape).toMatchObject({
     type: 'shape',
     shapeType: 'custom',
-    name: 'Speech bubbles 1',
+    libraryId: 'speech',
     selected: true,
   })
   expect(shape.path).toMatch(/^M/)
@@ -34,4 +34,7 @@ test('adds a speech bubble from the lazily loaded shape library', async ({ page 
     return konva.stages[0].findOne('#' + id)?.getClientRect().width ?? 0
   }, shape.id)
   expect(drawn).toBeGreaterThan(10)
+
+  await page.getByRole('button', { name: 'Layers', exact: true }).click()
+  await expect(page.getByText('Speech bubble', { exact: true })).toBeVisible()
 })

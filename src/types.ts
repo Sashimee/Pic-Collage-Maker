@@ -213,6 +213,8 @@ export interface ShapeElement extends BaseElement {
   arrowHead?: { size: number; style: 'triangle' | 'circle' | 'bar' }
   // For custom SVG path
   path?: string
+  /** The shape library entry this came from; names the layer in the current language. */
+  libraryId?: string
 }
 
 // ---- Group element ---------------------------------------------------------
