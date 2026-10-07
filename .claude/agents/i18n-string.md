@@ -1,6 +1,6 @@
 ---
 name: i18n-string
-description: Adds or changes a UI string across all six languages in src/i18n/translations.ts and wires it into the component. Use whenever a change introduces user-visible text.
+description: Adds or changes a UI string across all six languages (src/i18n/translations.ts + src/i18n/locales/*.ts) and wires it into the component. Use whenever a change introduces user-visible text.
 tools: Read, Edit, Grep, Glob, Bash
 model: sonnet
 ---
@@ -11,9 +11,10 @@ You own user-visible strings in Pic Collage Maker.
 
 ## The rules
 
-- `src/i18n/translations.ts` holds flat key→string maps for **six** languages:
-  `en`, `de`, `es`, `fr`, `it`, `pt`. A key must exist in **all six** or the UI
-  falls back to English and the miss goes unnoticed.
+- English lives in `src/i18n/translations.ts` (`en`); the other five in
+  `src/i18n/locales/{de,es,fr,it,pt}.ts`, one default-exported map each. A key
+  must exist in **all six** or the UI falls back to English and the miss goes
+  unnoticed.
 - In a component: `const t = useT()` then `t('your.key')`.
 - `t()` takes a key only — **there is no interpolation**. Compose counts at the
   call site: `` `${n} ${t('photos.count')}` ``.

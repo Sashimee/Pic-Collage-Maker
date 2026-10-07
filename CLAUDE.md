@@ -92,7 +92,8 @@ Pic-Collage-Maker/
     ├── services/
     │   └── localProjects.ts    # the IndexedDB project store (no network — see gotchas)
     ├── i18n/
-    │   ├── translations.ts     # Lang type, LANGS (flags), 6-language string maps
+    │   ├── translations.ts     # Lang type, LANGS (flags), the English map (eager)
+    │   ├── locales/            # de/es/fr/it/pt maps, each loaded on demand
     │   ├── useLang.ts          # lang store (detect+persist) + useT() translator hook
     │   └── useTheme.ts         # light/dark theme store
     ├── assets/fonts/           # self-hosted Poppins (latin subset) — see gotchas
@@ -283,15 +284,18 @@ clipped `Group`. Selecting a cell selects that photo (for filters/delete).
 
 ## i18n (`src/i18n/`)
 
-Lightweight, dependency-free. `translations.ts` holds flat key→string maps for
-**six languages** (`en`, `de`, `es`, `fr`, `it`, `pt`) plus `LANGS` (flag +
-label). `useLang.ts` is a zustand store that **defaults to the browser language**
-(`navigator.languages`, matched by prefix; English otherwise), **persists** the
-choice in `localStorage`, and sets `<html lang>`. `useT()` returns a `t(key)`
+Lightweight, dependency-free. Flat key→string maps for **six languages**:
+English in `translations.ts` (with `LANGS`, flag + label), the other five in
+`locales/*.ts`. Only English is in the eager bundle — every key would otherwise
+cost eager bytes six times over. `useLang.ts` is a zustand store that **defaults
+to the browser language** (`navigator.languages`, matched by prefix; English
+otherwise), **persists** the choice in `localStorage`, and sets `<html lang>`.
+It loads a language's map before switching to it; `main.tsx` waits for the
+detected one (`langReady`) before the first render, so nothing flashes English. `useT()` returns a `t(key)`
 translator (English is the fallback; unknown key → the key). `t()` takes a key
 only — **no interpolation**, so compose counts as `` `${n} ${t('key')}` ``.
 `LangSwitcher` (in the header) toggles language live. **To add a UI string:** add
-the key to **all six** language maps, then `const t = useT()` and `t('your.key')`.
+the key to **all six** language maps (`translations.ts` + `locales/`), then `const t = useT()` and `t('your.key')`.
 Font names, the bold "B", emoji, grid glyphs, and caption suggestions stay
 untranslated.
 
