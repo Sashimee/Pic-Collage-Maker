@@ -276,6 +276,8 @@ interface EditorState {
   setGridRadius: (radius: number) => void
   setFrame: (patch: Partial<Frame>) => void
   setBoardSize: (width: number, height: number) => void
+  /** Changes whenever another document replaces the board (New, open, project or page switch). */
+  documentId: number
   clearAll: () => void
   loadDocument: (doc: LoadedDocument) => void
 
@@ -370,6 +372,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   past: [],
   future: [],
   copiedStyle: null,
+  documentId: 0,
 
   watermark: { ...DEFAULT_WATERMARK },
   print: { ...DEFAULT_PRINT_SETTINGS },
@@ -785,11 +788,12 @@ export const useEditor = create<EditorState>((set, get) => ({
         print: { ...DEFAULT_PRINT_SETTINGS },
         past: [],
         future: [],
+        documentId: s.documentId + 1,
       }
     }),
 
   loadDocument: (doc) =>
-    set({
+    set((s) => ({
       boardWidth: doc.boardWidth,
       boardHeight: doc.boardHeight,
       background: doc.background,
@@ -807,7 +811,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       future: [],
       watermark: doc.watermark ? { ...DEFAULT_WATERMARK, ...doc.watermark } : { ...DEFAULT_WATERMARK },
       print: doc.print ? { ...DEFAULT_PRINT_SETTINGS, ...doc.print } : { ...DEFAULT_PRINT_SETTINGS },
-    }),
+      documentId: s.documentId + 1,
+    })),
 
   undo: () => get().travel(-1),
   redo: () => get().travel(1),

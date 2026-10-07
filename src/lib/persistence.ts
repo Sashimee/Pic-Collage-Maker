@@ -101,12 +101,12 @@ export async function loadDoc(): Promise<StoredDoc | undefined> {
   }
 }
 
-// Wipe everything (used by "New"). Also drops all stored photo blobs.
+// Forget the autosaved document (used by "New"). The photo blobs stay: saved projects and
+// version snapshots share the same store, and clearing it emptied every one of them (#142).
 export async function clearPersisted(): Promise<void> {
   if (!available()) return
   try {
     await tx(DOC_STORE, 'readwrite', (s) => s.delete(DOC_KEY))
-    await tx(PHOTO_STORE, 'readwrite', (s) => s.clear())
   } catch {
     /* ignore */
   }

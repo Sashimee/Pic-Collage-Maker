@@ -9,6 +9,9 @@ export interface ShortcutCallbacks {
   onSave?: () => void
   onOpenProject?: () => void
   onDuplicate?: () => void
+  /** Ctrl/Cmd+C with nothing selected. */
+  onCopyImage?: () => void
+  onPasteImages?: (files: FileList) => void
 }
 
 export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
@@ -136,9 +139,14 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
 
       // Copy
       if (mod && key === 'c') {
-        e.preventDefault()
         const el = useEditor.getState().selected()
-        if (el) {
+        // Highlighted text, or a dialog in front of the board, keeps the browser's own copy.
+        const textSelected = window.getSelection()?.isCollapsed === false
+        const inDialog = target instanceof Element && !!target.closest('[role="dialog"]')
+        if (!el && (!cbRef.current.onCopyImage || textSelected || inDialog)) return
+        e.preventDefault()
+        if (!el) cbRef.current.onCopyImage?.()
+        else {
           const json = JSON.stringify(el)
           navigator.clipboard.writeText(json).catch(() => {
             // Fallback for insecure contexts
@@ -150,41 +158,6 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
             document.body.removeChild(ta)
           })
         }
-        return
-      }
-
-      // Paste
-      if (mod && key === 'v') {
-        e.preventDefault()
-        navigator.clipboard.readText().then((text) => {
-          try {
-            const el = JSON.parse(text)
-            if (!el || !el.type) return
-            const { id, x, y, ...rest } = el
-            const newId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-              ? crypto.randomUUID()
-              : Math.random().toString(36).slice(2)
-            const store = useEditor.getState()
-            const newEl = { ...rest, id: newId, x: (x ?? 0) + 20, y: (y ?? 0) + 20 } as CanvasElement
-            if (newEl.type === 'photo') {
-              store.updateElement(id, newEl) // can't truly add via update, we need addPhoto
-              // Instead: manually insert into elements array
-              useEditor.setState({
-                elements: [...store.elements, newEl],
-                selectedId: newId,
-              })
-            } else {
-              useEditor.setState({
-                elements: [...store.elements, newEl],
-                selectedId: newId,
-              })
-            }
-          } catch {
-            // ignore invalid clipboard
-          }
-        }).catch(() => {
-          // clipboard read denied
-        })
         return
       }
 
@@ -258,7 +231,40 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
       }
     }
 
+    // The paste event, not Ctrl+V: it carries clipboard files, and reading it needs no permission.
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
+      const data = e.clipboardData
+      if (!data) return
+      if (Array.from(data.files).some((f) => f.type.startsWith('image/'))) {
+        e.preventDefault()
+        cbRef.current.onPasteImages?.(data.files)
+        return
+      }
+      try {
+        const el = JSON.parse(data.getData('text/plain'))
+        if (!el || !el.type) return
+        e.preventDefault()
+        const { x, y, ...rest } = el
+        const newId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2)
+        const newEl = { ...rest, id: newId, x: (x ?? 0) + 20, y: (y ?? 0) + 20 } as CanvasElement
+        useEditor.setState({
+          elements: [...useEditor.getState().elements, newEl],
+          selectedId: newId,
+        })
+      } catch {
+        // ignore invalid clipboard
+      }
+    }
+
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('paste', onPaste)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('paste', onPaste)
+    }
   }, [])
 }

@@ -5,11 +5,11 @@ import {
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
   ChevronDown, FileCode, FileText, Package, Smartphone,
-  Plus, BookOpen, Proportions,
+  Plus, BookOpen, Proportions, Copy,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useProjects } from '../store/projectsStore'
-import { canShareImage } from '../lib/exportImage'
+import { canCopyImage, canShareImage } from '../lib/exportImage'
 import { clearPersisted } from '../lib/persistence'
 import { useT } from '../i18n/useLang'
 import { useTheme } from '../i18n/useTheme'
@@ -20,6 +20,7 @@ import { m, AnimatePresence } from './motion'
 import { useToasts } from './ToastContainer'
 import { FullScreenButton } from './FullScreen'
 import { useInstall } from '../lib/pwaInstall'
+import { canPickFiles, useLinkedFileName } from '../lib/linkedFile'
 import { BrandMark } from './header/BrandMark'
 import { MobileMenu } from './header/MobileMenu'
 import { useProjectFileActions } from './header/useProjectFileActions'
@@ -37,6 +38,7 @@ const SizePresets = lazy(() =>
 export type ExportKind =
   | 'png'
   | 'jpg'
+  | 'copy'
   | 'share'
   | 'share-page'
   | 'png-page'
@@ -60,11 +62,19 @@ export function HeaderBar({
   const [sizesOpen, setSizesOpen] = useState(false)
   const exportButton = useRef<HTMLButtonElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
-  const closeSizes = () => {
-    setSizesOpen(false)
-    // The menu item that opened the sheet is gone; hand focus to whichever trigger is on screen.
+  const openInput = useRef<HTMLInputElement>(null)
+  // The menu item that was used is gone; hand focus to whichever trigger is on screen.
+  const refocusTrigger = () => {
     const trigger = exportButton.current?.offsetParent ? exportButton : moreButton
     trigger.current?.focus()
+  }
+  const closeSizes = () => {
+    setSizesOpen(false)
+    refocusTrigger()
+  }
+  const closeExportMenu = () => {
+    setExportOpen(false)
+    refocusTrigger()
   }
   const t = useT()
   const clearAll = useEditor((s) => s.clearAll)
@@ -82,15 +92,20 @@ export function HeaderBar({
   // single-page ones only earn their space when there is more than one page.
   const multiPage = useProjects((s) => s.pages.length) > 1
   const saveActiveProject = useProjects((s) => s.saveActiveProject)
+  const closeProject = useProjects((s) => s.closeProject)
   const toast = useToasts()
   // Hidden once installed, and on browsers with no install route at all
   // (Firefox), where an entry point would only lead nowhere.
   const canInstall = useInstall((s) => !s.standalone && s.platform !== 'unsupported')
-  const { handleSaveAsFile, handleOpenFile, handleBatchExport } = useProjectFileActions()
+  const { handleSaveAsFile, handleSaveAsNewFile, handleOpenFile, handlePickFile, handleBatchExport } =
+    useProjectFileActions()
+  const linkedName = useLinkedFileName()
 
   const handleExport = async (kind: ExportKind) => {
     setExportOpen(false)
     onExport(kind)
+    // Copying leaves nothing on screen to land on, unlike a download or a sheet.
+    if (kind === 'copy') refocusTrigger()
   }
 
   /*
@@ -109,8 +124,22 @@ export function HeaderBar({
     window.location.reload()
   }
 
-  const handleNew = () => {
+  // A second New while the first awaits its save would clear the canvas before that save reads it.
+  const clearing = useRef(false)
+  const handleNew = async () => {
+    if (clearing.current) return
     if (hasElements && window.confirm(t('header.clearConfirm'))) {
+      clearing.current = true
+      try {
+        // Still attached, the project autosave would write the blank canvas over the open project.
+        await closeProject()
+      } catch (err) {
+        console.error('Saving the project before New failed', err)
+        toast.error(t('project.saveFailed'))
+        return
+      } finally {
+        clearing.current = false
+      }
       clearAll()
       void clearPersisted()
       toast.info(t('toast.canvasCleared'))
@@ -213,6 +242,11 @@ export function HeaderBar({
                     <MenuItem onClick={() => handleExport('jpg')} icon={<FileImage size={16} />}>
                       {t('export.jpg')}
                     </MenuItem>
+                    {canCopyImage() && (
+                      <MenuItem onClick={() => handleExport('copy')} icon={<Copy size={16} />}>
+                        {t('export.copy')}
+                      </MenuItem>
+                    )}
                     <MenuItem onClick={() => { setExportOpen(false); onExportSVG?.() }} icon={<FileCode size={16} />}>
                       {t('export.svg')}
                     </MenuItem>
@@ -248,25 +282,42 @@ export function HeaderBar({
                       {t('export.batch')}
                     </MenuItem>
                     <div className="mx-3 my-1 h-px bg-border" />
-                    <MenuItem onClick={handleSaveAsFile} icon={<Upload size={16} />}>
-                      {t('export.saveProject')}
+                    <MenuItem onClick={() => { closeExportMenu(); void handleSaveAsFile() }} icon={<Upload size={16} />}>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">
+                        {linkedName ? `${t('file.saveTo')} ${linkedName}` : t('export.saveProject')}
+                      </span>
                     </MenuItem>
-                    <label className="flex min-h-[44px] w-full cursor-pointer items-center gap-2.5 px-4 py-3 text-left text-sm text-text/90 transition hover:bg-surface-3">
-                      <Upload size={16} className="text-muted" />
-                      <span>{t('export.openProject')}</span>
-                      <input
-                        type="file"
-                        accept=".piccollage,application/json"
-                        onChange={handleOpenFile}
-                        className="sr-only"
-                      />
-                    </label>
+                    {linkedName && (
+                      <MenuItem onClick={() => { closeExportMenu(); void handleSaveAsNewFile() }} icon={<Upload size={16} />}>
+                        {t('file.saveAsNew')}
+                      </MenuItem>
+                    )}
+                    <MenuItem
+                      onClick={() => {
+                        closeExportMenu()
+                        if (canPickFiles()) handlePickFile()
+                        else openInput.current?.click()
+                      }}
+                      icon={<Upload size={16} />}
+                    >
+                      {t('export.openProject')}
+                    </MenuItem>
                   </m.div>
                   {/* Backdrop */}
                   <div className="fixed inset-0 z-30" aria-hidden="true" onClick={() => setExportOpen(false)} />
                 </>
               )}
             </AnimatePresence>
+            {/* Outside the menu, which unmounts before the file dialog reports back. */}
+            <input
+              ref={openInput}
+              type="file"
+              accept=".piccollage,application/json"
+              onChange={handleOpenFile}
+              tabIndex={-1}
+              aria-hidden="true"
+              className="hidden"
+            />
           </div>
 
           {/* Mobile hamburger */}
@@ -318,7 +369,10 @@ export function HeaderBar({
       {/* Mobile Action Sheet */}
       <MobileMenu
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
+        onClose={() => {
+          setSheetOpen(false)
+          moreButton.current?.focus()
+        }}
         onExport={handleExport}
         onExportSVG={onExportSVG}
         onInstall={onInstall}
@@ -327,7 +381,9 @@ export function HeaderBar({
         onNew={handleNew}
         onBatchExport={handleBatchExport}
         onSaveAsFile={handleSaveAsFile}
+        onSaveAsNewFile={handleSaveAsNewFile}
         onOpenFile={handleOpenFile}
+        onPickFile={handlePickFile}
         onResize={() => setSizesOpen(true)}
       />
 

@@ -106,6 +106,21 @@ export default defineConfig({
         // Every window keeps its own editor. Reusing a window would hand a launched file to an
         // editor that may have a project open, whose autosave would then write it over that project.
         launch_handler: { client_mode: 'navigate-new' },
+        file_handlers: [
+          {
+            action: BASE,
+            accept: {
+              'application/x-piccollage': ['.piccollage'],
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/png': ['.png'],
+              'image/webp': ['.webp'],
+              'image/gif': ['.gif'],
+              'image/avif': ['.avif'],
+              'image/heic': ['.heic'],
+              'image/heif': ['.heif'],
+            },
+          },
+        ],
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },

@@ -38,6 +38,8 @@ interface ProjectsState {
   duplicateProject: (id: string) => Promise<string>
   deleteProject: (id: string) => Promise<void>
   saveActiveProject: () => Promise<void>
+  /** Saves any pending edits, then detaches the editor from the project. */
+  closeProject: () => Promise<void>
 
   /* ---- pages -----------------------------------------------------------
    * The editor always holds exactly one live document — the page you are
@@ -289,6 +291,17 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 
   /* ---- pages ----------------------------------------------------------- */
 
+  closeProject: async () => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+      saveTimeout = null
+      if (!hasCrashed()) trackSave().catch(() => {})
+    }
+    // A save still under way would set this project's pages again after the detach.
+    await inFlightSave
+    set({ activeProjectId: null, pages: [], activePage: 0 })
+  },
+
   addPage: async () => {
     const pages = await commitPages(get, set, (doc) => ({
       ...doc,
@@ -373,14 +386,26 @@ export const useProjects = create<ProjectsState>((set, get) => ({
 // Auto-save: whenever the editor state changes, save to the active project.
 // Debounced to avoid hammering IndexedDB during rapid edits.
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
+let inFlightSave: Promise<void> | null = null
+// Saves run one after another, so an older one can never finish last and leave its pages.
+function trackSave(): Promise<void> {
+  const save = (inFlightSave ?? Promise.resolve())
+    .catch(() => {})
+    .then(() => useProjects.getState().saveActiveProject())
+  inFlightSave = save
+  return save.finally(() => {
+    if (inFlightSave === save) inFlightSave = null
+  })
+}
 useEditor.subscribe(() => {
   if (typeof indexedDB === 'undefined') return
   const { activeProjectId } = useProjects.getState()
   if (!activeProjectId) return
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
+    saveTimeout = null
     if (hasCrashed()) return
-    useProjects.getState().saveActiveProject().catch(() => {})
+    trackSave().catch(() => {})
   }, 1500)
 })
 

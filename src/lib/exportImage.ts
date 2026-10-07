@@ -291,6 +291,23 @@ export function downloadDataURL(
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+export function canCopyImage(): boolean {
+  return (
+    typeof ClipboardItem !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    typeof navigator.clipboard?.write === 'function'
+  )
+}
+
+/**
+ * Puts the rendered PNG on the clipboard. The render goes in as a pending promise: Safari only
+ * allows the write while the click that asked for it is still being handled.
+ */
+export function copyImage(render: () => Promise<string>): Promise<void> {
+  const png = render().then(dataURLToBlob)
+  return navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+}
+
 export function canShareImage(): boolean {
   // Check the members are actually callable — `'canShare' in navigator` is true
   // even when the property exists but is undefined, which would wrongly report

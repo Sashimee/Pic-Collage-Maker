@@ -9,8 +9,9 @@ import { importFiles } from '../lib/importFiles'
 export function useImportFiles() {
   const t = useT()
   const toast = useToasts()
-  const reportHeic = ({ skippedHeic }: { skippedHeic: number }) => {
-    if (skippedHeic) toast.warn(`${t('import.heicUnsupported')} (${skippedHeic})`)
+  const reportHeic = (result: Awaited<ReturnType<typeof importFiles>>) => {
+    if (result.skippedHeic) toast.warn(`${t('import.heicUnsupported')} (${result.skippedHeic})`)
+    return result
   }
   return async (files: FileList, add: Parameters<typeof importFiles>[1]) => {
     if (files.length < 2) return reportHeic(await importFiles(files, add))
@@ -24,7 +25,7 @@ export function useImportFiles() {
       },
     })
     try {
-      reportHeic(
+      return reportHeic(
         await importFiles(files, add, {
           signal,
           onProgress: (done, total) => progress.update(label(Math.min(done + 1, total))),
