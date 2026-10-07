@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { dragOnCanvas, getMode, getZones, openApp, settleCanvas } from './helpers'
+import { dragOnCanvas, enterCustomLayout, getZones, openApp } from './helpers'
 
 /**
  * First-use tips. Every other spec suppresses these through `openApp`; these
@@ -12,12 +12,6 @@ import { dragOnCanvas, getMode, getZones, openApp, settleCanvas } from './helper
  */
 
 const demo = (page: Page) => page.locator('[data-gesture-demo="layout"]')
-
-async function enterCustomLayout(page: Page) {
-  await page.locator('button.w-full', { hasText: 'Custom Layout' }).click()
-  await expect.poll(() => getMode(page)).toBe('custom-layout')
-  await settleCanvas(page)
-}
 
 test.describe('first-use tips', () => {
   test('the drawing demo plays the first time the layout editor is opened', async ({ page }) => {

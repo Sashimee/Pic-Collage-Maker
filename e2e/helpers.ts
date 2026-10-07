@@ -160,6 +160,19 @@ export async function skipGallery(page: Page) {
 }
 
 /**
+ * Open the draw-your-own layout editor from the start-up gallery. The gallery
+ * animates out over the board, and a stroke started before it is gone lands on
+ * the gallery instead — the split silently never happens, on whichever test
+ * drew first. Waiting for it to leave, not just for the mode, is the point.
+ */
+export async function enterCustomLayout(page: Page) {
+  await page.locator('button.w-full', { hasText: 'Custom Layout' }).click()
+  await expect(page.getByText('Choose a Layout')).toBeHidden()
+  await expect.poll(() => getMode(page)).toBe('custom-layout')
+  await settleCanvas(page)
+}
+
+/**
  * Pick the first preset layout in the gallery and close the assignment sheet
  * that follows, leaving the app in grid mode.
  */
