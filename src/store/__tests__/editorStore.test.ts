@@ -356,6 +356,61 @@ describe('editorStore', () => {
     })
   })
 
+  describe('applyTemplate', () => {
+    it('keeps the photos, replaces the rest, and undoes in one step', () => {
+      const s = useEditor.getState()
+      s.addPhoto('blob:a', 800, 600)
+      s.addText()
+      const before = useEditor.getState().boardHeight
+      useEditor.getState().applyTemplate({
+        boardWidth: 1080,
+        boardHeight: 1920,
+        background: { type: 'solid', color: '#fde68a' },
+        gridId: 'film-4',
+        gridGap: 12,
+        gridRadius: 0,
+        gridMargin: 0,
+        frame: { style: 'none', color: '#ffffff', width: 0.04 },
+        elements: [
+          {
+            type: 'text',
+            text: 'Hi',
+            fontFamily: 'Poppins',
+            fontSize: 80,
+            fill: '#000000',
+            fontStyle: 'normal',
+            x: 10,
+            y: 20,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+          },
+        ],
+      })
+      const after = useEditor.getState()
+      expect(after).toMatchObject({
+        boardWidth: 1080,
+        boardHeight: 1920,
+        mode: 'grid',
+        gridId: 'film-4',
+        gridGap: 12,
+        galleryDismissed: true,
+        selectedId: null,
+      })
+      expect(after.background).toMatchObject({ type: 'solid', color: '#fde68a' })
+      expect(after.elements.map((e) => e.type)).toEqual(['photo', 'text'])
+      expect((after.elements[1] as TextElement).text).toBe('Hi')
+      expect(after.elements[1].id).toBeTruthy()
+      expect(after.past.at(-1)?.label).toBe('history.template')
+
+      after.undo()
+      const undone = useEditor.getState()
+      expect(undone.boardHeight).toBe(before)
+      expect(undone.elements.map((e) => e.type)).toEqual(['photo', 'text'])
+      expect((undone.elements[1] as TextElement).text).toBe('Tap to edit')
+    })
+  })
+
   describe('canvas zoom floor', () => {
     it('clamps the zoom to 0.25 by default', () => {
       useEditor.getState().setCanvasZoom(0.05)

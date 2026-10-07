@@ -33,6 +33,7 @@ import {
 import { getGridById } from '../lib/grids'
 import { styleOf, stylePatch, type ElementStyle } from '../lib/elementStyle'
 import { getCustomLayoutById } from '../lib/customLayoutStorage'
+import type { TemplateDocument } from '../lib/templates'
 
 const uid = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -267,6 +268,8 @@ interface EditorState {
   setBackground: (patch: Partial<Background>) => void
   setMode: (mode: EditorMode) => void
   applyLayout: (layoutId: string, opts?: { boardSize?: { w: number; h: number } }) => void
+  /** Replace everything but the photos with a template, as one undo step; the photos fill its cells. */
+  applyTemplate: (doc: TemplateDocument) => void
   setGrid: (gridId: string | null) => void
   setGridGap: (gap: number) => void
   setGridMargin: (margin: number) => void
@@ -695,6 +698,27 @@ export const useEditor = create<EditorState>((set, get) => ({
     setMode('grid')
     setGrid(layoutId)
   },
+
+  applyTemplate: (doc) =>
+    set((s) => ({
+      boardWidth: doc.boardWidth,
+      boardHeight: doc.boardHeight,
+      background: { ...DEFAULT_BACKGROUND, ...doc.background },
+      mode: 'grid',
+      gridId: doc.gridId,
+      gridGap: doc.gridGap,
+      gridRadius: doc.gridRadius,
+      gridMargin: doc.gridMargin,
+      frame: doc.frame,
+      elements: [
+        ...s.elements.filter((e) => e.type === 'photo'),
+        ...doc.elements.map((e) => ({ ...e, id: uid() }) as CanvasElement),
+      ],
+      selectedId: null,
+      multiSelected: [],
+      galleryDismissed: true,
+      ...record(s, 'history.template'),
+    })),
 
   setGrid: (gridId) =>
     set((s) => ({
