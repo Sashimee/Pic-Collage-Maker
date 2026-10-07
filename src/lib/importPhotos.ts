@@ -1,4 +1,5 @@
 import { putPhoto } from './persistence'
+import { runPixelJob } from '../workers/runPixelJob'
 
 export interface ImportedPhoto {
   src: string // preview variant (1080px) used for display
@@ -61,7 +62,29 @@ async function createImageFromSrc(src: string): Promise<HTMLImageElement> {
   return img
 }
 
-export async function loadPhotoMeta(file: File): Promise<ImportedPhoto> {
+interface Variants {
+  width: number
+  height: number
+  previewBlob: Blob
+  thumbBlob: Blob
+}
+
+/** Decoding and downscaling a 24 MP photo takes seconds; the worker keeps the page responsive meanwhile. */
+async function variantsOffThread(file: File): Promise<Variants> {
+  const type = file.type || 'image/jpeg'
+  const {
+    width,
+    height,
+    blobs: [preview, thumb],
+  } = await runPixelJob(file, null, [
+    { type, quality: 0.92, maxDim: 1080, shrinkOnly: true },
+    { type, quality: 0.85, maxDim: 256 },
+  ])
+  if (!thumb) throw new Error('Pixel job returned no thumbnail')
+  return { width, height, previewBlob: preview ?? file, thumbBlob: thumb }
+}
+
+async function variantsOnPage(file: File): Promise<Variants> {
   const url = URL.createObjectURL(file)
   let img: HTMLImageElement
   try {
@@ -76,13 +99,27 @@ export async function loadPhotoMeta(file: File): Promise<ImportedPhoto> {
   const naturalH = img.naturalHeight
 
   // Generate scaled variants using canvas
-  const [originalBlob, previewBlob, thumbBlob] = await Promise.all([
-    Promise.resolve(file), // keep original file blob
+  const [previewBlob, thumbBlob] = await Promise.all([
     naturalW > 1080 || naturalH > 1080
       ? canvasBlob(img, 1080, file.type || 'image/jpeg', 0.92)
       : Promise.resolve(file),
     canvasBlob(img, 256, file.type || 'image/jpeg', 0.85),
   ])
+  URL.revokeObjectURL(url)
+  return { width: naturalW, height: naturalH, previewBlob, thumbBlob }
+}
+
+export async function loadPhotoMeta(file: File): Promise<ImportedPhoto> {
+  let variants: Variants
+  try {
+    variants = await variantsOffThread(file)
+  } catch (err) {
+    // Some files decode as an <img> but not as an ImageBitmap; the page can still read those.
+    console.warn('[importPhotos] worker decode failed, decoding on the page', err)
+    variants = await variantsOnPage(file)
+  }
+  const { width: naturalW, height: naturalH, previewBlob, thumbBlob } = variants
+  const originalBlob = file
 
   const photoId =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -99,9 +136,6 @@ export async function loadPhotoMeta(file: File): Promise<ImportedPhoto> {
     putPhoto(`${photoId}:prev`, previewBlob),
     putPhoto(`${photoId}:thumb`, thumbBlob),
   ])
-
-  // Clean up the temporary object URL used for decoding
-  URL.revokeObjectURL(url)
 
   return {
     photoId,

@@ -1,32 +1,16 @@
 // Auto-enhance: client-side photo improvement using Canvas pixel manipulation.
 // No ML required — fast, deterministic, works offline.
 
-interface EnhanceOptions {
+import type { Pixels } from './pixels'
+
+export interface EnhanceOptions {
   autoContrast?: boolean
   autoWhiteBalance?: boolean
   sharpen?: boolean
   denoise?: boolean
 }
 
-export async function autoEnhance(
-  src: string,
-  opts: EnhanceOptions = {},
-): Promise<string> {
-  const img = new Image()
-  img.crossOrigin = 'anonymous'
-  img.src = src
-  await new Promise((resolve, reject) => {
-    img.onload = resolve
-    img.onerror = reject
-  })
-
-  const canvas = document.createElement('canvas')
-  canvas.width = img.naturalWidth
-  canvas.height = img.naturalHeight
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, 0, 0)
-
-  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+export function enhancePixels(imgData: Pixels, opts: EnhanceOptions = {}): void {
   const data = imgData.data
 
   if (opts.autoContrast) {
@@ -82,15 +66,12 @@ export async function autoEnhance(
   }
 
   if (opts.sharpen) {
-    applyConvolution(data, canvas.width, canvas.height, SHARPEN_KERNEL)
+    applyConvolution(data, imgData.width, imgData.height, SHARPEN_KERNEL)
   }
 
   if (opts.denoise) {
-    applyConvolution(data, canvas.width, canvas.height, GAUSSIAN_KERNEL)
+    applyConvolution(data, imgData.width, imgData.height, GAUSSIAN_KERNEL)
   }
-
-  ctx.putImageData(imgData, 0, 0)
-  return canvas.toDataURL('image/jpeg', 0.92)
 }
 
 const SHARPEN_KERNEL = [

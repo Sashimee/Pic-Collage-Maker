@@ -8,8 +8,8 @@ import { Chip, Section, Slider } from './ui'
 import { useToasts } from './ToastContainer'
 import { PhotoStyleSection } from './PhotoStyleSection'
 import { AdjustSection } from './AdjustSection'
-import { autoEnhance } from '../ai/autoEnhance'
-import { STYLE_OPTIONS, applyStyleTransfer } from '../ai/styleTransfer'
+import { autoEnhance, applyStyleTransfer } from '../ai/tools'
+import { STYLE_OPTIONS } from '../ai/styleTransfer'
 
 const ADVANCED_LABELS: Partial<Record<FilterOperation['type'], string>> = {
   levels: 'adjust.levels',
