@@ -542,6 +542,7 @@ export const en: Dict = {
   'toast.restoreFailed': 'Restore failed',
   'toast.projectSavedFile': 'Project saved as file',
   'toast.projectOpened': 'Project opened',
+  'launch.replaceConfirm': 'Open this project? It replaces what is on the board now.',
   'toast.noPhotosExport': 'No photos to export',
   'toast.noExportablePhotos': 'No exportable photos found',
   'toast.batchExportDone': 'Batch export downloaded',
