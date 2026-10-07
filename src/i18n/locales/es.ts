@@ -586,6 +586,8 @@ const es: Dict = {
   'book.create': 'Crear álbum',
   'book.rendering': 'Procesando página',
   'book.hint': 'Cada página se procesa a 300 PPP y se ajusta a la hoja.',
+  'book.print': 'Imprimir',
+  'book.failed': 'No se pudo crear el álbum de fotos. Inténtalo de nuevo.',
   'export.saveProject': 'Guardar como .piccollage',
   'export.openProject': 'Abrir .piccollage',
   'filter.removed': 'Filtro eliminado',

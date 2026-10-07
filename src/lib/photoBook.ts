@@ -105,34 +105,34 @@ export function pageNumberFor(index: number, options: BookOptions): number | nul
   return index + 1
 }
 
+type BookHooks = {
+  onProgress?: (done: number, total: number) => void
+  signal?: { cancelled: boolean }
+  /** The user's watermark / print marks, so a printed book carries them. */
+  watermark?: import('../types').WatermarkSettings
+  print?: import('../types').PrintSettings
+}
+
+export interface BookPage {
+  dataUrl: string
+  pageNumber: number | null
+}
+
 /**
- * Render every page and bind them into a PDF at the chosen physical size.
+ * Render every page at print resolution for the chosen sheet, with its page number.
  *
- * Both heavy modules are imported lazily: pdf-lib is ~420 KB and the
- * off-screen renderer pulls in react-konva. Neither belongs in the bundle
- * someone downloads to look at the layout gallery.
+ * The off-screen renderer is imported lazily: it pulls in react-konva, which
+ * does not belong in the bundle someone downloads to look at the layout gallery.
  */
-export async function buildPhotoBook(
+export async function renderBook(
   pages: import('../store/editorStore').LoadedDocument[],
   options: BookOptions,
-  hooks: {
-    onProgress?: (done: number, total: number) => void
-    signal?: { cancelled: boolean }
-    /** The user's watermark / print marks, so a printed book carries them. */
-    watermark?: import('../types').WatermarkSettings
-    print?: import('../types').PrintSettings
-  } = {},
-): Promise<Uint8Array | null> {
+  hooks: BookHooks = {},
+): Promise<BookPage[] | null> {
   if (!pages.length) return null
-  const size = bookSizeById(options.sizeId)
-
-  const [{ renderPages }, { exportPDF }] = await Promise.all([
-    import('./renderPages'),
-    import('./exportPDF'),
-  ])
-
+  const { renderPages } = await import('./renderPages')
   const bitmaps = await renderPages(pages, {
-    ...pageSizePx(size),
+    ...pageSizePx(bookSizeById(options.sizeId)),
     format: 'jpeg',
     watermark: hooks.watermark,
     print: hooks.print,
@@ -140,9 +140,19 @@ export async function buildPhotoBook(
     signal: hooks.signal,
   })
   if (!bitmaps.length || hooks.signal?.cancelled) return null
+  return bitmaps.map((dataUrl, i) => ({ dataUrl, pageNumber: pageNumberFor(i, options) }))
+}
 
-  return exportPDF(
-    bitmaps.map((dataUrl, i) => ({ dataUrl, pageNumber: pageNumberFor(i, options) })),
-    { page: pageSizePt(size), title: 'Photo Book' },
-  )
+/** Render every page and bind them into a PDF at the chosen physical size. pdf-lib (~420 KB) loads lazily. */
+export async function buildPhotoBook(
+  pages: import('../store/editorStore').LoadedDocument[],
+  options: BookOptions,
+  hooks: BookHooks = {},
+): Promise<Uint8Array | null> {
+  const [book, { exportPDF }] = await Promise.all([
+    renderBook(pages, options, hooks),
+    import('./exportPDF'),
+  ])
+  if (!book) return null
+  return exportPDF(book, { page: pageSizePt(bookSizeById(options.sizeId)), title: 'Photo Book' })
 }

@@ -601,6 +601,8 @@ export const en: Dict = {
   'book.create': 'Create book',
   'book.rendering': 'Rendering page',
   'book.hint': 'Every page is rendered at 300 DPI and fitted onto the sheet.',
+  'book.print': 'Print',
+  'book.failed': "Couldn't build the photo book. Try again.",
   'export.saveProject': 'Save as .piccollage',
   'export.openProject': 'Open .piccollage',
   'filter.removed': 'Filter removed',

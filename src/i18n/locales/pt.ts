@@ -339,6 +339,8 @@ const pt: Dict = {
   'book.create': 'Criar álbum',
   'book.rendering': 'A processar página',
   'book.hint': 'Cada página é processada a 300 DPI e ajustada à folha.',
+  'book.print': 'Imprimir',
+  'book.failed': 'Não foi possível criar o álbum de fotografias. Tente novamente.',
   'sel.duplicate': 'Duplicar',
   'sel.backward': 'Enviar para trás',
   'sel.forward': 'Trazer para frente',

@@ -586,6 +586,8 @@ const fr: Dict = {
   'book.create': 'Créer le livre',
   'book.rendering': 'Rendu de la page',
   'book.hint': 'Chaque page est rendue en 300 DPI et ajustée à la feuille.',
+  'book.print': 'Imprimer',
+  'book.failed': 'Impossible de créer le livre photo. Réessayez.',
   'export.saveProject': 'Enregistrer sous .piccollage',
   'export.openProject': 'Ouvrir .piccollage',
   'filter.removed': 'Filtre supprimé',
