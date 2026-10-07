@@ -3,6 +3,7 @@ import {
   assignmentSheet,
   clickOnBoard,
   dragOnCanvas,
+  enterCustomLayout,
   getMode,
   getZones,
   loopOnCanvas,
@@ -20,8 +21,7 @@ import {
 test.describe('custom layout', () => {
   test.beforeEach(async ({ page }) => {
     await openApp(page)
-    await page.locator('button.w-full', { hasText: 'Custom Layout' }).click()
-    await expect.poll(() => getMode(page)).toBe('custom-layout')
+    await enterCustomLayout(page)
     await expect.poll(() => getZones(page)).toHaveLength(1)
   })
 
