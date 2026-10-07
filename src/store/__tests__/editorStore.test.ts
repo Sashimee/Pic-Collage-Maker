@@ -125,6 +125,145 @@ describe('editorStore', () => {
     })
   })
 
+  describe('multi-select', () => {
+    const threeTexts = () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.addText()
+      s.addText()
+      return useEditor.getState().elements.map((e) => e.id)
+    }
+
+    it('shift-clicking a second element extends the plain selection', () => {
+      const [a, b] = threeTexts()
+      useEditor.getState().select(a)
+      useEditor.getState().toggleMultiSelect(b)
+      expect(useEditor.getState().multiSelected).toEqual([a, b])
+      expect(useEditor.getState().selectedId).toBe(b)
+    })
+
+    it('shift-clicking a member removes it and drops to a single selection at one left', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().selectMany([a, b, c])
+      useEditor.getState().toggleMultiSelect(c)
+      expect(useEditor.getState().multiSelected).toEqual([a, b])
+      expect(useEditor.getState().selectedId).toBe(b)
+      useEditor.getState().toggleMultiSelect(b)
+      expect(useEditor.getState().multiSelected).toEqual([])
+      expect(useEditor.getState().selectedId).toBe(a)
+    })
+
+    it('never adds a locked element', () => {
+      const [a, b] = threeTexts()
+      useEditor.getState().setElementLocked(b, true)
+      useEditor.getState().select(a)
+      useEditor.getState().toggleMultiSelect(b)
+      expect(useEditor.getState().multiSelected).toEqual([])
+      expect(useEditor.getState().selectedId).toBe(a)
+    })
+
+    it('selectMany skips locked and hidden elements and unknown ids', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().setElementLocked(a, true)
+      useEditor.getState().updateElement(b, { hidden: true })
+      useEditor.getState().selectMany([a, b, c, 'nope'])
+      expect(useEditor.getState().multiSelected).toEqual([])
+      expect(useEditor.getState().selectedId).toBe(c)
+    })
+
+    it('selectMany with nothing clears the selection', () => {
+      const [a] = threeTexts()
+      useEditor.getState().select(a)
+      useEditor.getState().selectMany([])
+      expect(useEditor.getState().selectedId).toBeNull()
+      expect(useEditor.getState().multiSelected).toEqual([])
+    })
+
+    it('locking or hiding a member drops it from the group', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().selectMany([a, b, c])
+      useEditor.getState().setElementLocked(c, true)
+      expect(useEditor.getState().multiSelected).toEqual([a, b])
+      expect(useEditor.getState().selectedId).toBe(b)
+      useEditor.getState().setElementHidden(b, true)
+      expect(useEditor.getState().multiSelected).toEqual([])
+      expect(useEditor.getState().selectedId).toBe(a)
+    })
+
+    it('switching to a grid, undoing or redoing ends the group', () => {
+      const [a, b] = threeTexts()
+      useEditor.getState().selectMany([a, b])
+      useEditor.getState().setGrid('2-v')
+      expect(useEditor.getState().multiSelected).toEqual([])
+
+      useEditor.getState().selectMany([a, b])
+      useEditor.getState().undo()
+      expect(useEditor.getState().multiSelected).toEqual([])
+
+      useEditor.getState().selectMany([a, b])
+      useEditor.getState().redo()
+      expect(useEditor.getState().multiSelected).toEqual([])
+    })
+
+    it('removing a member keeps the rest grouped', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().selectMany([a, b, c])
+      useEditor.getState().removeElement(c)
+      expect(useEditor.getState().multiSelected).toEqual([a, b])
+      expect(useEditor.getState().selectedId).toBe(b)
+    })
+
+    it('a plain select ends the multi-selection', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().selectMany([a, b])
+      useEditor.getState().select(c)
+      expect(useEditor.getState().multiSelected).toEqual([])
+      expect(useEditor.getState().selectedId).toBe(c)
+    })
+  })
+
+  describe('updateElements', () => {
+    it('moves a group as one undo step', () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.addText()
+      const [a, b] = useEditor.getState().elements
+      useEditor.setState({ past: [], future: [] })
+
+      useEditor.getState().updateElements({
+        [a.id]: { x: a.x + 50, rotation: 30 },
+        [b.id]: { x: b.x + 50, rotation: 30 },
+      })
+      const moved = useEditor.getState().elements
+      expect(moved.map((e) => e.x)).toEqual([a.x + 50, b.x + 50])
+      expect(moved.map((e) => e.rotation)).toEqual([30, 30])
+      expect(useEditor.getState().past).toHaveLength(1)
+
+      useEditor.getState().undo()
+      expect(useEditor.getState().elements.map((e) => e.x)).toEqual([a.x, b.x])
+    })
+
+    it('leaves elements without a patch untouched', () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.addText()
+      const [a, b] = useEditor.getState().elements
+      useEditor.getState().updateElements({ [a.id]: { y: 1 } })
+      expect(useEditor.getState().elements[1]).toBe(b)
+    })
+
+    it('is its own step even right after a single-element edit', () => {
+      const s = useEditor.getState()
+      s.addText()
+      const [a] = useEditor.getState().elements
+      useEditor.setState({ past: [], future: [] })
+      useEditor.getState().updateElement(a.id, { x: 10 })
+      useEditor.getState().updateElements({ [a.id]: { x: 20 } })
+      useEditor.getState().updateElement(a.id, { x: 30 })
+      expect(useEditor.getState().past).toHaveLength(3)
+    })
+  })
+
   describe('addText', () => {
     it('adds a text element and selects it', () => {
       const s = useEditor.getState()

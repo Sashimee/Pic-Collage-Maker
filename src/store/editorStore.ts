@@ -89,6 +89,17 @@ const record = (s: EditorState, key = ''): Partial<EditorState> => {
   return { past: [...s.past, snap(s)].slice(-HISTORY_LIMIT), future: [] }
 }
 
+// A group of one is no group: the survivor stays as the plain selection.
+const withoutFromGroup = (s: EditorState, ids: string[]): Partial<EditorState> => {
+  if (!s.multiSelected.length) return {}
+  const rest = s.multiSelected.filter((id) => !ids.includes(id))
+  const keep = s.selectedId && !ids.includes(s.selectedId)
+  return {
+    multiSelected: rest.length > 1 ? rest : [],
+    selectedId: keep ? s.selectedId : (rest[rest.length - 1] ?? null),
+  }
+}
+
 // Apply a zone operation and push the previous zones onto the custom-layout
 // undo stack. Reports back whether anything changed, so a gesture that did
 // nothing can be explained to the user rather than swallowed.
@@ -142,6 +153,8 @@ interface EditorState {
   // multi-select
   toggleMultiSelect: (id: string) => void
   clearMultiSelect: () => void
+  /** Select these elements together (locked and hidden ones are skipped). */
+  selectMany: (ids: string[]) => void
 
   // element actions
   addPhoto: (
@@ -158,10 +171,13 @@ interface EditorState {
   setTool: (tool: 'select' | 'draw') => void
   setBrush: (patch: { color?: string; size?: number }) => void
   updateElement: (id: string, patch: Partial<CanvasElement>) => void
+  /** Patch several elements as one undo step (a group move or transform). */
+  updateElements: (patches: Record<string, Partial<CanvasElement>>) => void
   updateFilters: (id: string, patch: Partial<PhotoFilters>) => void
   updateFilterStack: (id: string, stack: FilterOperation[]) => void
   duplicateElement: (id: string) => void
   removeElement: (id: string) => void
+  removeElements: (ids: string[]) => void
   select: (id: string | null) => void
   setCropping: (id: string | null) => void
 
@@ -398,12 +414,20 @@ export const useEditor = create<EditorState>((set, get) => ({
       return { elements: [...s.elements, shape], selectedId: shape.id, ...record(s) }
     }),
 
-  setTool: (tool) => set({ tool, selectedId: null }),
+  setTool: (tool) => set({ tool, selectedId: null, multiSelected: [] }),
 
   setBrush: (patch) =>
     set((s) => ({
       brushColor: patch.color ?? s.brushColor,
       brushSize: patch.size ?? s.brushSize,
+    })),
+
+  updateElements: (patches) =>
+    set((s) => ({
+      ...record(s),
+      elements: s.elements.map((e) =>
+        patches[e.id] ? ({ ...e, ...patches[e.id] } as CanvasElement) : e,
+      ),
     })),
 
   updateElement: (id, patch) =>
@@ -458,6 +482,17 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         elements: s.elements.filter((e) => e.id !== id),
         selectedId: s.selectedId === id ? null : s.selectedId,
+        ...withoutFromGroup(s, [id]),
+        ...record(s),
+      }
+    }),
+  removeElements: (ids) =>
+    set((s) => {
+      if (!ids.length) return {}
+      return {
+        elements: s.elements.filter((e) => !ids.includes(e.id)),
+        selectedId: s.selectedId && ids.includes(s.selectedId) ? null : s.selectedId,
+        ...withoutFromGroup(s, ids),
         ...record(s),
       }
     }),
@@ -471,12 +506,30 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   toggleMultiSelect: (id) =>
     set((s) => {
-      const has = s.multiSelected.includes(id)
+      if (s.elements.find((e) => e.id === id)?.locked) return {}
+      // Shift-clicking a second element extends the plain selection.
+      const current = s.multiSelected.length
+        ? s.multiSelected
+        : s.selectedId
+          ? [s.selectedId]
+          : []
+      const has = current.includes(id)
+      const next = has ? current.filter((x) => x !== id) : [...current, id]
       return {
-        multiSelected: has
-          ? s.multiSelected.filter((x) => x !== id)
-          : [...s.multiSelected, id],
-        selectedId: has ? s.selectedId : id,
+        multiSelected: next.length > 1 ? next : [],
+        selectedId: has ? (next[next.length - 1] ?? null) : id,
+      }
+    }),
+
+  selectMany: (ids) =>
+    set((s) => {
+      const picked = ids.filter((id) => {
+        const el = s.elements.find((e) => e.id === id)
+        return el && !el.locked && !el.hidden
+      })
+      return {
+        multiSelected: picked.length > 1 ? picked : [],
+        selectedId: picked[picked.length - 1] ?? null,
       }
     }),
 
@@ -524,6 +577,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, hidden } : e)),
+        ...(hidden ? withoutFromGroup(s, [id]) : {}),
         ...record(s, 'hidden'),
       }
     }),
@@ -531,6 +585,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, locked } : e)),
+        ...(locked ? withoutFromGroup(s, [id]) : {}),
         ...record(s, 'locked'),
       }
     }),
@@ -561,7 +616,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   setBackground: (patch: Partial<Background>) =>
     set((s) => ({ background: { ...s.background, ...patch }, ...record(s, 'bg') })),
 
-  setMode: (mode) => set((s) => ({ mode, ...record(s) })),
+  setMode: (mode) => set((s) => ({ mode, multiSelected: [], ...record(s) })),
 
   applyLayout: (layoutId: string, opts?: { boardSize?: { w: number; h: number } }) => {
     const { setGrid, setBoardSize, setMode } = get()
@@ -583,6 +638,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       gridId,
       mode: gridId ? 'grid' : 'free',
       selectedId: null,
+      multiSelected: [],
       ...record(s),
     })),
 
@@ -610,6 +666,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         elements: [],
         selectedId: null,
+        multiSelected: [],
         gridId: null,
         mode: 'free',
         galleryDismissed: false,
@@ -633,6 +690,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       frame: doc.frame,
       elements: doc.elements,
       selectedId: null,
+      multiSelected: [],
       past: [],
       future: [],
       watermark: doc.watermark ? { ...DEFAULT_WATERMARK, ...doc.watermark } : { ...DEFAULT_WATERMARK },
@@ -649,6 +707,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         past: s.past.slice(0, -1),
         future: [snap(s), ...s.future].slice(0, HISTORY_LIMIT),
         selectedId: null,
+        multiSelected: [],
       }
     }),
 
@@ -662,6 +721,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         past: [...s.past, snap(s)].slice(-HISTORY_LIMIT),
         future: s.future.slice(1),
         selectedId: null,
+        multiSelected: [],
       }
     }),
 
@@ -709,6 +769,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       customLayoutMode: v,
       mode: v ? 'custom-layout' : 'free',
       selectedId: null,
+      multiSelected: [],
       // Entering the editor starts from a single full-board zone unless an
       // existing layout is handed in to keep editing.
       ...(v

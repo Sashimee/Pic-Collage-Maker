@@ -44,14 +44,13 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
         return
       }
 
-      // Select all (top-most element)
+      // Select all
       if (mod && key === 'a') {
         e.preventDefault()
-        const els = useEditor.getState().elements
-        if (els.length) {
-          const top = els[els.length - 1]
-          useEditor.getState().select(top.id)
-        }
+        const { elements, mode, selectMany } = useEditor.getState()
+        selectMany(
+          elements.filter((el) => mode !== 'grid' || el.type !== 'photo').map((el) => el.id),
+        )
         return
       }
 
@@ -173,27 +172,41 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
 
       // Arrow nudge
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
-        const sel = useEditor.getState().selectedId
+        const { selectedId: sel, multiSelected, elements, updateElement, updateElements } =
+          useEditor.getState()
         if (!sel) return
         e.preventDefault()
         const step = e.shiftKey ? 10 : 1
-        const el = useEditor.getState().elements.find((e) => e.id === sel)
-        if (!el) return
         let dx = 0, dy = 0
         if (key === 'arrowup') dy = -step
         if (key === 'arrowdown') dy = step
         if (key === 'arrowleft') dx = -step
         if (key === 'arrowright') dx = step
-        useEditor.getState().updateElement(sel, { x: el.x + dx, y: el.y + dy })
+        if (multiSelected.length > 1) {
+          updateElements(
+            Object.fromEntries(
+              elements
+                .filter((el) => multiSelected.includes(el.id))
+                .map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]),
+            ),
+          )
+          return
+        }
+        const el = elements.find((e) => e.id === sel)
+        if (!el) return
+        updateElement(sel, { x: el.x + dx, y: el.y + dy })
         return
       }
 
       // Delete / Backspace
       if (key === 'delete' || key === 'backspace') {
-        const selectedId = useEditor.getState().selectedId
-        if (selectedId) {
+        const { selectedId, multiSelected, removeElement, removeElements } = useEditor.getState()
+        if (multiSelected.length > 1) {
           e.preventDefault()
-          useEditor.getState().removeElement(selectedId)
+          removeElements(multiSelected)
+        } else if (selectedId) {
+          e.preventDefault()
+          removeElement(selectedId)
         }
         return
       }

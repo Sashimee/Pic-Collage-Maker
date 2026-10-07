@@ -8,6 +8,14 @@ import { PinchDemo } from '../GestureDemo'
 import { clamp, type ViewTransform } from './useViewTransform'
 import { snapAngle, twoFingerPlacement, type FingerPair, type Placement } from '../../lib/twoFinger'
 
+interface Marquee {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  additive: boolean
+}
+
 interface Options {
   stageRef: RefObject<Konva.Stage | null>
   tf: ViewTransform
@@ -29,6 +37,7 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
   const selectedId = useEditor((s) => s.selectedId)
   const select = useEditor((s) => s.select)
   const clearMultiSelect = useEditor((s) => s.clearMultiSelect)
+  const selectMany = useEditor((s) => s.selectMany)
   const updateElement = useEditor((s) => s.updateElement)
   const setCanvasZoom = useEditor((s) => s.setCanvasZoom)
   const tool = useEditor((s) => s.tool)
@@ -50,6 +59,14 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
   const drawing = useRef(false)
   const ptsRef = useRef<number[]>([])
   const [, setTick] = useState(0)
+  const [marquee, setMarquee] = useState<Marquee | null>(null)
+  // Konva may call a handler from before the last render, so the live box is
+  // read from a ref; the state only draws it.
+  const marqueeRef = useRef<Marquee | null>(null)
+  const putMarquee = (m: Marquee | null) => {
+    marqueeRef.current = m
+    setMarquee(m)
+  }
 
   // Pinch-to-zoom hint (one-time), now on the shared first-use registry.
   useEffect(() => {
@@ -179,13 +196,10 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
   ) => {
     const target = e.target
     if (target === target.getStage() || target.name() === 'background') {
-      select(null)
       onBackgroundPress()
-      if (e.evt.shiftKey) {
-        // Shift-click on canvas keeps multi-selection
-      } else {
-        clearMultiSelect()
-      }
+      if (e.evt.shiftKey) return
+      select(null)
+      clearMultiSelect()
     }
   }
 
@@ -215,6 +229,41 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
     setTick((t) => t + 1)
   }
 
+  const endMarquee = () => {
+    const m = marqueeRef.current
+    putMarquee(null)
+    const stage = stageRef.current
+    if (!m || !stage || Math.abs(m.x1 - m.x0) < 4 || Math.abs(m.y1 - m.y0) < 4) return
+    const box = {
+      x: Math.min(m.x0, m.x1),
+      y: Math.min(m.y0, m.y1),
+      width: Math.abs(m.x1 - m.x0),
+      height: Math.abs(m.y1 - m.y0),
+    }
+    const hits = elements.flatMap((el) => {
+      if (mode === 'grid' && el.type === 'photo') return []
+      const node = stage.findOne('#' + el.id)
+      return node && Konva.Util.haveIntersection(box, node.getClientRect()) ? [el.id] : []
+    })
+    if (!m.additive) return selectMany(hits)
+    const { multiSelected, selectedId: current } = useEditor.getState()
+    const kept = multiSelected.length ? multiSelected : current ? [current] : []
+    selectMany([...kept, ...hits.filter((id) => !kept.includes(id))])
+  }
+
+  // A button released off the stage never reaches its mouseup.
+  const marqueeOpen = marquee !== null
+  useEffect(() => {
+    if (!marqueeOpen) return
+    const close = () => endMarqueeRef.current()
+    window.addEventListener('mouseup', close)
+    return () => window.removeEventListener('mouseup', close)
+  }, [marqueeOpen])
+  const endMarqueeRef = useRef(endMarquee)
+  useEffect(() => {
+    endMarqueeRef.current = endMarquee
+  })
+
   const onStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (drawMode) {
       const p = stageRef.current?.getPointerPosition()
@@ -222,11 +271,23 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
       return
     }
     handlePointerDown(e)
+    const target = e.target
+    const p = stageRef.current?.getPointerPosition()
+    const onEmpty = target === target.getStage() || target.name() === 'background'
+    if (p && onEmpty && mode !== 'custom-layout') {
+      putMarquee({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, additive: e.evt.shiftKey })
+    }
   }
   const onStageMouseMove = () => {
-    if (!drawMode) return
     const p = stageRef.current?.getPointerPosition()
-    if (p) moveDraw(p.x, p.y)
+    if (!p) return
+    const m = marqueeRef.current
+    if (m) putMarquee({ ...m, x1: p.x, y1: p.y })
+    if (drawMode) moveDraw(p.x, p.y)
+  }
+  const onStageMouseUp = () => {
+    endDraw()
+    endMarquee()
   }
   const onStageTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
     if (drawMode && e.evt.touches.length === 1) {
@@ -262,11 +323,18 @@ export function useStageGestures({ stageRef, tf, setTf, zoomAtPoint, onBackgroun
     drawMode,
     /** The in-progress stroke in board units, or null when not drawing. */
     liveStroke: drawing.current && ptsRef.current.length >= 2 ? ptsRef.current : null,
+    /** The rubber-band selection box in stage coordinates, while dragging one. */
+    marquee: marquee && {
+      x: Math.min(marquee.x0, marquee.x1),
+      y: Math.min(marquee.y0, marquee.y1),
+      width: Math.abs(marquee.x1 - marquee.x0),
+      height: Math.abs(marquee.y1 - marquee.y0),
+    },
     stageHandlers: {
       onWheel: handleWheel,
       onMouseDown: onStageMouseDown,
       onMouseMove: onStageMouseMove,
-      onMouseUp: endDraw,
+      onMouseUp: onStageMouseUp,
       onTouchStart: onStageTouchStart,
       onTouchMove: onStageTouchMove,
       onTouchEnd: onStageTouchEnd,
