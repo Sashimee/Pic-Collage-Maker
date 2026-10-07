@@ -336,7 +336,10 @@ export function SelectionBar({ measure }: SelectionBarProps) {
               </Btn>
               {hasCopiedStyle && (
                 <Btn
-                  onClick={() => pasteStyle(hasMulti ? multiSelected : [selectedId])}
+                  onClick={() => {
+                    pasteStyle(hasMulti ? multiSelected : [selectedId])
+                    toast.success(t('style.pasted'))
+                  }}
                   label={t('style.paste')}
                 >
                   <PaintRoller size={18} />

@@ -77,4 +77,15 @@ describe('styleOf / stylePatch', () => {
     expect(stylePatch(styleOf(source), sticker)).toEqual({ opacity: 0.4, blendMode: 'screen' })
     expect(stylePatch(styleOf(source), photo())).toEqual({ opacity: 0.4, blendMode: 'screen' })
   })
+
+  it('leaves a photo frame and clip shape alone when either side is in a grid', () => {
+    const framed = photo({ shape: 'heart', styling: { borderWidth: 6 } })
+    const tinted = photo({ filters: { ...DEFAULT_FILTERS, brightness: 0.2 } })
+    const fromGrid = stylePatch(styleOf(tinted, true), framed)
+    expect(fromGrid).not.toHaveProperty('styling')
+    expect(fromGrid).not.toHaveProperty('shape')
+    expect((fromGrid as Partial<PhotoElement>).filters).toMatchObject({ brightness: 0.2 })
+    const intoGrid = stylePatch(styleOf(framed), tinted, true)
+    expect(Object.keys(intoGrid).sort()).toEqual(['blendMode', 'filterStack', 'filters', 'opacity'])
+  })
 })

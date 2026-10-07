@@ -776,7 +776,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   copyStyle: (id) =>
     set((s) => {
       const el = s.elements.find((e) => e.id === id)
-      return el ? { copiedStyle: styleOf(el) } : {}
+      return el ? { copiedStyle: styleOf(el, s.mode === 'grid') } : {}
     }),
 
   pasteStyle: (ids) =>
@@ -786,7 +786,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         ...record(s, 'history.pasteStyle'),
         elements: s.elements.map((e) =>
-          ids.includes(e.id) ? ({ ...e, ...stylePatch(style, e) } as CanvasElement) : e,
+          ids.includes(e.id)
+            ? ({ ...e, ...stylePatch(style, e, s.mode === 'grid') } as CanvasElement)
+            : e,
         ),
       }
     }),

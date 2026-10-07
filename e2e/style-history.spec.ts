@@ -39,6 +39,7 @@ test.describe('copy / paste style and named history', () => {
 
     await page.evaluate(({ id }) => window.__editor!.getState().select(id), { id: b.id })
     await page.getByRole('button', { name: 'Paste style' }).click()
+    await expect(page.getByText('Style pasted')).toBeVisible()
     await expect
       .poll(async () => (await texts(page))[1])
       .toMatchObject({
@@ -68,6 +69,7 @@ test.describe('copy / paste style and named history', () => {
     await steps.getByRole('button', { name: 'Add text' }).first().click()
     await expect.poll(async () => (await texts(page)).length).toBe(1)
     await expect(steps.locator('[aria-current="step"]')).toHaveText('Add text')
+    await expect(page.getByText('Now at: Add text')).toBeVisible()
     await expect(steps.getByRole('button')).toHaveCount(5)
 
     await steps.getByRole('button', { name: 'Background' }).click()
