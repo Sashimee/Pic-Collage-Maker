@@ -6,6 +6,7 @@ import { LayoutPreview } from '../LayoutPreview'
 import { useT } from '../../i18n/useLang'
 import { PHOTO_SHAPES } from '../../lib/shapes'
 import { SizePresets } from '../SizePresets'
+import { SmartFillButton } from '../SmartFillButton'
 import { TemplateGallery } from '../TemplateGallery'
 
 const ASPECTS = [
@@ -242,6 +243,7 @@ export function LayoutPanel() {
             value={gridMargin}
             onChange={setGridMargin}
           />
+          <SmartFillButton />
           <p className="text-xs text-muted">{t('grid.hint')}</p>
         </Section>
       )}
