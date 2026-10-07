@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   Undo2, Redo2, Sun, Moon, Trash2, Download,
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
   ChevronDown, FileCode, FileText, Package, Smartphone,
-  Plus, BookOpen,
+  Plus, BookOpen, Proportions,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useProjects } from '../store/projectsStore'
@@ -23,6 +23,11 @@ import { useInstall } from '../lib/pwaInstall'
 import { BrandMark } from './header/BrandMark'
 import { MobileMenu } from './header/MobileMenu'
 import { useProjectFileActions } from './header/useProjectFileActions'
+import { ActionSheet } from './ActionSheet'
+
+const SizePresets = lazy(() =>
+  import('./SizePresets').then((mod) => ({ default: mod.SizePresets })),
+)
 
 /**
  * `share` / `png` / `jpg` cover the whole project — every page. The `-page`
@@ -52,6 +57,15 @@ export function HeaderBar({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [projectManagerOpen, setProjectManagerOpen] = useState(false)
+  const [sizesOpen, setSizesOpen] = useState(false)
+  const exportButton = useRef<HTMLButtonElement>(null)
+  const moreButton = useRef<HTMLButtonElement>(null)
+  const closeSizes = () => {
+    setSizesOpen(false)
+    // The menu item that opened the sheet is gone; hand focus to whichever trigger is on screen.
+    const trigger = exportButton.current?.offsetParent ? exportButton : moreButton
+    trigger.current?.focus()
+  }
   const t = useT()
   const clearAll = useEditor((s) => s.clearAll)
   const hasElements = useEditor((s) => s.elements.length > 0)
@@ -166,6 +180,7 @@ export function HeaderBar({
           {/* Export dropdown (desktop) */}
           <div className="relative hidden sm:block">
             <button
+              ref={exportButton}
               onClick={() => setExportOpen((v) => !v)}
               className={accentBtn}
               aria-expanded={exportOpen}
@@ -226,6 +241,9 @@ export function HeaderBar({
                         </MenuItem>
                       </>
                     )}
+                    <MenuItem onClick={() => { setExportOpen(false); setSizesOpen(true) }} icon={<Proportions size={16} />}>
+                      {t('preset.resizeFor')}
+                    </MenuItem>
                     <MenuItem onClick={() => { setExportOpen(false); handleBatchExport() }} icon={<Package size={16} />}>
                       {t('export.batch')}
                     </MenuItem>
@@ -253,6 +271,7 @@ export function HeaderBar({
 
           {/* Mobile hamburger */}
           <button
+            ref={moreButton}
             onClick={() => setSheetOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-2 text-text/80 transition hover:bg-surface-3 active:scale-95 sm:hidden"
             aria-label={t('menu.more')}
@@ -309,7 +328,16 @@ export function HeaderBar({
         onBatchExport={handleBatchExport}
         onSaveAsFile={handleSaveAsFile}
         onOpenFile={handleOpenFile}
+        onResize={() => setSizesOpen(true)}
       />
+
+      <ActionSheet open={sizesOpen} title={t('preset.resizeFor')} onClose={closeSizes}>
+        <Suspense fallback={<p className="min-h-[44px] px-4 text-sm text-muted">{t('common.loading')}</p>}>
+          <div className="px-4 pb-4">
+            <SizePresets autoFocus onPick={closeSizes} />
+          </div>
+        </Suspense>
+      </ActionSheet>
 
       <ProjectManager open={projectManagerOpen} onClose={() => setProjectManagerOpen(false)} />
     </>

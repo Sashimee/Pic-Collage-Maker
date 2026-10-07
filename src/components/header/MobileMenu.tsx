@@ -3,7 +3,7 @@ import {
   Share2, FileImage, Image as ImageIcon,
   FolderOpen, Save, Upload,
   FileCode, Maximize, FileText, Package, Smartphone,
-  BookOpen,
+  BookOpen, Proportions,
 } from 'lucide-react'
 import { useEditor } from '../../store/editorStore'
 import { useProjects } from '../../store/projectsStore'
@@ -25,6 +25,7 @@ interface Props {
   onBatchExport: () => void
   onSaveAsFile: () => void
   onOpenFile: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onResize: () => void
 }
 
 /** The mobile "more" sheet: history, theme, language, projects and export. */
@@ -40,6 +41,7 @@ export function MobileMenu({
   onBatchExport,
   onSaveAsFile,
   onOpenFile,
+  onResize,
 }: Props) {
   const t = useT()
   const lang = useLang((s) => s.lang)
@@ -176,6 +178,11 @@ export function MobileMenu({
           label={t('export.sharePage')}
         />
       )}
+      <ActionItem
+        onClick={() => { onClose(); onResize() }}
+        icon={<Proportions size={18} />}
+        label={t('preset.resizeFor')}
+      />
       <ActionItem
         onClick={() => { onClose(); onBatchExport() }}
         icon={<Package size={18} />}

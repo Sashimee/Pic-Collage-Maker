@@ -356,6 +356,45 @@ describe('editorStore', () => {
     })
   })
 
+  describe('setBoardSize', () => {
+    const place = (patch: Partial<TextElement>) => {
+      useEditor.setState({ boardWidth: 1000, boardHeight: 1000 })
+      useEditor.getState().addText()
+      const id = useEditor.getState().elements[0].id
+      useEditor.getState().updateElement(id, { x: 500, y: 500, scaleX: 1, scaleY: 1, ...patch })
+      useEditor.setState({ past: [], future: [] })
+      return id
+    }
+    const el = () => useEditor.getState().elements[0]
+
+    it('scales content to fit and centres it along the spare axis', () => {
+      place({ x: 0, y: 0, scaleX: 2, scaleY: 1 })
+      useEditor.getState().setBoardSize(2000, 4000)
+      expect(useEditor.getState()).toMatchObject({ boardWidth: 2000, boardHeight: 4000 })
+      expect(el()).toMatchObject({ x: 0, y: 1000, scaleX: 4, scaleY: 2 })
+    })
+
+    it('shrinks content so it stays on a smaller board', () => {
+      place({ x: 1000, y: 500 })
+      useEditor.getState().setBoardSize(500, 250)
+      expect(el()).toMatchObject({ x: 375, y: 125, scaleX: 0.25, scaleY: 0.25 })
+    })
+
+    it('keeps rotation and leaves content alone when the size is unchanged', () => {
+      place({ x: 120, y: 340, rotation: 30 })
+      useEditor.getState().setBoardSize(1000, 1000)
+      expect(el()).toMatchObject({ x: 120, y: 340, rotation: 30, scaleX: 1, scaleY: 1 })
+    })
+
+    it('undoes size and content placement in one step', () => {
+      place({ x: 500, y: 500 })
+      useEditor.getState().setBoardSize(2000, 1000)
+      useEditor.getState().undo()
+      expect(useEditor.getState()).toMatchObject({ boardWidth: 1000, boardHeight: 1000 })
+      expect(el()).toMatchObject({ x: 500, y: 500, scaleX: 1, scaleY: 1 })
+    })
+  })
+
   describe('applyTemplate', () => {
     it('keeps the photos, replaces the rest, and undoes in one step', () => {
       const s = useEditor.getState()

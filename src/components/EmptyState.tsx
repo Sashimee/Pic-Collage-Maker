@@ -1,5 +1,5 @@
 import { ImagePlus, Camera, ChevronDown } from 'lucide-react'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
 import { importFiles } from '../lib/importFiles'
@@ -12,6 +12,48 @@ import { m, AnimatePresence } from './motion'
 const TemplateGallery = lazy(() =>
   import('./TemplateGallery').then((mod) => ({ default: mod.TemplateGallery })),
 )
+const SizePresets = lazy(() =>
+  import('./SizePresets').then((mod) => ({ default: mod.SizePresets })),
+)
+
+/**
+ * A start-screen card that mounts its contents only once opened: rendering
+ * every thumbnail during first load cost the start screen its blocking-time budget.
+ */
+function Disclosure({
+  title,
+  loading,
+  children,
+}: {
+  title: string
+  loading: string
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <section className="flex flex-col gap-2.5 rounded-2xl border border-border/30 bg-surface-2/80 p-2 shadow-[var(--shadow-card)] backdrop-blur-sm">
+      <h3>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex min-h-[44px] w-full items-center justify-between rounded-xl px-2 text-[0.7rem] font-semibold uppercase tracking-wide text-muted hover:bg-surface-3"
+        >
+          {title}
+          <ChevronDown
+            size={16}
+            aria-hidden="true"
+            className={`transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+      </h3>
+      {open && (
+        <Suspense fallback={<p className="min-h-[44px] text-sm text-muted">{loading}</p>}>
+          {children}
+        </Suspense>
+      )}
+    </section>
+  )
+}
 
 const GALLERY_ID = 'empty-gallery-input'
 const CAMERA_ID = 'empty-camera-input'
@@ -31,8 +73,6 @@ export function EmptyState() {
   const assignLayoutId = useEditor((s) => s.assignLayoutId)
   const setAssignLayoutId = useEditor((s) => s.setAssignLayoutId)
   const [showAssignment, setShowAssignment] = useState(false)
-  // Mounted on demand: rendering every thumbnail during first load cost the start screen its blocking-time budget.
-  const [showTemplates, setShowTemplates] = useState(false)
 
   // resolveLayoutById (not getGridById) so custom layouts saved to
   // localStorage resolve too — their ids are uuids, not preset names.
@@ -159,27 +199,13 @@ export function EmptyState() {
                 onSkip={handleSkip}
               />
 
-              <section className="flex flex-col gap-2.5 rounded-2xl border border-border/30 bg-surface-2/80 p-2 shadow-[var(--shadow-card)] backdrop-blur-sm">
-                <h3>
-                  <button
-                    onClick={() => setShowTemplates((v) => !v)}
-                    aria-expanded={showTemplates}
-                    className="flex min-h-[44px] w-full items-center justify-between rounded-xl px-2 text-[0.7rem] font-semibold uppercase tracking-wide text-muted hover:bg-surface-3"
-                  >
-                    {t('tpl.title')}
-                    <ChevronDown
-                      size={16}
-                      aria-hidden="true"
-                      className={`transition-transform ${showTemplates ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-                </h3>
-                {showTemplates && (
-                  <Suspense fallback={<p className="min-h-[44px] text-sm text-muted">{t('tpl.loading')}</p>}>
-                    <TemplateGallery />
-                  </Suspense>
-                )}
-              </section>
+              <Disclosure title={t('preset.size')} loading={t('common.loading')}>
+                <SizePresets />
+              </Disclosure>
+
+              <Disclosure title={t('tpl.title')} loading={t('tpl.loading')}>
+                <TemplateGallery />
+              </Disclosure>
 
               {/* Secondary: direct photo add buttons */}
               <div className="flex justify-center gap-3">
