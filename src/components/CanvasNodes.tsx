@@ -22,7 +22,7 @@ import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
 import { tracePhotoShape } from '../lib/shapes'
 import { computeFilterConfig, computeFilterConfigFromStack } from '../lib/filters'
-import { commonHandlers, toBlend, type NodeProps } from './nodes/shared'
+import { commonHandlers, lockProps, toBlend, type NodeProps } from './nodes/shared'
 import { TextNode } from './nodes/TextNode'
 
 function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElement>) {
@@ -68,7 +68,7 @@ function PhotoNode({ el, onSelect, onChange, onDragMove }: NodeProps<PhotoElemen
       scaleY={el.scaleY}
       opacity={el.opacity ?? 1}
       globalCompositeOperation={toBlend(el.blendMode)}
-      draggable
+      {...lockProps(el)}
       onClick={(e) => onSelect(e)}
       onTap={(e) => onSelect(e)}
       clipFunc={
@@ -120,7 +120,7 @@ function DrawingNode({ el, onSelect, onChange, onDragMove }: NodeProps<DrawingEl
       scaleY={el.scaleY}
       opacity={el.opacity ?? 1}
       globalCompositeOperation={toBlend(el.blendMode)}
-      draggable
+      {...lockProps(el)}
       onClick={(e) => onSelect(e)}
       onTap={(e) => onSelect(e)}
       {...commonHandlers(onChange, onDragMove)}
@@ -142,7 +142,7 @@ function StickerNode({ el, onSelect, onChange, onDragMove }: NodeProps<StickerEl
       scaleY={el.scaleY}
       opacity={el.opacity ?? 1}
       globalCompositeOperation={toBlend(el.blendMode)}
-      draggable
+      {...lockProps(el)}
       onClick={(e) => onSelect(e)}
       onTap={(e) => onSelect(e)}
       {...commonHandlers(onChange, onDragMove)}
@@ -161,7 +161,7 @@ function ShapeNode({ el, onSelect, onChange, onDragMove }: NodeProps<ShapeElemen
     scaleY: el.scaleY,
     opacity: el.opacity ?? 1,
     globalCompositeOperation: toBlend(el.blendMode),
-    draggable: true,
+    ...lockProps(el),
     onClick: onSelect,
     onTap: onSelect,
     ...commonHandlers(onChange, onDragMove),
@@ -171,7 +171,6 @@ function ShapeNode({ el, onSelect, onChange, onDragMove }: NodeProps<ShapeElemen
     fill: el.fill,
     stroke: el.strokeWidth ? el.stroke : undefined,
     strokeWidth: el.strokeWidth ?? 0,
-    listening: true,
   }
 
   switch (el.shapeType) {
@@ -234,6 +233,7 @@ export function ElementNode({
   onEditText?: (id: string) => void
   onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void
 }) {
+  if (el.hidden) return null
   switch (el.type) {
     case 'photo':
       return <PhotoNode el={el} onSelect={onSelect} onChange={onChange} onDragMove={onDragMove} />

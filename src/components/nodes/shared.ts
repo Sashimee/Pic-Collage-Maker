@@ -5,6 +5,11 @@ export function toBlend(mode: BaseElement['blendMode']): Konva.NodeConfig['globa
   return !mode || mode === 'normal' ? 'source-over' : mode
 }
 
+/** A locked element neither drags nor takes taps — they fall through to whatever is under it. */
+export function lockProps(el: BaseElement): { draggable: boolean; listening: boolean } {
+  return { draggable: !el.locked, listening: !el.locked }
+}
+
 export interface NodeProps<T extends CanvasElement> {
   el: T
   onSelect: (e?: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void

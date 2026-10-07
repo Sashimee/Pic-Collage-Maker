@@ -5,7 +5,7 @@ import { useEditor } from '../../store/editorStore'
 /**
  * Attach the shared Transformer to the selection — every multi-selected
  * element, or else the selected one — keeping only free nodes: anything in
- * free mode, only non-photo elements in grid mode.
+ * free mode, only non-photo elements in grid mode, never locked or hidden ones.
  */
 export function useTransformerAttach(
   trRef: RefObject<Konva.Transformer | null>,
@@ -23,7 +23,7 @@ export function useTransformerAttach(
     const ids = multiSelected.length > 1 ? multiSelected : selectedId ? [selectedId] : []
     const nodes = ids.flatMap((id) => {
       const el = elements.find((e) => e.id === id)
-      if (!el || (mode === 'grid' && el.type === 'photo')) return []
+      if (!el || el.locked || el.hidden || (mode === 'grid' && el.type === 'photo')) return []
       const node = stage.findOne('#' + id)
       return node ? [node] : []
     })

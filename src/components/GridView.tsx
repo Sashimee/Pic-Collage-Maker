@@ -7,6 +7,7 @@ import { useEditor } from '../store/editorStore'
 import { computeFilterConfig } from '../lib/filters'
 import { assignSlots, cellRect, type CellRect as Rect2 } from '../lib/grids'
 import { getClipBounds, getClipFunc } from '../lib/gridClip'
+import { toBlend } from './nodes/shared'
 
 function placePhoto(
   rect: Rect2,
@@ -116,6 +117,9 @@ function CellPhoto({
       clipY={clipFunc ? undefined : clipRect.y}
       clipWidth={clipFunc ? undefined : clipRect.w}
       clipHeight={clipFunc ? undefined : clipRect.h}
+      opacity={el.opacity ?? 1}
+      globalCompositeOperation={toBlend(el.blendMode)}
+      listening={!el.locked}
       onClick={onSelect}
       onTap={onSelect}
       onDblClick={onReset}

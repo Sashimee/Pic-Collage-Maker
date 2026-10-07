@@ -53,7 +53,8 @@ export function BoardScene({
 
   const gridLayout = gridId ? resolveLayoutById(gridId) : undefined
   const inGrid = mode === 'grid' && !!gridLayout
-  const photos = elements.filter((e): e is PhotoElement => e.type === 'photo')
+  // Hidden photos give up their cell, as in the page strip and the photo book's image count.
+  const photos = elements.filter((e): e is PhotoElement => e.type === 'photo' && !e.hidden)
   // In grid mode the photos are laid out by GridView; text and stickers still
   // render as free overlays on top of it.
   const freeElements = inGrid ? elements.filter((e) => e.type !== 'photo') : elements

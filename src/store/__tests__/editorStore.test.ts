@@ -162,6 +162,19 @@ describe('editorStore', () => {
       expect(useEditor.getState().selectedId).toBe(a)
     })
 
+    it('locking or hiding the selected element deselects it', () => {
+      const [a, b, c] = threeTexts()
+      useEditor.getState().select(a)
+      useEditor.getState().setElementLocked(a, true)
+      expect(useEditor.getState().selectedId).toBeNull()
+      useEditor.getState().select(b)
+      useEditor.getState().setElementHidden(b, true)
+      expect(useEditor.getState().selectedId).toBeNull()
+      useEditor.getState().select(c)
+      useEditor.getState().setElementHidden(a, true)
+      expect(useEditor.getState().selectedId).toBe(c)
+    })
+
     it('selectMany skips locked and hidden elements and unknown ids', () => {
       const [a, b, c] = threeTexts()
       useEditor.getState().setElementLocked(a, true)

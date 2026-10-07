@@ -39,10 +39,10 @@ describe('LayerPanel', () => {
 
   it('selects a layer and marks it pressed', async () => {
     render(<LayerPanel />)
-    await userEvent.click(screen.getByRole('button', { name: /Photo/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^[^:]*Photo$/ }))
     const photo = useEditor.getState().elements.find((e) => e.type === 'photo')!
     expect(useEditor.getState().selectedId).toBe(photo.id)
-    expect(screen.getByRole('button', { name: /Photo/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^[^:]*Photo$/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('toggles hidden and locked without selecting the layer', async () => {

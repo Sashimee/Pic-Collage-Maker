@@ -29,6 +29,10 @@ export interface BaseElement {
    */
   blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten'
   /**
+   * The user's label for the layer; when unset the Layers panel describes it.
+   */
+  name?: string
+  /**
    * If set, this element belongs to a group. Grouped items move together.
    */
   groupId?: string

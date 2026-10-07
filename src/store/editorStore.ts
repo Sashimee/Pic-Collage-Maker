@@ -90,6 +90,10 @@ const record = (s: EditorState, key = ''): Partial<EditorState> => {
 }
 
 // A group of one is no group: the survivor stays as the plain selection.
+/** Locking or hiding takes an element out of the selection, single or grouped. */
+const deselect = (s: EditorState, id: string): Partial<EditorState> =>
+  s.multiSelected.length ? withoutFromGroup(s, [id]) : s.selectedId === id ? { selectedId: null } : {}
+
 const withoutFromGroup = (s: EditorState, ids: string[]): Partial<EditorState> => {
   if (!s.multiSelected.length) return {}
   const rest = s.multiSelected.filter((id) => !ids.includes(id))
@@ -577,7 +581,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, hidden } : e)),
-        ...(hidden ? withoutFromGroup(s, [id]) : {}),
+        ...(hidden ? deselect(s, id) : {}),
         ...record(s, 'hidden'),
       }
     }),
@@ -585,7 +589,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, locked } : e)),
-        ...(locked ? withoutFromGroup(s, [id]) : {}),
+        ...(locked ? deselect(s, id) : {}),
         ...record(s, 'locked'),
       }
     }),
