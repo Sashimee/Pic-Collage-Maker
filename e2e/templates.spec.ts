@@ -83,4 +83,48 @@ test.describe('templates', () => {
       .poll(() => editor(page))
       .toMatchObject({ gridId: before.gridId, types: before.types })
   })
+
+  test('a board saved as my template survives a reload and applies again', async ({ page }) => {
+    await openApp(page)
+    await page.locator('#empty-gallery-input').setInputFiles(pngFile())
+    await waitForElements(page, 'photo')
+    await page.getByRole('button', { name: 'Layout', exact: true }).click()
+    await page.getByRole('button', { name: 'Happy Birthday!, Square' }).click()
+    await expect.poll(() => editor(page)).toMatchObject({ gridId: 'polaroid-2' })
+
+    const gallery = page.getByRole('group', { name: 'Templates' })
+    await gallery.getByRole('button', { name: 'Mine', exact: true }).click()
+    await expect(page.getByText('Templates you save show up here.')).toBeVisible()
+    await page.getByRole('button', { name: 'Save as my template' }).click()
+    await expect(page.getByText('Saved to your templates.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Happy Birthday!', exact: true })).toBeVisible()
+
+    await page.reload()
+    await page.waitForFunction(() => !!window.__editor, undefined, { timeout: 10_000 })
+    await waitForElements(page, 'photo')
+    await page.evaluate(() => {
+      const get = window.__editor!.getState
+      for (const e of get().elements) if (e.type !== 'photo') get().removeElement(e.id)
+      get().setGrid('4-grid')
+      get().setBoardSize(1080, 1920)
+    })
+    await expect.poll(() => editor(page)).toMatchObject({ gridId: '4-grid', texts: [] })
+
+    // The reload restores the open Layout panel; clicking its tab now would close it.
+    await expect(gallery).toBeVisible()
+    await gallery.getByRole('button', { name: 'Mine', exact: true }).click()
+    await page.getByRole('button', { name: 'Happy Birthday!', exact: true }).click()
+    await expect
+      .poll(() => editor(page))
+      .toMatchObject({
+        size: [1080, 1080],
+        gridId: 'polaroid-2',
+        mode: 'grid',
+        types: ['photo', 'text', 'text', 'sticker', 'sticker'],
+        texts: ['Happy Birthday!', 'Make a wish'],
+      })
+
+    await page.getByRole('button', { name: 'Delete template: Happy Birthday!' }).click()
+    await expect(page.getByText('Templates you save show up here.')).toBeVisible()
+  })
 })
