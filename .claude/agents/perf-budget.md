@@ -12,13 +12,12 @@ You measure and report. You never edit source files.
 ## Commands
 
 ```bash
-npm run build                              # tsc -b && vite build → dist/
-node scripts/check-bundle.mjs              # budget gate, if it exists
+npm run build -- --sourcemap hidden        # tsc -b && vite build → dist/, with maps for the lazy check
+npm run check:bundle                       # scripts/check-bundle.mjs: eager gzip vs BUDGET_GZIP_KB + must-be-lazy modules
 ```
 
-If `scripts/check-bundle.mjs` does not exist yet, list `dist/assets/*.js` with
-their raw and gzip sizes (`gzip -c f | wc -c`) and identify the eager chunks:
-the ones referenced by `<script>` / `modulepreload` in `dist/index.html`.
+The script reads the eager set from `<script>` / `modulepreload` in
+`dist/index.html` and each chunk's `.map` `sources` to see which modules went in.
 
 ## What to report
 

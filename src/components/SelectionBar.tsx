@@ -19,7 +19,6 @@ import { useEditor } from '../store/editorStore'
 import type { BaseElement } from '../types'
 import { useT } from '../i18n/useLang'
 import { m, AnimatePresence } from './motion'
-import { detectFaces, computeSmartCrop } from '../ai/faceDetection'
 import { useToasts } from './ToastContainer'
 
 // Floating contextual actions for the currently selected element.
@@ -63,6 +62,7 @@ export function SelectionBar() {
       img.onerror = reject
     })
     try {
+      const { detectFaces, computeSmartCrop } = await import('../ai/faceDetection')
       const faces = await detectFaces(el.src)
       const crop = computeSmartCrop(
         faces,
