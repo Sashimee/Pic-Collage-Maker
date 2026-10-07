@@ -258,6 +258,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
       <KonvaText
         ref={textRef}
         text={el.text}
+        visible={curve === 0}
         {...basePaint}
         {...fillProps}
       />
