@@ -16,6 +16,7 @@ import { useCustomLayoutTools } from './canvas/useCustomLayoutTools'
 import { useCellPicker } from './canvas/useCellPicker'
 import { CanvasAidToggles, CanvasGuides, type GridType } from './canvas/CanvasAids'
 import { InlineTextEditor, type TextEditState } from './canvas/InlineTextEditor'
+import { CanvasErrorBridge } from './canvas/CanvasErrorBridge'
 
 export type { EditorHandle }
 
@@ -74,6 +75,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
   const cellPicker = useCellPicker()
 
   const [editing, setEditing] = useState<TextEditState | null>(null)
+  const [canvasError, setCanvasError] = useState<Error | null>(null)
 
   const handleDragMove = (el: CanvasElement) => (e: Konva.KonvaEventObject<DragEvent>) => {
     if (!snapEnabled || e.evt?.shiftKey) return
@@ -146,6 +148,8 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
     setEditing(null)
   }
 
+  if (canvasError) throw canvasError
+
   return (
     <div ref={hostRef} className="canvas-host relative h-full w-full">
       {/* Opened programmatically when an empty cell is tapped, so there is no
@@ -205,6 +209,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
           style={{ cursor: drawMode ? 'crosshair' : 'default' }}
         >
           <Layer>
+            <CanvasErrorBridge onError={setCanvasError}>
             <Group ref={boardRef} x={tf.x} y={tf.y} scaleX={tf.scale} scaleY={tf.scale}>
               {/* In draw mode elements ignore hits so strokes land on the stage. */}
               <Group listening={!drawMode}>
@@ -283,6 +288,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
                 newBox.width < 20 || newBox.height < 20 ? oldBox : newBox
               }
             />
+            </CanvasErrorBridge>
           </Layer>
         </Stage>
       )}

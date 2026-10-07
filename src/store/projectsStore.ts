@@ -16,6 +16,7 @@ import {
   withActivePage,
   type ProjectDocument,
 } from '../lib/projectSchema'
+import { hasCrashed } from '../lib/crashState'
 
 export interface ProjectMeta {
   id: string
@@ -377,6 +378,7 @@ useEditor.subscribe(() => {
   if (!activeProjectId) return
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
+    if (hasCrashed()) return
     useProjects.getState().saveActiveProject().catch(() => {})
   }, 1500)
 })
