@@ -724,6 +724,13 @@ const de: Dict = {
   'tpl.text.youreInvited': 'Du bist eingeladen',
   'tpl.text.joinUs': 'Feiere mit uns',
   'tpl.text.ourYear': 'Unser Jahr in Fotos',
+  'cmd.title': 'Befehlspalette',
+  'cmd.placeholder': 'Befehl eingeben…',
+  'cmd.empty': 'Keine passenden Befehle',
+  'cmd.shortcuts': 'Tastenkürzel',
+  'cmd.deselect': 'Auswahl aufheben',
+  'cmd.openPanel': 'Bereich öffnen',
+  'cmd.nudge': 'Auswahl verschieben (Umschalt: 10×)',
 }
 
 export default de

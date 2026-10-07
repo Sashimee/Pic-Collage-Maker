@@ -54,4 +54,68 @@ test.describe('keyboard shortcuts', () => {
     await page.waitForTimeout(200)
     expect(await elementCount(page)).toBe(4)
   })
+
+  test.describe('command palette', () => {
+    const select = (page: import('@playwright/test').Page) =>
+      page.evaluate(() => {
+        const s = window.__editor!.getState() as unknown as {
+          elements: { id: string }[]
+          select: (id: string | null) => void
+        }
+        s.select(s.elements[0].id)
+      })
+    const selectedId = (page: import('@playwright/test').Page) =>
+      page.evaluate(
+        () => (window.__editor!.getState() as unknown as { selectedId: string | null }).selectedId,
+      )
+
+    test('ctrl+k finds and runs a command, then gets out of the way', async ({ page }) => {
+      await select(page)
+      await page.keyboard.press('Control+k')
+      const dialog = page.getByRole('dialog', { name: 'Command palette' })
+      await expect(dialog).toBeVisible()
+      await expect(dialog.getByRole('combobox')).toBeFocused()
+      await page.keyboard.type('dupl')
+      await expect(dialog.getByRole('option')).toHaveText(['DuplicateCtrl+D'])
+      await page.keyboard.press('Enter')
+      await expect(dialog).toBeHidden()
+      await expect.poll(() => elementCount(page)).toBe(4)
+    })
+
+    test('escape closes the palette and leaves the selection alone', async ({ page }) => {
+      await select(page)
+      await page.keyboard.press('Control+k')
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toBeHidden()
+      expect(await selectedId(page)).not.toBeNull()
+    })
+
+    test('a panel opens from the palette', async ({ page }) => {
+      await page.keyboard.press('Control+k')
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await page.keyboard.type('panel layers')
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('heading', { name: 'Layers' }).first()).toBeVisible()
+    })
+
+    test('? lists the shortcuts, including ones not usable right now', async ({ page }) => {
+      await page.evaluate(() =>
+        (window.__editor!.getState() as unknown as { select: (id: null) => void }).select(null),
+      )
+      await page.keyboard.press('Shift+?')
+      const sheet = page.getByRole('dialog', { name: 'Keyboard shortcuts' })
+      await expect(sheet).toBeVisible()
+      await expect(sheet.getByRole('button', { name: 'Close' })).toBeFocused()
+      await expect(sheet.getByRole('term').filter({ hasText: /^Delete$/ })).toBeVisible()
+      await expect(sheet.getByRole('definition').filter({ hasText: 'Ctrl+K' })).toBeVisible()
+      await page.keyboard.press('Control+a')
+      await page.keyboard.press('Escape')
+      await expect(sheet).toBeHidden()
+      const selected = await page.evaluate(
+        () => (window.__editor!.getState() as unknown as { multiSelected: string[] }).multiSelected,
+      )
+      expect(selected).toEqual([])
+    })
+  })
 })
