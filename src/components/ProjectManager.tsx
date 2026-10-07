@@ -10,6 +10,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useProjects } from '../store/projectsStore'
+import { useEditor } from '../store/editorStore'
+import { addUndoToast } from '../store/toastStore'
 import { useLang, useT } from '../i18n/useLang'
 import {
   formatBytes,
@@ -44,6 +46,7 @@ export default function ProjectManager({ open, onClose }: Props) {
     renameProject,
     duplicateProject,
     deleteProject,
+    restoreProject,
   } = useProjects()
 
   useEffect(() => {
@@ -219,9 +222,16 @@ export default function ProjectManager({ open, onClose }: Props) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (window.confirm(t('project.deleteConfirm'))) {
-                        void deleteProject(p.id)
-                      }
+                      const reattach =
+                        p.id === activeProjectId ? useEditor.getState().documentId : undefined
+                      void deleteProject(p.id).then((deleted) => {
+                        if (!deleted) return
+                        addUndoToast(t('project.deleted'), t('header.undo'), () =>
+                          restoreProject(deleted, reattach).catch((err: unknown) =>
+                            console.error('Restoring the deleted project failed', err),
+                          ),
+                        )
+                      })
                     }}
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-red-500/10 hover:text-red-500"
                     title={t('project.delete')}

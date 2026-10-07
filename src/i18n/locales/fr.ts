@@ -352,7 +352,7 @@ const fr: Dict = {
   'project.rename': 'Renommer',
   'project.duplicate': 'Dupliquer',
   'project.delete': 'Supprimer',
-  'project.deleteConfirm': 'Supprimer ce projet ? Cette action est irréversible.',
+  'project.deleted': 'Projet supprimé.',
   'project.save': 'Enregistrer',
   'project.open': 'Ouvrir',
   'header.projects': 'Projets',
@@ -366,7 +366,8 @@ const fr: Dict = {
   'page.add': 'Ajouter une page',
   'page.duplicate': 'Dupliquer la page',
   'page.delete': 'Supprimer la page',
-  'page.deleteConfirm': 'Supprimer cette page ? Cette action est irréversible.',
+  'page.deleted': 'Page supprimée.',
+  'element.deleted': 'Supprimé.',
 
   'layer.title': 'Calques',
   'layer.show': 'Afficher',

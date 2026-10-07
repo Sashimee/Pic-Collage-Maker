@@ -9,6 +9,7 @@ import { usePointerReorder } from '../hooks/usePointerReorder'
 import { usePageThumbs } from '../hooks/usePageThumbs'
 import { PageThumb } from './PageThumb'
 import { useT } from '../i18n/useLang'
+import { addUndoToast } from '../store/toastStore'
 
 const TILE_W = 48
 const TILE_H = 60
@@ -82,15 +83,21 @@ export function PageStrip() {
     [overflowRef],
   )
 
-  const run = useCallback(async (fn: () => Promise<unknown>) => {
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
+  const run = useCallback((fn: () => Promise<unknown>) => {
     // setActivePage awaits rehydratePhotos from IndexedDB, so it is not
     // instantaneous — without this a double-tap can interleave two page swaps.
-    setBusy(true)
-    try {
-      await fn()
-    } finally {
-      setBusy(false)
-    }
+    // Queued rather than refused: a toast's Undo can't be disabled while a swap runs.
+    const next = queue.current.then(async () => {
+      setBusy(true)
+      try {
+        await fn()
+      } finally {
+        setBusy(false)
+      }
+    })
+    queue.current = next.catch(() => {})
+    return next
   }, [])
 
   /**
@@ -151,8 +158,17 @@ export function PageStrip() {
 
   const deletePage = () => {
     if (tiles.length <= 1) return
-    if (!window.confirm(t('page.deleteConfirm'))) return
-    void run(() => useProjects.getState().deletePage(activePage))
+    const index = activePage
+    void run(async () => {
+      const projectId = useProjects.getState().activeProjectId
+      const deleted = await useProjects.getState().deletePage(index)
+      if (!deleted) return
+      addUndoToast(t('page.deleted'), t('header.undo'), () => {
+        // Too late once another project is open: the page would land in that one.
+        if (useProjects.getState().activeProjectId !== projectId) return
+        void run(() => useProjects.getState().restorePage(index, deleted))
+      })
+    })
   }
 
   const scroll = (dir: 'left' | 'right') => {

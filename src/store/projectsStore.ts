@@ -36,7 +36,13 @@ interface ProjectsState {
   openProject: (id: string) => Promise<void>
   renameProject: (id: string, name: string) => Promise<void>
   duplicateProject: (id: string) => Promise<string>
-  deleteProject: (id: string) => Promise<void>
+  /** Resolves to the deleted record, so the caller can offer an undo. */
+  deleteProject: (id: string) => Promise<Project | null>
+  /**
+   * Puts a deleted project back. With `documentId`, also reattaches the editor to it —
+   * but only if nothing else has been loaded into the editor since (see editorStore).
+   */
+  restoreProject: (project: Project, documentId?: number) => Promise<void>
   saveActiveProject: () => Promise<void>
   /** Saves any pending edits, then detaches the editor from the project. */
   closeProject: () => Promise<void>
@@ -51,7 +57,10 @@ interface ProjectsState {
   activePage: number
   addPage: () => Promise<void>
   duplicatePage: (index?: number) => Promise<void>
-  deletePage: (index: number) => Promise<void>
+  /** Resolves to the deleted page, so the caller can offer an undo. */
+  deletePage: (index: number) => Promise<LoadedDocument | null>
+  /** Puts a deleted page back at `index` and switches to it. */
+  restorePage: (index: number, page: LoadedDocument) => Promise<void>
   reorderPages: (from: number, to: number) => Promise<void>
   /** `skipCommit` is internal: deletePage has already written the pages. */
   setActivePage: (index: number, skipCommit?: boolean) => Promise<void>
@@ -257,13 +266,30 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   },
 
   deleteProject: async (id) => {
-    if (typeof indexedDB === 'undefined') return
+    if (typeof indexedDB === 'undefined') return null
+    // Flush pending edits first, so the record an undo puts back is the latest one.
+    if (get().activeProjectId === id) await get().closeProject()
+    const deleted = (await loadProject(id)) ?? null
     await deleteProject(id)
     set((state) => {
       const nextProjects = state.projects.filter((p) => p.id !== id)
       const nextActive = state.activeProjectId === id ? null : state.activeProjectId
       return { projects: nextProjects, activeProjectId: nextActive }
     })
+    return deleted
+  },
+
+  restoreProject: async (project, documentId) => {
+    if (typeof indexedDB === 'undefined') return
+    await saveProject(project)
+    await get().loadProjectList()
+    if (documentId === undefined || get().activeProjectId !== null) return
+    if (useEditor.getState().documentId !== documentId) return
+    const doc = toProjectDocument(project.data)
+    if (!doc) return
+    set({ activeProjectId: project.id, pages: doc.pages, activePage: doc.activePage })
+    // Edits made while it was gone are only on the board until this folds them in.
+    await trackSave()
   },
 
   saveActiveProject: async () => {
@@ -324,16 +350,29 @@ export const useProjects = create<ProjectsState>((set, get) => ({
   deletePage: async (index) => {
     // A project always has at least one page; removing the last would leave
     // openProject with nothing to load.
-    if (get().pages.length <= 1) return
+    if (get().pages.length <= 1) return null
     const wasActive = get().activePage
-    const pages = await commitPages(get, set, (doc) => ({
-      ...doc,
-      pages: doc.pages.filter((_, i) => i !== index),
-    }))
-    if (!pages) return
+    let deleted: LoadedDocument | null = null
+    const pages = await commitPages(get, set, (doc) => {
+      deleted = doc.pages[index] ?? null
+      return { ...doc, pages: doc.pages.filter((_, i) => i !== index) }
+    })
+    if (!pages) return null
     // Follow the page that took its place, clamped to the new end.
     const target = index < wasActive ? wasActive - 1 : Math.min(wasActive, pages.length - 1)
     await get().setActivePage(target, true)
+    return deleted
+  },
+
+  restorePage: async (index, page) => {
+    const at = Math.max(0, Math.min(get().pages.length, index))
+    const pages = await commitPages(get, set, (doc) => {
+      const next = doc.pages.slice()
+      next.splice(at, 0, page)
+      // The cursor has to follow the live page, or the switch below folds it into its neighbour.
+      return { ...doc, pages: next, activePage: doc.activePage + (at <= doc.activePage ? 1 : 0) }
+    })
+    if (pages) await get().setActivePage(at)
   },
 
   reorderPages: async (from, to) => {

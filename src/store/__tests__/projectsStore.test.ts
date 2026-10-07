@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useProjects } from '../projectsStore'
 import { useEditor } from '../editorStore'
+import { loadProject } from '../../services/localProjects'
+import { toProjectDocument } from '../../lib/projectSchema'
 
 describe('projectsStore', () => {
   beforeEach(() => {
@@ -56,5 +58,47 @@ describe('projectsStore', () => {
     await useProjects.getState().deleteProject(id)
     expect(useProjects.getState().projects.length).toBe(0)
     expect(useProjects.getState().activeProjectId).toBeNull()
+  })
+
+  it('restores a deleted project from what deleteProject returned', async () => {
+    useEditor.getState().addText()
+    const id = await useProjects.getState().createProject('Undo me')
+    const deleted = await useProjects.getState().deleteProject(id)
+    expect(deleted?.name).toBe('Undo me')
+
+    await useProjects.getState().restoreProject(deleted!)
+
+    expect(useProjects.getState().projects.map((p) => p.id)).toContain(id)
+  })
+
+  it('undoing the delete of the open project reattaches it, edits included', async () => {
+    const id = await useProjects.getState().createProject('Open')
+    useEditor.getState().addText()
+    const documentId = useEditor.getState().documentId
+
+    const deleted = await useProjects.getState().deleteProject(id)
+    expect(useProjects.getState().activeProjectId).toBeNull()
+    useEditor.getState().addText()
+    await useProjects.getState().restoreProject(deleted!, documentId)
+
+    expect(useProjects.getState().activeProjectId).toBe(id)
+    const stored = toProjectDocument((await loadProject(id))!.data)!
+    expect(stored.pages[stored.activePage].elements).toHaveLength(2)
+  })
+
+  it('does not reattach once something else is on the board', async () => {
+    const id = await useProjects.getState().createProject('Open')
+    const documentId = useEditor.getState().documentId
+    const deleted = await useProjects.getState().deleteProject(id)
+
+    useEditor.getState().clearAll()
+    await useProjects.getState().restoreProject(deleted!, documentId)
+
+    expect(useProjects.getState().activeProjectId).toBeNull()
+    expect(useProjects.getState().projects.map((p) => p.id)).toContain(id)
+  })
+
+  it('deleting a project that is not there returns null', async () => {
+    expect(await useProjects.getState().deleteProject('missing')).toBeNull()
   })
 })

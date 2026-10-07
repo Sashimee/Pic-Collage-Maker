@@ -122,8 +122,45 @@ describe('page actions', () => {
 
   it('refuses to delete the last page', async () => {
     await projects().createProject('P')
-    await projects().deletePage(0)
+    expect(await projects().deletePage(0)).toBeNull()
     expect(projects().pages).toHaveLength(1)
+  })
+
+  it('restorePage puts a deleted page back where it was, with its work', async () => {
+    await addTextPage('one')
+    await projects().createProject('P')
+    await projects().addPage()
+    await addTextPage('two')
+
+    const deleted = await projects().deletePage(1)
+    expect(deleted).not.toBeNull()
+    await projects().restorePage(1, deleted!)
+
+    expect(projects().pages).toHaveLength(2)
+    expect(projects().activePage).toBe(1)
+    expect(liveTexts()).toEqual(['two'])
+    await projects().setActivePage(0)
+    expect(liveTexts()).toEqual(['one'])
+  })
+
+  it('restoring a page before the one being edited keeps that page’s work in place', async () => {
+    await addTextPage('one')
+    await projects().createProject('P')
+    await projects().addPage()
+    await addTextPage('two')
+    await projects().addPage()
+    await addTextPage('three')
+
+    const deleted = await projects().deletePage(0)
+    await projects().setActivePage(1)
+    await addTextPage('more')
+    await projects().restorePage(0, deleted!)
+
+    expect(liveTexts()).toEqual(['one'])
+    await projects().setActivePage(2)
+    expect(liveTexts()).toEqual(['three', 'more'])
+    await projects().setActivePage(1)
+    expect(liveTexts()).toEqual(['two'])
   })
 
   it('reorderPages moves a page and keeps you on the one you were editing', async () => {
