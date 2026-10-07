@@ -73,6 +73,7 @@ export function BoardScene({
           height={boardHeight}
           gap={doc.gridGap}
           radius={doc.gridRadius}
+          margin={doc.gridMargin ?? 0}
           selectedId={interactions?.selectedId ?? null}
           onSelect={(id) => interactions?.onSelect(id)}
           onUpdate={(id, patch) => interactions?.onChange(id, patch)}

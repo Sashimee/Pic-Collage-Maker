@@ -68,6 +68,8 @@ function CellPhoto({
   const crop = el.crop && k !== null ? scaleCrop(el.crop, k) : undefined
   const ref = useRef<Konva.Image>(null)
 
+  // The cache is a bitmap at the node's size, so a new cell size (layout
+  // switch, gutter, margin, zoom) has to rebuild it or the stale one is drawn.
   useEffect(() => {
     const node = ref.current
     if (!node || !image) return
@@ -85,7 +87,17 @@ function CellPhoto({
       node.clearCache()
       node.filters([])
     }
-  }, [image, el.filters, crop?.x, crop?.y, crop?.width, crop?.height])
+  }, [
+    image,
+    el.filters,
+    crop?.x,
+    crop?.y,
+    crop?.width,
+    crop?.height,
+    rect.w,
+    rect.h,
+    el.cellZoom,
+  ])
 
   // NOTE: all hooks must run before any early return. `image` starts null and
   // becomes an HTMLImageElement once decoded; a `useMemo` placed after an
@@ -245,6 +257,7 @@ export function GridView({
   height,
   gap,
   radius,
+  margin = 0,
   selectedId,
   onSelect,
   onUpdate,
@@ -256,6 +269,7 @@ export function GridView({
   height: number
   gap: number
   radius: number
+  margin?: number
   selectedId: string | null
   onSelect: (id: string) => void
   onUpdate: (id: string, patch: Partial<PhotoElement>) => void
@@ -265,7 +279,7 @@ export function GridView({
   return (
     <>
       {layout.cells.map((cell, i) => {
-        const rect = cellRect(cell, width, height, gap)
+        const rect = cellRect(cell, width, height, gap, margin)
         const photo = slots[i]
         const isSelected = photo && photo.id === selectedId
         return (

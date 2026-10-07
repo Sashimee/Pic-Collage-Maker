@@ -19,6 +19,7 @@ export function useProjectFileActions() {
       gridId: useEditor.getState().gridId,
       gridGap: useEditor.getState().gridGap,
       gridRadius: useEditor.getState().gridRadius,
+      gridMargin: useEditor.getState().gridMargin,
       frame: useEditor.getState().frame,
       elements: useEditor.getState().elements,
     }

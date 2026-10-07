@@ -55,6 +55,7 @@ interface Snapshot {
   gridId: string | null
   gridGap: number
   gridRadius: number
+  gridMargin: number
   frame: Frame
   boardWidth: number
   boardHeight: number
@@ -69,6 +70,7 @@ const snap = (s: EditorState): Snapshot => ({
   gridId: s.gridId,
   gridGap: s.gridGap,
   gridRadius: s.gridRadius,
+  gridMargin: s.gridMargin,
   frame: s.frame,
   boardWidth: s.boardWidth,
   boardHeight: s.boardHeight,
@@ -134,6 +136,7 @@ interface EditorState {
   gridId: string | null
   gridGap: number
   gridRadius: number
+  gridMargin: number
   frame: Frame
   elements: CanvasElement[]
   selectedId: string | null
@@ -224,6 +227,7 @@ interface EditorState {
   applyLayout: (layoutId: string, opts?: { boardSize?: { w: number; h: number } }) => void
   setGrid: (gridId: string | null) => void
   setGridGap: (gap: number) => void
+  setGridMargin: (margin: number) => void
   setGridRadius: (radius: number) => void
   setFrame: (patch: Partial<Frame>) => void
   setBoardSize: (width: number, height: number) => void
@@ -262,6 +266,8 @@ export interface LoadedDocument {
   gridId: string | null
   gridGap: number
   gridRadius: number
+  /** Outer margin around the whole grid (design units); absent in older documents. */
+  gridMargin?: number
   frame: Frame
   elements: CanvasElement[]
   watermark?: WatermarkSettings
@@ -297,6 +303,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   gridId: null,
   gridGap: 12,
   gridRadius: 0,
+  gridMargin: 0,
   frame: DEFAULT_FRAME,
   elements: [],
   selectedId: null,
@@ -648,6 +655,9 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setGridGap: (gap) => set((s) => ({ gridGap: gap, ...record(s, 'gridGap') })),
 
+  setGridMargin: (margin) =>
+    set((s) => ({ gridMargin: margin, ...record(s, 'gridMargin') })),
+
   setGridRadius: (radius) =>
     set((s) => ({ gridRadius: radius, ...record(s, 'gridRadius') })),
 
@@ -691,6 +701,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       gridId: doc.gridId,
       gridGap: doc.gridGap,
       gridRadius: doc.gridRadius,
+      gridMargin:
+        typeof doc.gridMargin === 'number' && Number.isFinite(doc.gridMargin) ? doc.gridMargin : 0,
       frame: doc.frame,
       elements: doc.elements,
       selectedId: null,

@@ -315,3 +315,49 @@ test.describe('photos survive a reload', () => {
     expect(ok).toBe(true)
   })
 })
+
+test('the grid margin survives a reload', async ({ page }) => {
+  await openApp(page)
+  await page.locator('#empty-gallery-input').setInputFiles(pngFile())
+  await waitForElements(page, 'photo')
+  await page.evaluate(() => {
+    const s = window.__editor!.getState()
+    s.setGrid('mag-cover')
+    s.setGridMargin(48)
+  })
+
+  const persistedMargin = () =>
+    page.evaluate(
+      () =>
+        new Promise<number | null>((resolve) => {
+          const req = indexedDB.open('piccollage')
+          req.onsuccess = () => {
+            const db = req.result
+            if (!db.objectStoreNames.contains('doc')) {
+              db.close()
+              return resolve(null)
+            }
+            const t = db.transaction('doc', 'readonly')
+            const get = t.objectStore('doc').getAll()
+            get.onsuccess = () => {
+              const docs = get.result as { gridMargin?: number }[]
+              resolve(docs.map((d) => d?.gridMargin).find((m) => m !== undefined) ?? null)
+            }
+            get.onerror = () => resolve(null)
+            t.oncomplete = () => db.close()
+          }
+          req.onerror = () => resolve(null)
+        }),
+    )
+
+  await expect.poll(persistedMargin, { timeout: 15_000 }).toBe(48)
+  await page.reload()
+  await page.waitForFunction(() => !!window.__editor)
+  await waitForElements(page, 'photo')
+  expect(
+    await page.evaluate(() => {
+      const s = window.__editor!.getState()
+      return { gridId: s.gridId, gridMargin: s.gridMargin }
+    }),
+  ).toEqual({ gridId: 'mag-cover', gridMargin: 48 })
+})

@@ -90,6 +90,7 @@ function getSnapshot(): LoadedDocument {
     gridId: s.gridId,
     gridGap: s.gridGap,
     gridRadius: s.gridRadius,
+    gridMargin: s.gridMargin,
     frame: s.frame,
     // Photos' object URLs are per-document and die on reload; keep only the
     // photoId so openProject can rebuild them from IndexedDB.

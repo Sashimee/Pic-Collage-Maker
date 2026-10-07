@@ -8,13 +8,27 @@ export interface CellRect {
   h: number
 }
 
-/** A normalised cell scaled onto a board of `W`×`H`, inset by the gutter. */
-export function cellRect(cell: GridCell, W: number, H: number, gap: number): CellRect {
+export const MAX_GRID_MARGIN = 160
+
+/** The largest margin that still has an effect on a `W`×`H` board. */
+export function maxGridMargin(W: number, H: number): number {
+  return Math.min(MAX_GRID_MARGIN, Math.floor(Math.min(W, H) / 4))
+}
+
+/**
+ * A normalised cell scaled onto a board of `W`×`H`, inset by the gutter and
+ * by an outer margin around the whole grid.
+ */
+export function cellRect(cell: GridCell, W: number, H: number, gap: number, margin = 0): CellRect {
+  // A margin chosen on a big board must not turn a small one inside out.
+  const m = Math.max(0, Math.min(margin, Math.min(W, H) / 4))
+  const iw = W - 2 * m
+  const ih = H - 2 * m
   return {
-    x: cell.x * W + gap / 2,
-    y: cell.y * H + gap / 2,
-    w: cell.width * W - gap,
-    h: cell.height * H - gap,
+    x: m + cell.x * iw + gap / 2,
+    y: m + cell.y * ih + gap / 2,
+    w: cell.width * iw - gap,
+    h: cell.height * ih - gap,
   }
 }
 
@@ -801,6 +815,196 @@ export const GRID_LAYOUTS: GridLayout[] = [
       { x: 0.25, y: 0.75, width: 0.25, height: 0.25 },
       { x: 0.5, y: 0.75, width: 0.25, height: 0.25 },
       { x: 0.75, y: 0.75, width: 0.25, height: 0.25 },
+    ],
+  },
+
+  // ---- Magazine, filmstrip, polaroid and story (9:16) presets ----
+  {
+    id: 'mag-cover',
+    label: '3',
+    count: 3,
+    category: 'editorial',
+    tags: ['magazine'],
+    cells: [
+      { x: 0, y: 0, width: 1, height: 0.65 },
+      { x: 0, y: 0.65, width: 0.5, height: 0.35 },
+      { x: 0.5, y: 0.65, width: 0.5, height: 0.35 },
+    ],
+  },
+  {
+    id: 'mag-spread',
+    label: '4',
+    count: 4,
+    category: 'editorial',
+    tags: ['magazine'],
+    cells: [
+      { x: 0, y: 0, width: 0.5, height: 1 },
+      { x: 0.5, y: 0, width: 0.5, height: 0.6 },
+      { x: 0.5, y: 0.6, width: 0.25, height: 0.4 },
+      { x: 0.75, y: 0.6, width: 0.25, height: 0.4 },
+    ],
+  },
+  {
+    id: 'mag-feature',
+    label: '5',
+    count: 5,
+    category: 'editorial',
+    tags: ['magazine'],
+    cells: [
+      { x: 0, y: 0, width: 0.4, height: 1 },
+      { x: 0.4, y: 0, width: 0.3, height: 0.5 },
+      { x: 0.7, y: 0, width: 0.3, height: 0.5 },
+      { x: 0.4, y: 0.5, width: 0.3, height: 0.5 },
+      { x: 0.7, y: 0.5, width: 0.3, height: 0.5 },
+    ],
+  },
+  {
+    id: 'mag-banner',
+    label: '6',
+    count: 6,
+    category: 'editorial',
+    tags: ['magazine'],
+    cells: [
+      { x: 0, y: 0, width: 1, height: 0.3 },
+      { x: 0, y: 0.3, width: 0.3333, height: 0.4 },
+      { x: 0.3333, y: 0.3, width: 0.3333, height: 0.4 },
+      { x: 0.6667, y: 0.3, width: 0.3333, height: 0.4 },
+      { x: 0, y: 0.7, width: 0.5, height: 0.3 },
+      { x: 0.5, y: 0.7, width: 0.5, height: 0.3 },
+    ],
+  },
+  {
+    id: 'film-3',
+    label: '3',
+    count: 3,
+    category: 'creative',
+    tags: ['filmstrip'],
+    cells: [
+      { x: 0.12, y: 0.04, width: 0.76, height: 0.28 },
+      { x: 0.12, y: 0.36, width: 0.76, height: 0.28 },
+      { x: 0.12, y: 0.68, width: 0.76, height: 0.28 },
+    ],
+  },
+  {
+    id: 'film-4',
+    label: '4',
+    count: 4,
+    category: 'creative',
+    tags: ['filmstrip'],
+    cells: [
+      { x: 0.0, y: 0.3, width: 0.25, height: 0.4 },
+      { x: 0.25, y: 0.3, width: 0.25, height: 0.4 },
+      { x: 0.5, y: 0.3, width: 0.25, height: 0.4 },
+      { x: 0.75, y: 0.3, width: 0.25, height: 0.4 },
+    ],
+  },
+  {
+    id: 'film-5',
+    label: '5',
+    count: 5,
+    category: 'creative',
+    tags: ['filmstrip'],
+    cells: [
+      { x: 0.15, y: 0.025, width: 0.7, height: 0.19 },
+      { x: 0.15, y: 0.215, width: 0.7, height: 0.19 },
+      { x: 0.15, y: 0.405, width: 0.7, height: 0.19 },
+      { x: 0.15, y: 0.595, width: 0.7, height: 0.19 },
+      { x: 0.15, y: 0.785, width: 0.7, height: 0.19 },
+    ],
+  },
+  {
+    id: 'polaroid-1',
+    label: '1',
+    count: 1,
+    category: 'creative',
+    tags: ['polaroid'],
+    cells: [{ x: 0.1, y: 0.07, width: 0.8, height: 0.7 }],
+  },
+  {
+    id: 'polaroid-2',
+    label: '2',
+    count: 2,
+    category: 'creative',
+    tags: ['polaroid'],
+    cells: [
+      { x: 0.05, y: 0.15, width: 0.43, height: 0.5 },
+      { x: 0.52, y: 0.15, width: 0.43, height: 0.5 },
+    ],
+  },
+  {
+    id: 'polaroid-3',
+    label: '3',
+    count: 3,
+    category: 'creative',
+    tags: ['polaroid'],
+    cells: [
+      { x: 0.04, y: 0.3, width: 0.28, height: 0.3 },
+      { x: 0.36, y: 0.3, width: 0.28, height: 0.3 },
+      { x: 0.68, y: 0.3, width: 0.28, height: 0.3 },
+    ],
+  },
+  {
+    id: 'polaroid-4',
+    label: '4',
+    count: 4,
+    category: 'creative',
+    tags: ['polaroid'],
+    cells: [
+      { x: 0.06, y: 0.04, width: 0.41, height: 0.36 },
+      { x: 0.53, y: 0.04, width: 0.41, height: 0.36 },
+      { x: 0.06, y: 0.52, width: 0.41, height: 0.36 },
+      { x: 0.53, y: 0.52, width: 0.41, height: 0.36 },
+    ],
+  },
+  {
+    id: 'story-3',
+    label: '3',
+    count: 3,
+    category: 'social',
+    tags: ['story', '9:16'],
+    cells: [
+      { x: 0, y: 0, width: 1, height: 0.4 },
+      { x: 0, y: 0.4, width: 1, height: 0.3 },
+      { x: 0, y: 0.7, width: 1, height: 0.3 },
+    ],
+  },
+  {
+    id: 'story-1-2',
+    label: '3',
+    count: 3,
+    category: 'social',
+    tags: ['story', '9:16'],
+    cells: [
+      { x: 0, y: 0, width: 1, height: 0.6 },
+      { x: 0, y: 0.6, width: 0.5, height: 0.4 },
+      { x: 0.5, y: 0.6, width: 0.5, height: 0.4 },
+    ],
+  },
+  {
+    id: 'story-5',
+    label: '5',
+    count: 5,
+    category: 'social',
+    tags: ['story', '9:16'],
+    cells: [
+      { x: 0, y: 0, width: 1, height: 0.5 },
+      { x: 0, y: 0.5, width: 0.5, height: 0.25 },
+      { x: 0.5, y: 0.5, width: 0.5, height: 0.25 },
+      { x: 0, y: 0.75, width: 0.5, height: 0.25 },
+      { x: 0.5, y: 0.75, width: 0.5, height: 0.25 },
+    ],
+  },
+  {
+    id: 'story-l3',
+    label: '4',
+    count: 4,
+    category: 'social',
+    tags: ['story', '9:16'],
+    cells: [
+      { x: 0, y: 0, width: 0.5, height: 1 },
+      { x: 0.5, y: 0, width: 0.5, height: 0.3333 },
+      { x: 0.5, y: 0.3333, width: 0.5, height: 0.3333 },
+      { x: 0.5, y: 0.6667, width: 0.5, height: 0.3333 },
     ],
   },
 

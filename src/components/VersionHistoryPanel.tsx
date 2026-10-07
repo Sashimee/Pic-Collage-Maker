@@ -55,6 +55,7 @@ export default function VersionHistoryPanel() {
       gridId: useEditor.getState().gridId,
       gridGap: useEditor.getState().gridGap,
       gridRadius: useEditor.getState().gridRadius,
+      gridMargin: useEditor.getState().gridMargin,
       frame: useEditor.getState().frame,
       elements: data.elements,
     })

@@ -140,6 +140,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Grid style',
     'grid.gap': 'Gutter',
     'grid.radius': 'Corner radius',
+    'grid.margin': 'Margin',
     'layout.free': 'Free',
     'grid.hint':
       'Add photos — they fill the grid cells in order. Tap a cell to select it for filters.',
@@ -639,6 +640,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Rasterstil',
     'grid.gap': 'Abstand',
     'grid.radius': 'Eckenradius',
+    'grid.margin': 'Rand',
     'layout.free': 'Frei',
     'grid.hint':
       'Füge Fotos hinzu — sie füllen die Rasterfelder der Reihe nach. Tippe ein Feld an, um es für Filter auszuwählen.',
@@ -1121,6 +1123,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Estilo de cuadrícula',
     'grid.gap': 'Separación',
     'grid.radius': 'Radio de esquina',
+    'grid.margin': 'Margen',
     'layout.free': 'Libre',
     'grid.hint':
       'Añade fotos — llenan las celdas de la cuadrícula en orden. Toca una celda para seleccionarla y aplicar filtros.',
@@ -1620,6 +1623,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Style de grille',
     'grid.gap': 'Gouttière',
     'grid.radius': "Rayon d'angle",
+    'grid.margin': 'Marge',
     'layout.free': 'Libre',
     'grid.hint':
       'Ajoutez des photos — elles remplissent les cellules de la grille dans l\'ordre. Appuyez sur une cellule pour la sélectionner et appliquer des filtres.',
@@ -2119,6 +2123,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Stile griglia',
     'grid.gap': 'Interspazio',
     'grid.radius': 'Raggio angolo',
+    'grid.margin': 'Margine',
     'layout.free': 'Libero',
     'grid.hint':
       'Aggiungi foto — riempiono le celle della griglia in ordine. Tocca una cella per selezionarla e applicare i filtri.',
@@ -2630,6 +2635,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'layout.gridStyle': 'Estilo da grade',
     'grid.gap': 'Espaçamento',
     'grid.radius': 'Raio do canto',
+    'grid.margin': 'Margem',
     'layout.free': 'Livre',
     'grid.hint': 'Adicione fotos — elas preenchem as células em ordem. Toque uma célula para selecioná-la.',
     'photos.add': 'Adicionar fotos',
