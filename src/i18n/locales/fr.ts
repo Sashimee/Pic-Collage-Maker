@@ -552,6 +552,8 @@ const fr: Dict = {
   'export.batch': 'Export par lots',
   'export.book': 'Livre photo (PDF)',
   'export.rendering': 'Rendu de la page',
+  'import.adding': 'Ajout de la photo',
+  'export.packing': 'Archivage de la photo',
   'tips.title': 'Astuces',
   'tips.hint': 'De courtes démos se lancent la première fois que vous ouvrez un outil à geste.',
   'tips.replay': 'Revoir les astuces',

@@ -310,6 +310,8 @@ const pt: Dict = {
   'export.batch': 'Exportar Lote',
   'export.book': 'Álbum de fotografias (PDF)',
   'export.rendering': 'A processar página',
+  'import.adding': 'A adicionar foto',
+  'export.packing': 'A compactar foto',
   'tips.title': 'Dicas',
   'tips.hint': 'Demonstrações curtas aparecem na primeira vez que abre uma ferramenta com gestos.',
   'tips.replay': 'Mostrar as dicas novamente',

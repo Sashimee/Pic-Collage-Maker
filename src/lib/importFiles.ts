@@ -1,6 +1,12 @@
 import { loadPhotoMeta } from './importPhotos'
 import { track } from './analytics'
 
+export interface ImportHooks {
+  onProgress?: (done: number, total: number) => void
+  /** Set `cancelled` to stop after the photo in flight; photos already added stay. */
+  signal?: { cancelled: boolean }
+}
+
 // Decode picked image files, stash each source blob in IndexedDB (so the
 // collage survives a reload), and hand the object URL + intrinsic size to the
 // store's addPhoto. Shared by the Photos panel and the first-run empty state.
@@ -13,12 +19,17 @@ export async function importFiles(
     photoId?: string,
     opts?: { originalSrc?: string; previewSrc?: string; thumbSrc?: string },
   ) => void,
+  hooks: ImportHooks = {},
 ) {
   console.log('[importFiles] processing', files.length, 'files')
   // Counted once per import action rather than per file, so the number reads as
   // "people who added photos" instead of "photos added".
   let added = 0
-  for (const file of Array.from(files)) {
+  const list = Array.from(files)
+  for (let i = 0; i < list.length; i++) {
+    if (hooks.signal?.cancelled) break
+    const file = list[i]
+    hooks.onProgress?.(i, list.length)
     // Mobile Safari often reports empty or 'application/octet-stream' for
     // Camera Roll photos. We try to load any file that is not a known non-image
     // type; loadPhotoMeta will fail gracefully on actually broken files.

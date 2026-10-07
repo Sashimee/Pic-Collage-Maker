@@ -185,44 +185,55 @@ export function SelectionBar({ measure }: SelectionBarProps) {
     }
   }
 
-  const handleRemoveBg = async () => {
+  /** Stays up while the tool works; Cancel throws the result away rather than applying it. */
+  const runTool = async (
+    keys: { busy: string; done: string; failed: string },
+    run: (src: string) => Promise<string>,
+  ) => {
     if (el?.type !== 'photo' || !selectedId) return
-    toast.info(t('toast.removingBg'))
+    const id = selectedId
+    let cancelled = false
+    const progress = toast.progress(t(keys.busy), {
+      label: t('menu.cancel'),
+      onClick: () => {
+        cancelled = true
+        progress.done()
+      },
+    })
     try {
-      const { removeBackground } = await import('../ai/tools')
-      const result = await removeBackground(el.src)
-      updateElement(selectedId, { src: result })
-      toast.success(t('toast.bgRemoved'))
+      const result = await run(el.src)
+      if (cancelled) return
+      updateElement(id, { src: result })
+      toast.success(t(keys.done))
     } catch {
-      toast.error(t('toast.bgRemovalFailed'))
+      if (!cancelled) toast.error(t(keys.failed))
+    } finally {
+      progress.done()
     }
   }
 
-  const handleRetouch = async () => {
-    if (el?.type !== 'photo' || !selectedId) return
-    toast.info(t('toast.retouching'))
-    try {
-      const { portraitRetouch } = await import('../ai/tools')
-      const result = await portraitRetouch(el.src, { skinSmooth: 0.3, teethWhite: 0.2, eyeBrighten: 0.4 })
-      updateElement(selectedId, { src: result })
-      toast.success(t('toast.retouched'))
-    } catch {
-      toast.error(t('toast.retouchFailed'))
-    }
-  }
+  const handleRemoveBg = () =>
+    runTool(
+      { busy: 'toast.removingBg', done: 'toast.bgRemoved', failed: 'toast.bgRemovalFailed' },
+      async (src) => (await import('../ai/tools')).removeBackground(src),
+    )
 
-  const handleEnhance = async () => {
-    if (el?.type !== 'photo' || !selectedId) return
-    toast.info(t('toast.enhancing'))
-    try {
-      const { autoEnhance } = await import('../ai/tools')
-      const result = await autoEnhance(el.src)
-      updateElement(selectedId, { src: result })
-      toast.success(t('toast.enhanced'))
-    } catch {
-      toast.error(t('toast.enhanceFailed'))
-    }
-  }
+  const handleRetouch = () =>
+    runTool(
+      { busy: 'toast.retouching', done: 'toast.retouched', failed: 'toast.retouchFailed' },
+      async (src) =>
+        (await import('../ai/tools')).portraitRetouch(src, {
+          skinSmooth: 0.3,
+          teethWhite: 0.2,
+          eyeBrighten: 0.4,
+        }),
+    )
+
+  const handleEnhance = () =>
+    runTool(
+      { busy: 'toast.enhancing', done: 'toast.enhanced', failed: 'toast.enhanceFailed' },
+      async (src) => (await import('../ai/tools')).autoEnhance(src),
+    )
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-3 flex flex-col items-center gap-2 px-2 z-20">

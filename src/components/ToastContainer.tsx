@@ -21,6 +21,8 @@ export function ToastContainer() {
     <div
       role="status"
       aria-live="polite"
+      // A progress toast rewrites its count per item; atomic would re-read every toast and button each time.
+      aria-atomic="false"
       className="pointer-events-none fixed left-0 right-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[100] flex flex-col items-center gap-2 px-4"
     >
       <AnimatePresence>
@@ -43,13 +45,16 @@ export function ToastContainer() {
                 {toast.action.label}
               </button>
             )}
-            <button
-              onClick={() => remove(toast.id)}
-              className="ml-1 rounded-md p-1 text-muted transition hover:text-text hover:bg-surface-2"
-              aria-label={t('aria.dismiss')}
-            >
-              ✕
-            </button>
+            {/* Hiding a running job would leave it going with no way left to stop it. */}
+            {!(toast.duration === 0 && toast.action) && (
+              <button
+                onClick={() => remove(toast.id)}
+                className="ml-1 rounded-md p-1 text-muted transition hover:text-text hover:bg-surface-2"
+                aria-label={t('aria.dismiss')}
+              >
+                ✕
+              </button>
+            )}
           </m.div>
         ))}
       </AnimatePresence>
@@ -76,8 +81,8 @@ export function useToasts() {
      * A toast that stays until the work finishes. Rendering several pages is
      * seconds of silence otherwise, which reads as the app having hung.
      */
-    progress: (msg: string) => {
-      const id = addToast(msg, 'info', 0)
+    progress: (msg: string, cancel?: ToastAction) => {
+      const id = addToast(msg, 'info', 0, cancel)
       return {
         update: (next: string) => updateToast(id, next),
         done: () => removeToast(id),

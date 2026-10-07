@@ -1,6 +1,6 @@
 import { ImagePlus, Camera } from 'lucide-react'
 import { useEditor } from '../../store/editorStore'
-import { importFiles } from '../../lib/importFiles'
+import { useImportFiles } from '../../hooks/useImportFiles'
 import { PrimaryButton } from '../ui'
 import { useT } from '../../i18n/useLang'
 
@@ -9,6 +9,7 @@ const PANEL_CAMERA_ID = 'panel-camera-input'
 
 export function PhotosPanel() {
   const t = useT()
+  const importFiles = useImportFiles()
   const addPhoto = useEditor((s) => s.addPhoto)
 
   const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

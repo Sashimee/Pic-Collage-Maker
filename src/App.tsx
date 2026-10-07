@@ -343,7 +343,14 @@ export default function App() {
     // rendered — no reason to spin up a second one for it.
     if (pages.length <= 1) return oneUrl(await editorRef.current?.exportImage(format), format)
 
-    const progress = toast.progress(`${t('export.rendering')} 1/${pages.length}`)
+    const signal = { cancelled: false }
+    const progress = toast.progress(`${t('export.rendering')} 1/${pages.length}`, {
+      label: t('menu.cancel'),
+      onClick: () => {
+        signal.cancelled = true
+        progress.done()
+      },
+    })
     try {
       const { renderPages } = await import('./lib/renderPages')
       const editor = useEditor.getState()
@@ -355,7 +362,10 @@ export default function App() {
         print: editor.print,
         onProgress: (done, total) =>
           progress.update(`${t('export.rendering')} ${Math.min(done + 1, total)}/${total}`),
+        signal,
       })
+      // Half a project is not what was asked for; a stopped export saves nothing.
+      if (signal.cancelled) return []
       return Promise.all(urls.map((url, i) => withExif(url, format, pages[i].elements)))
     } finally {
       progress.done()
