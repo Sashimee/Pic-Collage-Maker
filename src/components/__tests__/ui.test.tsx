@@ -1,15 +1,34 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ColorField, IconButton, PrimaryButton, Section, Slider, Chip } from '../ui'
 import { MotionProvider } from '../motion'
+import { useColours } from '../../lib/palette'
+import { useToast } from '../../store/toastStore'
 
 const renderUi = (node: ReactNode) => render(<MotionProvider>{node}</MotionProvider>)
 
+afterEach(() => {
+  vi.unstubAllGlobals()
+  delete (HTMLInputElement.prototype as Partial<HTMLInputElement>).showPicker
+  useColours.setState({ recent: [], saved: [], boardPick: null })
+  useToast.setState({ toasts: [] })
+  localStorage.clear()
+})
+
 describe('Slider', () => {
   it('shows the label and the value rounded to two decimals', () => {
-    renderUi(<Slider label="Brightness" min={0} max={1} step={0.001} value={0.12345} onChange={() => {}} />)
+    renderUi(
+      <Slider
+        label="Brightness"
+        min={0}
+        max={1}
+        step={0.001}
+        value={0.12345}
+        onChange={() => {}}
+      />,
+    )
     expect(screen.getByText('Brightness')).toBeInTheDocument()
     expect(screen.getByText('0.12')).toBeInTheDocument()
   })
@@ -39,6 +58,112 @@ describe('ColorField', () => {
     fireEvent.input(input, { target: { value: '#ff8800' } })
     expect(onChange).toHaveBeenCalledWith('#ff8800')
   })
+
+  it('remembers a colour once it is committed, and offers it again', async () => {
+    const onChange = vi.fn()
+    renderUi(<ColorField label="Fill" value="#000000" onChange={onChange} />)
+    const input = screen.getByLabelText('Fill')
+    fireEvent.input(input, { target: { value: '#123456' } })
+    fireEvent.change(input, { target: { value: '#123456' } })
+    expect(useColours.getState().recent[0]).toBe('#123456')
+
+    const toggle = screen.getByRole('button', { name: /Fill: / })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(await screen.findByRole('button', { name: 'Color #123456' }))
+    expect(onChange).toHaveBeenLastCalledWith('#123456')
+  })
+
+  it('saves the current colour as a swatch', async () => {
+    renderUi(<ColorField label="Fill" value="#abcdef" onChange={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /Fill: / }))
+    const save = await screen.findByRole('button', { name: /save/i })
+    await userEvent.click(save)
+    expect(save).toHaveAttribute('aria-pressed', 'true')
+    expect(useColours.getState().saved).toContain('#abcdef')
+  })
+
+  it('picks with the EyeDropper API where the browser has one', async () => {
+    const open = vi.fn().mockResolvedValue({ sRGBHex: '#FF0000' })
+    vi.stubGlobal(
+      'EyeDropper',
+      class {
+        open = open
+      },
+    )
+    const onChange = vi.fn()
+    renderUi(<ColorField label="Fill" value="#000000" onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: /Fill: / }))
+    await userEvent.click(await screen.findByRole('button', { name: /screen/i }))
+    expect(onChange).toHaveBeenCalledWith('#ff0000')
+    expect(useColours.getState().boardPick).toBeNull()
+  })
+
+  it('falls back to picking from the board without it', async () => {
+    const onChange = vi.fn()
+    renderUi(<ColorField label="Fill" value="#000000" onChange={onChange} />)
+    await userEvent.click(screen.getByRole('button', { name: /Fill: / }))
+    await userEvent.click(await screen.findByRole('button', { name: /screen/i }))
+    const pick = useColours.getState().boardPick
+    expect(pick).toBeTypeOf('function')
+    pick!('#00ff00')
+    expect(onChange).toHaveBeenCalledWith('#00ff00')
+    useColours.getState().endBoardPick()
+  })
+
+  it('ends the board pick when pressed again, or when its toast goes away', async () => {
+    renderUi(<ColorField label="Fill" value="#000000" onChange={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /Fill: / }))
+    const eyedropper = await screen.findByRole('button', { name: /screen/i })
+    await userEvent.click(eyedropper)
+    expect(eyedropper).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(eyedropper)
+    expect(useColours.getState().boardPick).toBeNull()
+    expect(useToast.getState().toasts).toHaveLength(0)
+
+    await userEvent.click(eyedropper)
+    const [toast] = useToast.getState().toasts
+    act(() => useToast.getState().remove(toast.id))
+    expect(useColours.getState().boardPick).toBeNull()
+    expect(eyedropper).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('opens the browser picker instead when the eyedropper is pressed from the keyboard', async () => {
+    const showPicker = vi.fn()
+    HTMLInputElement.prototype.showPicker = showPicker
+    renderUi(<ColorField label="Fill" value="#000000" onChange={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /Fill: / }))
+    fireEvent.click(await screen.findByRole('button', { name: /screen/i }), { detail: 0 })
+    expect(showPicker).toHaveBeenCalledTimes(1)
+    expect(useColours.getState().boardPick).toBeNull()
+  })
+
+  it('disarms its board pick when the tools close, and picks for the latest target', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const { rerender } = renderUi(<ColorField label="Fill" value="#000000" onChange={first} />)
+    const toggle = screen.getByRole('button', { name: /Fill: / })
+    await userEvent.click(toggle)
+    await userEvent.click(await screen.findByRole('button', { name: /screen/i }))
+    rerender(
+      <MotionProvider>
+        <ColorField label="Fill" value="#000000" onChange={second} />
+      </MotionProvider>,
+    )
+    useColours.getState().boardPick!('#00ff00')
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledWith('#00ff00')
+
+    await userEvent.click(screen.getByRole('button', { name: /screen/i }))
+    await userEvent.click(toggle)
+    expect(useColours.getState().boardPick).toBeNull()
+  })
+
+  it('is still named when its field has no label', () => {
+    renderUi(<ColorField label="" value="#000000" onChange={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Color tools' })).toBeInTheDocument()
+  })
 })
 
 describe('Chip', () => {
@@ -46,7 +171,9 @@ describe('Chip', () => {
     const onClick = vi.fn()
     renderUi(
       <>
-        <Chip active onClick={onClick}>On</Chip>
+        <Chip active onClick={onClick}>
+          On
+        </Chip>
         <Chip onClick={() => {}}>Off</Chip>
       </>,
     )
@@ -61,7 +188,11 @@ describe('Chip', () => {
 describe('PrimaryButton', () => {
   it('does not fire while disabled', async () => {
     const onClick = vi.fn()
-    renderUi(<PrimaryButton onClick={onClick} disabled>Go</PrimaryButton>)
+    renderUi(
+      <PrimaryButton onClick={onClick} disabled>
+        Go
+      </PrimaryButton>,
+    )
     const button = screen.getByRole('button', { name: 'Go' })
     expect(button).toBeDisabled()
     await userEvent.click(button)
@@ -71,7 +202,9 @@ describe('PrimaryButton', () => {
   it('renders as a label bound to an input when asked', () => {
     renderUi(
       <>
-        <PrimaryButton as="label" htmlFor="pick">Pick</PrimaryButton>
+        <PrimaryButton as="label" htmlFor="pick">
+          Pick
+        </PrimaryButton>
         <input id="pick" type="file" />
       </>,
     )
@@ -98,14 +231,22 @@ describe('Section', () => {
 describe('IconButton', () => {
   it('is named by its label for assistive tech', async () => {
     const onClick = vi.fn()
-    renderUi(<IconButton label="Undo" onClick={onClick}>↶</IconButton>)
+    renderUi(
+      <IconButton label="Undo" onClick={onClick}>
+        ↶
+      </IconButton>,
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
   it('does not fire while disabled', async () => {
     const onClick = vi.fn()
-    renderUi(<IconButton label="Redo" onClick={onClick} disabled>↷</IconButton>)
+    renderUi(
+      <IconButton label="Redo" onClick={onClick} disabled>
+        ↷
+      </IconButton>,
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Redo' }))
     expect(onClick).not.toHaveBeenCalled()
   })

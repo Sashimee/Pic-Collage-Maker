@@ -18,6 +18,7 @@ import { CanvasAidToggles, CanvasGuides, SnapAids, type GridType } from './canva
 import { useGuides } from '../store/guidesStore'
 import { InlineTextEditor, type TextEditState } from './canvas/InlineTextEditor'
 import { CanvasErrorBridge } from './canvas/CanvasErrorBridge'
+import { BoardColourPicker } from './canvas/BoardColourPicker'
 
 export type { EditorHandle }
 
@@ -342,6 +343,7 @@ export const EditorCanvas = forwardRef<EditorHandle, EditorCanvasProps>(({ botto
           onCancel={() => setEditing(null)}
         />
       )}
+      <BoardColourPicker hostRef={hostRef} />
     </div>
   )
 })
