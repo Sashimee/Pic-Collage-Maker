@@ -112,6 +112,53 @@ describe('editorStore', () => {
       expect(useEditor.getState().future.length).toBe(0)
     })
 
+    it('names each step after what it did', () => {
+      const s = useEditor.getState()
+      s.addPhoto('blob:fake', 800, 600)
+      const id = useEditor.getState().elements[0].id
+      s.updateElement(id, { x: 5, y: 5 })
+      s.updateElement(id, { rotation: 30 })
+      s.updateElement(id, { opacity: 0.5 })
+      s.setBackground({ color: '#ff0000' })
+      expect(useEditor.getState().past.map((e) => e.label)).toEqual([
+        'history.addPhoto',
+        'history.move',
+        'history.transform',
+        'history.edit',
+        'history.background',
+      ])
+    })
+
+    it("keeps a step's name as it moves between undo and redo", () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.setBackground({ color: '#ff0000' })
+      s.undo()
+      expect(useEditor.getState().future.map((e) => e.label)).toEqual(['history.background'])
+      s.redo()
+      expect(useEditor.getState().past.map((e) => e.label)).toEqual([
+        'history.addText',
+        'history.background',
+      ])
+    })
+
+    it('travels several steps at once, and no further than the ends', () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.addText()
+      s.addText()
+      s.travel(-2)
+      expect(useEditor.getState().elements).toHaveLength(1)
+      expect(useEditor.getState().future).toHaveLength(2)
+      s.travel(1)
+      expect(useEditor.getState().elements).toHaveLength(2)
+      s.travel(-99)
+      expect(useEditor.getState().elements).toHaveLength(0)
+      s.travel(99)
+      expect(useEditor.getState().elements).toHaveLength(3)
+      expect(useEditor.getState().past).toHaveLength(3)
+    })
+
     it('undo is a no-op when past is empty', () => {
       const state = useEditor.getState()
       state.undo()
@@ -313,6 +360,39 @@ describe('editorStore', () => {
     it('still caps zoom at 4', () => {
       useEditor.getState().setCanvasZoom(99)
       expect(useEditor.getState().canvasZoom).toBe(4)
+    })
+  })
+
+  describe('copy / paste style', () => {
+    it('pastes onto every target as one undo step, keeping their content', () => {
+      const s = useEditor.getState()
+      s.addText()
+      s.addText()
+      s.addText()
+      const [a, b, c] = useEditor.getState().elements.map((e) => e.id)
+      s.updateElement(a, { fill: '#ff0000', fontFamily: 'Lobster', text: 'Source' })
+      s.copyStyle(a)
+      const before = useEditor.getState().past.length
+      s.pasteStyle([b, c])
+      const els = useEditor.getState().elements as TextElement[]
+      expect(els.slice(1).map((e) => [e.fill, e.fontFamily, e.text === 'Source'])).toEqual([
+        ['#ff0000', 'Lobster', false],
+        ['#ff0000', 'Lobster', false],
+      ])
+      expect(useEditor.getState().past).toHaveLength(before + 1)
+      expect(useEditor.getState().past.at(-1)?.label).toBe('history.pasteStyle')
+      s.undo()
+      expect((useEditor.getState().elements[1] as TextElement).fill).not.toBe('#ff0000')
+    })
+
+    it('does nothing before anything is copied', () => {
+      const s = useEditor.getState()
+      useEditor.setState({ copiedStyle: null })
+      s.addText()
+      const before = useEditor.getState()
+      s.pasteStyle([before.elements[0].id])
+      expect(useEditor.getState().elements).toBe(before.elements)
+      expect(useEditor.getState().past).toBe(before.past)
     })
   })
 })

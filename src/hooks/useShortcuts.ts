@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useEditor } from '../store/editorStore'
 import { useT } from '../i18n/useLang'
+import { useToast } from '../store/toastStore'
 import type { CanvasElement } from '../types'
 
 export interface ShortcutCallbacks {
@@ -41,6 +42,23 @@ export function useShortcuts(callbacks: ShortcutCallbacks = {}) {
       if (mod && key === 'y') {
         e.preventDefault()
         useEditor.getState().redo()
+        return
+      }
+
+      // Copy / paste style. By code, not key: Option+C types "ç" on a Mac.
+      if (mod && e.altKey && (e.code === 'KeyC' || e.code === 'KeyV')) {
+        const { selectedId, multiSelected, copyStyle, pasteStyle, copiedStyle } =
+          useEditor.getState()
+        // Left alone with nothing to act on: AltGr reports as Ctrl+Alt on Windows (AltGr+C is "ć").
+        if (!selectedId || (e.code === 'KeyV' && !copiedStyle)) return
+        e.preventDefault()
+        if (e.code === 'KeyC') {
+          copyStyle(selectedId)
+          useToast.getState().add(tRef.current('style.copied'), 'success')
+        } else {
+          pasteStyle(multiSelected.length > 1 ? multiSelected : [selectedId])
+          useToast.getState().add(tRef.current('style.pasted'), 'success')
+        }
         return
       }
 

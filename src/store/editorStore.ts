@@ -31,6 +31,7 @@ import {
   type Zone,
 } from '../lib/customLayout'
 import { getGridById } from '../lib/grids'
+import { styleOf, stylePatch, type ElementStyle } from '../lib/elementStyle'
 import { getCustomLayoutById } from '../lib/customLayoutStorage'
 
 const uid = () =>
@@ -63,6 +64,12 @@ interface Snapshot {
   print: PrintSettings
 }
 
+/** One undo step: the document either side of it, and what the step did (an i18n key). */
+export interface HistoryEntry {
+  doc: Snapshot
+  label: string
+}
+
 const snap = (s: EditorState): Snapshot => ({
   elements: s.elements,
   background: s.background,
@@ -80,7 +87,7 @@ const snap = (s: EditorState): Snapshot => ({
 
 // Returns the `past`/`future` patch to spread into a mutating `set`. When a
 // `key` repeats within the coalesce window the step is merged (no new entry).
-const record = (s: EditorState, key = ''): Partial<EditorState> => {
+const record = (s: EditorState, label: string, key = ''): Partial<EditorState> => {
   const now = Date.now()
   if (key && key === lastKey && now - lastAt < 600) {
     lastAt = now
@@ -88,7 +95,36 @@ const record = (s: EditorState, key = ''): Partial<EditorState> => {
   }
   lastKey = key
   lastAt = now
-  return { past: [...s.past, snap(s)].slice(-HISTORY_LIMIT), future: [] }
+  return { past: [...s.past, { doc: snap(s), label }].slice(-HISTORY_LIMIT), future: [] }
+}
+
+const isMove = (patch: object) => Object.keys(patch).every((k) => k === 'x' || k === 'y')
+const TRANSFORM_KEYS = new Set(['x', 'y', 'rotation', 'scaleX', 'scaleY', 'width', 'height'])
+const editLabel = (patch: object) =>
+  isMove(patch)
+    ? 'history.move'
+    : Object.keys(patch).every((k) => TRANSFORM_KEYS.has(k))
+      ? 'history.transform'
+      : 'history.edit'
+
+const undoOnce = (s: EditorState): EditorState => {
+  const prev = s.past[s.past.length - 1]
+  return {
+    ...s,
+    ...prev.doc,
+    past: s.past.slice(0, -1),
+    future: [{ doc: snap(s), label: prev.label }, ...s.future].slice(0, HISTORY_LIMIT),
+  }
+}
+
+const redoOnce = (s: EditorState): EditorState => {
+  const next = s.future[0]
+  return {
+    ...s,
+    ...next.doc,
+    past: [...s.past, { doc: snap(s), label: next.label }].slice(-HISTORY_LIMIT),
+    future: s.future.slice(1),
+  }
 }
 
 // A group of one is no group: the survivor stays as the plain selection.
@@ -148,8 +184,10 @@ interface EditorState {
   brushColor: string
   brushSize: number
 
-  past: Snapshot[]
-  future: Snapshot[]
+  past: HistoryEntry[]
+  future: HistoryEntry[]
+  /** The style last copied with "Copy style"; not part of the document. */
+  copiedStyle: ElementStyle | null
 
   watermark: WatermarkSettings
   print: PrintSettings
@@ -255,6 +293,11 @@ interface EditorState {
   // history
   undo: () => void
   redo: () => void
+  /** Undo (negative) or redo (positive) this many steps as one jump. */
+  travel: (steps: number) => void
+  copyStyle: (id: string) => void
+  /** Give these elements the copied style, as one undo step. */
+  pasteStyle: (ids: string[]) => void
 }
 
 // Shape accepted by loadDocument when restoring persisted work.
@@ -319,6 +362,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   past: [],
   future: [],
+  copiedStyle: null,
 
   watermark: { ...DEFAULT_WATERMARK },
   print: { ...DEFAULT_PRINT_SETTINGS },
@@ -354,7 +398,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         filters: { ...DEFAULT_FILTERS },
         filterStack: [...DEFAULT_FILTER_STACK],
       }
-      return { elements: [...s.elements, photo], selectedId: photo.id, ...record(s) }
+      return { elements: [...s.elements, photo], selectedId: photo.id, ...record(s, 'history.addPhoto') }
     }),
 
   addText: () =>
@@ -373,7 +417,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         scaleX: 1,
         scaleY: 1,
       }
-      return { elements: [...s.elements, text], selectedId: text.id, ...record(s) }
+      return { elements: [...s.elements, text], selectedId: text.id, ...record(s, 'history.addText') }
     }),
 
   addSticker: (emoji) =>
@@ -389,7 +433,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         scaleX: 1,
         scaleY: 1,
       }
-      return { elements: [...s.elements, sticker], selectedId: sticker.id, ...record(s) }
+      return { elements: [...s.elements, sticker], selectedId: sticker.id, ...record(s, 'history.addSticker') }
     }),
 
   addDrawing: (points, stroke, strokeWidth) =>
@@ -406,7 +450,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         scaleX: 1,
         scaleY: 1,
       }
-      return { elements: [...s.elements, drawing], ...record(s) }
+      return { elements: [...s.elements, drawing], ...record(s, 'history.draw') }
     }),
 
   addShape: (shapeType, fill = '#6366f1') =>
@@ -422,7 +466,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         scaleX: 1,
         scaleY: 1,
       }
-      return { elements: [...s.elements, shape], selectedId: shape.id, ...record(s) }
+      return { elements: [...s.elements, shape], selectedId: shape.id, ...record(s, 'history.addShape') }
     }),
 
   setTool: (tool) => set({ tool, selectedId: null, multiSelected: [] }),
@@ -435,24 +479,27 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   updateElements: (patches) =>
     set((s) => ({
-      ...record(s),
+      ...record(s, Object.values(patches).every(isMove) ? 'history.move' : 'history.transform'),
       elements: s.elements.map((e) =>
         patches[e.id] ? ({ ...e, ...patches[e.id] } as CanvasElement) : e,
       ),
     })),
 
   updateElement: (id, patch) =>
-    set((s) => ({
-      // Coalesce rapid edits to the same element (slider drags, live typing).
-      ...record(s, 'update:' + id),
-      elements: s.elements.map((e) =>
-        e.id === id ? ({ ...e, ...patch } as CanvasElement) : e,
-      ),
-    })),
+    set((s) => {
+      const label = editLabel(patch)
+      return {
+        // Coalesce rapid edits of one kind to the same element (slider drags, live typing).
+        ...record(s, label, `${label}:${id}`),
+        elements: s.elements.map((e) =>
+          e.id === id ? ({ ...e, ...patch } as CanvasElement) : e,
+        ),
+      }
+    }),
 
   updateFilters: (id, patch) =>
     set((s) => ({
-      ...record(s, 'filters:' + id),
+      ...record(s, 'history.filters', 'filters:' + id),
       elements: s.elements.map((e) =>
         e.id === id && e.type === 'photo'
           ? { ...e, filters: { ...e.filters, ...patch } }
@@ -462,7 +509,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   updateFilterStack: (id, stack) =>
     set((s) => ({
-      ...record(s, 'filterStack:' + id),
+      ...record(s, 'history.filters', 'filterStack:' + id),
       elements: s.elements.map((e) =>
         e.id === id && e.type === 'photo'
           ? { ...e, filterStack: stack }
@@ -482,7 +529,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         // photos keep the same object URL — it's just another reference.
         ...(el.type === 'photo' ? { filters: { ...el.filters } } : {}),
       } as CanvasElement
-      return { elements: [...s.elements, copy], selectedId: copy.id, ...record(s) }
+      return { elements: [...s.elements, copy], selectedId: copy.id, ...record(s, 'history.duplicate') }
     }),
 
   removeElement: (id) =>
@@ -494,7 +541,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         elements: s.elements.filter((e) => e.id !== id),
         selectedId: s.selectedId === id ? null : s.selectedId,
         ...withoutFromGroup(s, [id]),
-        ...record(s),
+        ...record(s, 'history.delete'),
       }
     }),
   removeElements: (ids) =>
@@ -504,7 +551,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         elements: s.elements.filter((e) => !ids.includes(e.id)),
         selectedId: s.selectedId && ids.includes(s.selectedId) ? null : s.selectedId,
         ...withoutFromGroup(s, ids),
-        ...record(s),
+        ...record(s, 'history.delete'),
       }
     }),
   select: (id) =>
@@ -555,7 +602,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       if (i < 0 || i === s.elements.length - 1) return {}
       const els = [...s.elements]
       ;[els[i], els[i + 1]] = [els[i + 1], els[i]]
-      return { elements: els, ...record(s) }
+      return { elements: els, ...record(s, 'history.order') }
     }),
 
   // move element one step backward
@@ -565,7 +612,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       if (i <= 0) return {}
       const els = [...s.elements]
       ;[els[i - 1], els[i]] = [els[i], els[i - 1]]
-      return { elements: els, ...record(s) }
+      return { elements: els, ...record(s, 'history.order') }
     }),
 
 
@@ -573,14 +620,14 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => {
       const el = s.elements.find((e) => e.id === id)
       if (!el) return {}
-      return { elements: [...s.elements.filter((e) => e.id !== id), el], ...record(s) }
+      return { elements: [...s.elements.filter((e) => e.id !== id), el], ...record(s, 'history.order') }
     }),
 
   sendToBack: (id) =>
     set((s) => {
       const el = s.elements.find((e) => e.id === id)
       if (!el) return {}
-      return { elements: [el, ...s.elements.filter((e) => e.id !== id)], ...record(s) }
+      return { elements: [el, ...s.elements.filter((e) => e.id !== id)], ...record(s, 'history.order') }
     }),
 
   // visibility & lock actions
@@ -589,7 +636,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, hidden } : e)),
         ...(hidden ? deselect(s, id) : {}),
-        ...record(s, 'hidden'),
+        ...record(s, 'history.visibility', 'hidden'),
       }
     }),
   setElementLocked: (id, locked) =>
@@ -597,7 +644,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         elements: s.elements.map((e) => (e.id === id ? { ...e, locked } : e)),
         ...(locked ? deselect(s, id) : {}),
-        ...record(s, 'locked'),
+        ...record(s, 'history.lock', 'locked'),
       }
     }),
 
@@ -608,26 +655,26 @@ export const useEditor = create<EditorState>((set, get) => ({
       const groupId = uid()
       return {
         elements: s.elements.map((e) => (ids.includes(e.id) ? { ...e, groupId } : e)),
-        ...record(s, 'group'),
+        ...record(s, 'history.group', 'group'),
       }
     }),
   ungroupElements: (groupId) =>
     set((s) => ({
       elements: s.elements.map((e) => (e.groupId === groupId ? { ...e, groupId: undefined } : e)),
-      ...record(s, 'ungroup'),
+      ...record(s, 'history.ungroup', 'ungroup'),
     })),
 
   // reorder
   setElements: (elements) =>
     set((s) => ({
       elements,
-      ...record(s, 'reorder'),
+      ...record(s, 'history.order', 'reorder'),
     })),
 
   setBackground: (patch: Partial<Background>) =>
-    set((s) => ({ background: { ...s.background, ...patch }, ...record(s, 'bg') })),
+    set((s) => ({ background: { ...s.background, ...patch }, ...record(s, 'history.background', 'bg') })),
 
-  setMode: (mode) => set((s) => ({ mode, multiSelected: [], ...record(s) })),
+  setMode: (mode) => set((s) => ({ mode, multiSelected: [], ...record(s, 'history.layout') })),
 
   applyLayout: (layoutId: string, opts?: { boardSize?: { w: number; h: number } }) => {
     const { setGrid, setBoardSize, setMode } = get()
@@ -650,22 +697,22 @@ export const useEditor = create<EditorState>((set, get) => ({
       mode: gridId ? 'grid' : 'free',
       selectedId: null,
       multiSelected: [],
-      ...record(s),
+      ...record(s, 'history.layout'),
     })),
 
-  setGridGap: (gap) => set((s) => ({ gridGap: gap, ...record(s, 'gridGap') })),
+  setGridGap: (gap) => set((s) => ({ gridGap: gap, ...record(s, 'history.spacing', 'gridGap') })),
 
   setGridMargin: (margin) =>
-    set((s) => ({ gridMargin: margin, ...record(s, 'gridMargin') })),
+    set((s) => ({ gridMargin: margin, ...record(s, 'history.spacing', 'gridMargin') })),
 
   setGridRadius: (radius) =>
-    set((s) => ({ gridRadius: radius, ...record(s, 'gridRadius') })),
+    set((s) => ({ gridRadius: radius, ...record(s, 'history.corners', 'gridRadius') })),
 
   setFrame: (patch) =>
-    set((s) => ({ frame: { ...s.frame, ...patch }, ...record(s, 'frame') })),
+    set((s) => ({ frame: { ...s.frame, ...patch }, ...record(s, 'history.frame', 'frame') })),
 
   setBoardSize: (width, height) =>
-    set((s) => ({ boardWidth: width, boardHeight: height, ...record(s, 'boardSize') })),
+    set((s) => ({ boardWidth: width, boardHeight: height, ...record(s, 'history.boardSize', 'boardSize') })),
 
   clearAll: () =>
     set((s) => {
@@ -713,31 +760,36 @@ export const useEditor = create<EditorState>((set, get) => ({
       print: doc.print ? { ...DEFAULT_PRINT_SETTINGS, ...doc.print } : { ...DEFAULT_PRINT_SETTINGS },
     }),
 
-  undo: () =>
+  undo: () => get().travel(-1),
+  redo: () => get().travel(1),
+
+  travel: (steps) =>
     set((s) => {
-      if (!s.past.length) return {}
+      const n = Math.max(-s.past.length, Math.min(s.future.length, Math.trunc(steps)))
+      if (!n) return {}
       lastKey = ''
-      const prev = s.past[s.past.length - 1]
-      return {
-        ...prev,
-        past: s.past.slice(0, -1),
-        future: [snap(s), ...s.future].slice(0, HISTORY_LIMIT),
-        selectedId: null,
-        multiSelected: [],
-      }
+      let next = s
+      for (let i = 0; i < Math.abs(n); i++) next = n < 0 ? undoOnce(next) : redoOnce(next)
+      return { ...next, selectedId: null, multiSelected: [] }
     }),
 
-  redo: () =>
+  copyStyle: (id) =>
     set((s) => {
-      if (!s.future.length) return {}
-      lastKey = ''
-      const next = s.future[0]
+      const el = s.elements.find((e) => e.id === id)
+      return el ? { copiedStyle: styleOf(el, s.mode === 'grid') } : {}
+    }),
+
+  pasteStyle: (ids) =>
+    set((s) => {
+      const style = s.copiedStyle
+      if (!style || !ids.length) return {}
       return {
-        ...next,
-        past: [...s.past, snap(s)].slice(-HISTORY_LIMIT),
-        future: s.future.slice(1),
-        selectedId: null,
-        multiSelected: [],
+        ...record(s, 'history.pasteStyle'),
+        elements: s.elements.map((e) =>
+          ids.includes(e.id)
+            ? ({ ...e, ...stylePatch(style, e, s.mode === 'grid') } as CanvasElement)
+            : e,
+        ),
       }
     }),
 
@@ -746,7 +798,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       elements: s.elements.map((e) =>
         e.type === 'photo' ? { ...e, shape } : e,
       ),
-      ...record(s, 'shapeAll'),
+      ...record(s, 'history.shape', 'shapeAll'),
     })),
 
   setCanvasZoom: (zoom) =>
@@ -755,9 +807,9 @@ export const useEditor = create<EditorState>((set, get) => ({
   setExporting: (v) => set({ exporting: v }),
 
   setWatermark: (patch) =>
-    set((s) => ({ watermark: { ...s.watermark, ...patch }, ...record(s, 'watermark') })),
+    set((s) => ({ watermark: { ...s.watermark, ...patch }, ...record(s, 'history.watermark', 'watermark') })),
   setPrint: (patch) =>
-    set((s) => ({ print: { ...s.print, ...patch }, ...record(s, 'print') })),
+    set((s) => ({ print: { ...s.print, ...patch }, ...record(s, 'history.print', 'print') })),
 
   splitCustomLayout: (pts, snapStep) =>
     commitZones(set, get, (zones) => splitZonesByStroke(zones, pts, { snapStep })),

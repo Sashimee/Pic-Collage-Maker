@@ -23,6 +23,8 @@ import {
   AlignHorizontalSpaceBetween,
   AlignVerticalSpaceBetween,
   AlignVerticalJustifyCenter,
+  Paintbrush,
+  PaintRoller,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import type { BaseElement } from '../types'
@@ -106,6 +108,9 @@ export function SelectionBar({ measure }: SelectionBarProps) {
   const groupElements = useEditor((s) => s.groupElements)
   const clearMultiSelect = useEditor((s) => s.clearMultiSelect)
   const updateElements = useEditor((s) => s.updateElements)
+  const copyStyle = useEditor((s) => s.copyStyle)
+  const pasteStyle = useEditor((s) => s.pasteStyle)
+  const hasCopiedStyle = useEditor((s) => s.copiedStyle !== null)
   const elements = useEditor((s) => s.elements)
   const boardWidth = useEditor((s) => s.boardWidth)
   const boardHeight = useEditor((s) => s.boardHeight)
@@ -319,6 +324,26 @@ export function SelectionBar({ measure }: SelectionBarProps) {
                     <BringToFront size={18} />
                   </Btn>
                 </>
+              )}
+              <Btn
+                onClick={() => {
+                  copyStyle(selectedId)
+                  toast.success(t('style.copied'))
+                }}
+                label={t('style.copy')}
+              >
+                <Paintbrush size={18} />
+              </Btn>
+              {hasCopiedStyle && (
+                <Btn
+                  onClick={() => {
+                    pasteStyle(hasMulti ? multiSelected : [selectedId])
+                    toast.success(t('style.pasted'))
+                  }}
+                  label={t('style.paste')}
+                >
+                  <PaintRoller size={18} />
+                </Btn>
               )}
               {alignIds.length > 0 && (
                 <Btn

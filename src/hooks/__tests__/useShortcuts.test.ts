@@ -28,6 +28,21 @@ describe('useShortcuts', () => {
     expect(useEditor.getState().elements).toHaveLength(2)
   })
 
+  it('ctrl+alt+c / ctrl+alt+v copy and paste style, by key code', () => {
+    renderHook(() => useShortcuts())
+    const [a, b] = ids()
+    useEditor.getState().updateElement(a, { opacity: 0.3 })
+    useEditor.getState().select(a)
+    const code = (c: string, key: string) =>
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key, code: c, ctrlKey: true, altKey: true, bubbles: true }),
+      )
+    code('KeyC', 'ç')
+    useEditor.getState().select(b)
+    code('KeyV', '√')
+    expect(useEditor.getState().elements[1].opacity).toBe(0.3)
+  })
+
   it('ctrl+a selects every element', () => {
     renderHook(() => useShortcuts())
     press('a', { ctrl: true })
