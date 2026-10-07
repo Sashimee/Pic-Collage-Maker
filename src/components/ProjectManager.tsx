@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FolderOpen,
   Plus,
@@ -8,9 +8,13 @@ import {
   X,
   Save,
   ChevronRight,
+  Download,
+  Upload,
 } from 'lucide-react'
 import { useProjects } from '../store/projectsStore'
 import { useT } from '../i18n/useLang'
+import { useToasts } from './ToastContainer'
+import { hasCrashed } from '../lib/crashState'
 
 interface Props {
   open: boolean
@@ -23,6 +27,9 @@ export default function ProjectManager({ open, onClose }: Props) {
   const [newName, setNewName] = useState('')
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [busy, setBusy] = useState(false)
+  const restoreInput = useRef<HTMLInputElement>(null)
+  const toast = useToasts()
 
   const {
     projects,
@@ -34,6 +41,7 @@ export default function ProjectManager({ open, onClose }: Props) {
     renameProject,
     duplicateProject,
     deleteProject,
+    saveActiveProject,
   } = useProjects()
 
   useEffect(() => {
@@ -47,6 +55,60 @@ export default function ProjectManager({ open, onClose }: Props) {
     await createProject(name)
     setNewName('')
     setCreateOpen(false)
+  }
+
+  const handleBackup = async () => {
+    if (busy) return
+    setBusy(true)
+    const progress = toast.progress(t('project.backingUp'))
+    try {
+      // Autosave lags edits by a moment; the backup reads only what is saved.
+      if (activeProjectId && !hasCrashed()) await saveActiveProject()
+      const { packBackup } = await import('../lib/projectFile')
+      const { blob } = await packBackup()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pic-collage-backup-${new Date().toISOString().slice(0, 10)}.piccollage-backup`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      toast.success(t('project.backupSaved'))
+    } catch (err) {
+      console.error('[backup]', err)
+      toast.error(t('project.backupFailed'))
+    } finally {
+      progress.done()
+      setBusy(false)
+    }
+  }
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setBusy(true)
+    const progress = toast.progress(t('project.restoring'))
+    try {
+      const { restoreBackup } = await import('../lib/projectFile')
+      const count = await restoreBackup(file)
+      await loadProjectList()
+      toast.success(`${count} ${t(count === 1 ? 'project.restoredOne' : 'project.restored')}`)
+    } catch (err) {
+      console.error('[restore]', err)
+      const { InvalidBackupError, BackupStorageError } = await import('../lib/projectFile')
+      toast.error(
+        t(
+          err instanceof InvalidBackupError
+            ? 'project.restoreInvalid'
+            : err instanceof BackupStorageError
+              ? 'project.restoreNoSpace'
+              : 'project.backupFailed',
+        ),
+      )
+    } finally {
+      progress.done()
+      setBusy(false)
+    }
   }
 
   const handleRename = async (id: string) => {
@@ -188,6 +250,31 @@ export default function ProjectManager({ open, onClose }: Props) {
               </li>
             ))}
           </ul>
+
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={handleBackup}
+              disabled={projects.length === 0}
+              aria-disabled={busy}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition hover:bg-surface-2 disabled:opacity-50 aria-disabled:opacity-50">
+              <Download size={15} /> {t('project.backup')}
+            </button>
+            <button
+              onClick={() => !busy && restoreInput.current?.click()}
+              aria-disabled={busy}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-medium text-text transition hover:bg-surface-2 disabled:opacity-50 aria-disabled:opacity-50">
+              <Upload size={15} /> {t('project.restore')}
+            </button>
+            <input
+              ref={restoreInput}
+              type="file"
+              accept=".piccollage-backup,application/json"
+              onChange={handleRestore}
+              className="hidden"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          </div>
         </div>
       </div>
     </>

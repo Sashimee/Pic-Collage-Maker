@@ -2,7 +2,9 @@
 // This keeps the format dependency-free and human-readable (unlike binary zip).
 
 import type { LoadedDocument } from '../store/editorStore'
+import { listProjects, loadProject, saveProject } from '../services/localProjects'
 import { getPhoto, putPhoto } from './persistence'
+import { toProjectDocument, type ProjectDocument } from './projectSchema'
 import {
   backgroundKey,
   rehydrateBackground,
@@ -141,4 +143,129 @@ export async function unpackProject(
   const elements = await rehydratePhotos(stripPhotoUrls(file.doc.elements))
   const background = await rehydrateBackground(stripBackgroundUrl(file.doc.background))
   return { name: file.project.name, doc: { ...file.doc, elements, background } }
+}
+
+/** Every saved project, with the photos they use, in one file. */
+export interface BackupFile {
+  format: 'piccollage-backup'
+  version: 1
+  createdAt: number
+  projects: { name: string; createdAt: number; updatedAt: number; data: ProjectDocument }[]
+  photos: Record<string, string> // photo store key → base64 data URL
+}
+
+const stripPage = (page: LoadedDocument): LoadedDocument => ({
+  ...page,
+  elements: stripPhotoUrls(page.elements),
+  background: stripBackgroundUrl(page.background),
+})
+
+const backupKeys = (projects: BackupFile['projects']) =>
+  new Set(projects.flatMap((p) => p.data.pages.flatMap((page) => [...photoKeys(page)])))
+
+export async function packBackup(): Promise<{ blob: Blob; count: number }> {
+  const projects: BackupFile['projects'] = []
+  for (const id of await listProjects()) {
+    const project = await loadProject(id)
+    const data = project && toProjectDocument(project.data)
+    // Unreadable records can't be opened in the app either; there is nothing to back up.
+    if (!project || !data) continue
+    projects.push({
+      name: project.name,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      data: { ...data, pages: data.pages.map(stripPage) },
+    })
+  }
+
+  const head: Omit<BackupFile, 'photos'> = {
+    format: 'piccollage-backup',
+    version: 1,
+    createdAt: Date.now(),
+    projects,
+  }
+  // One Blob part per photo, so the whole backup never has to exist as a single string.
+  const parts: BlobPart[] = [JSON.stringify(head).slice(0, -1), ',"photos":{']
+  let first = true
+  for (const key of backupKeys(projects)) {
+    const blob = await getPhoto(key)
+    if (!blob) continue
+    const typed = blob.type.startsWith('image/') ? blob : new Blob([blob], { type: 'image/jpeg' })
+    const entry = `${JSON.stringify(key)}:${JSON.stringify(await blobToBase64(typed))}`
+    parts.push(new Blob([first ? entry : `,${entry}`]))
+    first = false
+  }
+  parts.push('}}')
+  return { blob: new Blob(parts, { type: 'application/json' }), count: projects.length }
+}
+
+/** The file isn't a backup this version can read. */
+export class InvalidBackupError extends Error {}
+/** The device ran out of room while the backup's photos were being stored. */
+export class BackupStorageError extends Error {}
+
+function validateBackup(raw: unknown): BackupFile {
+  if (!isPlainObject(raw) || raw.format !== 'piccollage-backup') {
+    throw new InvalidBackupError('Not a Pic Collage backup file')
+  }
+  if (raw.version !== 1) throw new InvalidBackupError(`Unsupported backup version: ${raw.version}`)
+  if (!Array.isArray(raw.projects)) throw new InvalidBackupError('Invalid backup: missing projects')
+  if (!isPlainObject(raw.photos)) throw new InvalidBackupError('Invalid backup: missing photos map')
+
+  const projects = raw.projects.map((p: unknown, i): BackupFile['projects'][number] => {
+    if (!isPlainObject(p) || typeof p.name !== 'string') {
+      throw new InvalidBackupError(`Invalid backup: project ${i + 1} has no name`)
+    }
+    const data = toProjectDocument(p.data)
+    if (!data) throw new InvalidBackupError(`Invalid backup: project "${p.name}" has no pages`)
+    const now = Date.now()
+    return {
+      name: p.name,
+      createdAt: typeof p.createdAt === 'number' ? p.createdAt : now,
+      updatedAt: typeof p.updatedAt === 'number' ? p.updatedAt : now,
+      data: { ...data, pages: data.pages.map(stripPage) },
+    }
+  })
+
+  const photos: Record<string, string> = {}
+  for (const [key, dataUrl] of Object.entries(raw.photos)) {
+    // Only data: images, so a crafted file can't make the app fetch anything remote.
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      throw new InvalidBackupError(`Invalid backup: photo "${key}" is not a data:image/ URL`)
+    }
+    photos[key] = dataUrl
+  }
+  return { format: 'piccollage-backup', version: 1, createdAt: 0, projects, photos }
+}
+
+/**
+ * Adds every project in a backup as a new project; nothing already saved is overwritten.
+ * The whole file is checked before anything is written. Returns how many were added.
+ */
+export async function restoreBackup(blob: Blob): Promise<number> {
+  const text = await blob.text()
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    throw new InvalidBackupError('Not a Pic Collage backup file')
+  }
+  const backup = validateBackup(raw)
+
+  for (const key of backupKeys(backup.projects)) {
+    const dataUrl = backup.photos[key]
+    if (!dataUrl) continue
+    await putPhoto(key, await (await fetch(dataUrl)).blob())
+    // putPhoto swallows its errors; a full disk would otherwise restore projects without photos.
+    if (!(await getPhoto(key))) {
+      throw new BackupStorageError(
+        "Could not store the backup's photos. Free up space on the device and try again.",
+      )
+    }
+  }
+
+  for (const p of backup.projects) {
+    await saveProject({ id: crypto.randomUUID(), ...p })
+  }
+  return backup.projects.length
 }
