@@ -122,3 +122,33 @@ export function computeSmartCrop(
 
   return { x, y, width: cw, height: ch }
 }
+
+/**
+ * The grid-cell pan (−1..1 per axis, as `PhotoElement.cellPan`) that brings
+ * the faces as close to the middle of a cover-fitted cell as the photo's
+ * overflow allows. No faces, no pan.
+ */
+export function facePan(
+  faces: { x: number; y: number; width: number; height: number }[],
+  imgW: number,
+  imgH: number,
+  cellAspect: number,
+): { x: number; y: number } {
+  if (!faces.length) return { x: 0, y: 0 }
+  const left = Math.min(...faces.map((f) => f.x))
+  const top = Math.min(...faces.map((f) => f.y))
+  const right = Math.max(...faces.map((f) => f.x + f.width))
+  const bottom = Math.max(...faces.map((f) => f.y + f.height))
+  // In units of the shown image: a cover fit leaves overflow on one axis only.
+  const shownW = Math.min(imgW, imgH * cellAspect)
+  const shownH = Math.min(imgH, imgW / cellAspect)
+  const axis = (centre: number, size: number, shown: number) => {
+    const overflow = size - shown
+    if (overflow <= 0) return 0
+    return Math.max(-1, Math.min(1, (size - 2 * centre) / overflow))
+  }
+  return {
+    x: axis((left + right) / 2, imgW, shownW),
+    y: axis((top + bottom) / 2, imgH, shownH),
+  }
+}
