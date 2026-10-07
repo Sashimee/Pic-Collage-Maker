@@ -1,14 +1,22 @@
 import { useState } from 'react'
 import { Trash2, GripVertical, Plus, Wand2, Sparkles } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
-import { FILTER_PRESETS, computeFilterConfigFromStack } from '../lib/filters'
+import { FILTER_PRESETS, computeFilterConfigFromStack, photoStack } from '../lib/filters'
 import { useT } from '../i18n/useLang'
 import type { FilterOperation, FilterPreset } from '../types'
 import { Chip, Section, Slider } from './ui'
 import { useToasts } from './ToastContainer'
 import { PhotoStyleSection } from './PhotoStyleSection'
+import { AdjustSection } from './AdjustSection'
 import { autoEnhance } from '../ai/autoEnhance'
 import { STYLE_OPTIONS, applyStyleTransfer } from '../ai/styleTransfer'
+
+const ADVANCED_LABELS: Partial<Record<FilterOperation['type'], string>> = {
+  levels: 'adjust.levels',
+  curves: 'adjust.curves',
+  hsl: 'adjust.hsl',
+  lut: 'adjust.lut',
+}
 
 const FILTER_OPS = [
   { type: 'brightness', labelKey: 'filter.brightness', min: -1, max: 1, step: 0.02, default: 0 },
@@ -46,12 +54,7 @@ export function FilterPanel() {
   }
 
   // Use v2 filterStack, or derive from v1 filters
-  const stack: FilterOperation[] = photo.filterStack ?? [
-    { type: 'brightness', value: photo.filters.brightness },
-    { type: 'contrast', value: photo.filters.contrast },
-    { type: 'saturation', value: photo.filters.saturation },
-    { type: 'preset', id: photo.filters.preset },
-  ]
+  const stack: FilterOperation[] = photoStack(photo.filterStack, photo.filters)
 
   const updateStack = (next: FilterOperation[]) => {
     updateFilterStack(selectedId, next)
@@ -149,10 +152,14 @@ export function FilterPanel() {
             const label =
               op.type === 'preset'
                 ? `${t('filter.presetLabel')}: ${t('filter.' + op.id)}`
-                : t(FILTER_OPS.find((o) => o.type === op.type)?.labelKey ?? '') || op.type
+                : op.type === 'lut'
+                  ? `${t('adjust.lut')}: ${op.name}`
+                  : ADVANCED_LABELS[op.type]
+                    ? t(ADVANCED_LABELS[op.type]!)
+                    : t(FILTER_OPS.find((o) => o.type === op.type)?.labelKey ?? '') || op.type
 
             const value =
-              op.type === 'preset'
+              op.type === 'preset' || op.type in ADVANCED_LABELS
                 ? ''
                 : op.type === 'blur'
                   ? op.radius
@@ -167,36 +174,42 @@ export function FilterPanel() {
                 key={`${op.type}-${i}`}
                 className="rounded-lg border border-border/50 bg-surface-2 transition hover:border-border"
               >
-                <button
-                  onClick={() =>
-                    setExpanded((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(i)) next.delete(i)
-                      else next.add(i)
-                      return next
-                    })
-                  }
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
-                >
-                  <GripVertical size={14} className="text-muted" />
-                  <span className="flex-1 font-medium">{label}</span>
-                  {value !== '' && (
-                    <span className="text-xs text-muted">
-                      {typeof value === 'number' ? value.toFixed(1) : value}
+                <div className="flex items-center">
+                  {value !== '' ? (
+                    <button
+                      aria-expanded={isExpanded}
+                      onClick={() =>
+                        setExpanded((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(i)) next.delete(i)
+                          else next.add(i)
+                          return next
+                        })
+                      }
+                      className="flex min-h-[44px] flex-1 items-center gap-2 px-3 text-left text-sm"
+                    >
+                      <GripVertical size={14} className="text-muted" />
+                      <span className="flex-1 font-medium">{label}</span>
+                      <span className="text-xs text-muted">
+                        {typeof value === 'number' ? value.toFixed(1) : value}
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="flex min-h-[44px] flex-1 items-center gap-2 px-3 text-sm">
+                      <GripVertical size={14} className="text-muted" />
+                      <span className="flex-1 font-medium">{label}</span>
                     </span>
                   )}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeOp(i)
-                    }}
-                    className="rounded p-1 text-muted transition hover:bg-danger/10 hover:text-danger"
+                    onClick={() => removeOp(i)}
+                    aria-label={`${t('sel.delete')}: ${label}`}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-danger/10 hover:text-danger"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden />
                   </button>
-                </button>
+                </div>
 
-                {isExpanded && op.type !== 'preset' && (
+                {isExpanded && value !== '' && (
                   <div className="px-3 pb-2">
                     <Slider
                       label=""
@@ -231,6 +244,8 @@ export function FilterPanel() {
           ))}
         </div>
       </Section>
+
+      <AdjustSection photoId={selectedId} stack={stack} onChange={updateStack} />
 
       {/* Artistic styles (destructive: replaces the photo bitmap) */}
       <Section title={t('style.title')}>

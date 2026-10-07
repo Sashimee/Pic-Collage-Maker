@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest'
-import { computeFilterConfigFromStack, computeFilterConfig } from '../filters'
+import { describe, it, expect, vi } from 'vitest'
+import {
+  applyPhotoFilters,
+  computeFilterConfigFromStack,
+  computeFilterConfig,
+  filtersSettled,
+  photoStack,
+} from '../filters'
 import Konva from 'konva'
+import type { Filter } from 'konva/lib/Node'
 import type { FilterOperation } from '../../types'
 
 describe('computeFilterConfigFromStack', () => {
@@ -214,3 +221,88 @@ describe('computeFilterConfig (v1 backward-compat)', () => {
     expect(cfg.filters).toContain(Konva.Filters.Sepia)
   })
 })
+
+describe('applyPhotoFilters', () => {
+  const fakeNode = () => {
+    const calls: Filter[][] = []
+    const node = {
+      cache: vi.fn(),
+      clearCache: vi.fn(),
+      filters: (f: Filter[]) => calls.push(f),
+      brightness: vi.fn(),
+      contrast: vi.fn(),
+      hue: vi.fn(),
+      saturation: vi.fn(),
+      luminance: vi.fn(),
+      blurRadius: vi.fn(),
+      getLayer: () => null,
+    }
+    return { node: node as unknown as Konva.Image, calls }
+  }
+  const levels: FilterOperation = { type: 'levels', black: 20, white: 230, gamma: 1 }
+
+  it('adds levels/curves/HSL/LUT filters once their chunk loads, ahead of blur', async () => {
+    const { node, calls } = fakeNode()
+    applyPhotoFilters(node, [levels, { type: 'blur', radius: 4 }])
+    expect(calls).toHaveLength(1)
+    await filtersSettled()
+    expect(calls).toHaveLength(2)
+    const last = calls[1]
+    expect(last.length).toBe(calls[0].length + 1)
+    expect(last.at(-1)).toBe(Konva.Filters.Blur)
+    expect(calls[0]).not.toContain(last.at(-2))
+  })
+
+  it('applies nothing late once cleaned up', async () => {
+    const { node, calls } = fakeNode()
+    const cleanup = applyPhotoFilters(node, [levels])
+    cleanup()
+    await filtersSettled()
+    expect(calls.at(-1)).toEqual([])
+    expect(node.clearCache).toHaveBeenCalled()
+  })
+
+  it('stays synchronous without advanced ops', async () => {
+    const { node, calls } = fakeNode()
+    applyPhotoFilters(node, [{ type: 'brightness', value: 0.2 }])
+    await filtersSettled()
+    expect(calls).toHaveLength(1)
+  })
+
+  it('makes export fail while a photo is drawn without its adjustments', async () => {
+    vi.resetModules()
+    vi.doMock('../adjustments', () => {
+      throw new Error('chunk gone')
+    })
+    const fresh = await import('../filters')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { node } = fakeNode()
+      const cleanup = fresh.applyPhotoFilters(node, [levels])
+      await expect(fresh.filtersSettled()).rejects.toThrow(/missing their adjustments/)
+      expect(error).toHaveBeenCalled()
+      cleanup()
+      await expect(fresh.filtersSettled()).resolves.toBeUndefined()
+    } finally {
+      error.mockRestore()
+      vi.doUnmock('../adjustments')
+    }
+  })
+})
+
+describe('photoStack', () => {
+  it('prefers the v2 stack and derives one from v1 filters otherwise', () => {
+    const v1 = {
+      brightness: 0.1,
+      contrast: 0,
+      saturation: 0,
+      blur: 2,
+      vignette: 0,
+      preset: 'none' as const,
+    }
+    expect(photoStack([levels2], v1)).toEqual([levels2])
+    expect(photoStack(undefined, v1)).toContainEqual({ type: 'blur', radius: 2 })
+  })
+})
+
+const levels2: FilterOperation = { type: 'levels', black: 0, white: 255, gamma: 2 }

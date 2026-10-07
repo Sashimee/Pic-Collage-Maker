@@ -7,6 +7,7 @@ import { rehydrateBackground, rehydratePhotos } from './photoRehydrate'
 import { assignSlots, resolveLayoutById } from './grids'
 import { containRect } from './photoBook'
 import { applyPostProcess } from './exportImage'
+import { filtersSettled } from './filters'
 import type { PhotoElement, PrintSettings, WatermarkSettings } from '../types'
 
 /**
@@ -194,6 +195,8 @@ export async function renderPages(
       // A text node starts loading its pack font on mount and re-measures once
       // it arrives; until then it draws in the fallback face.
       await document.fonts.ready
+      await nextFrame()
+      await filtersSettled()
       await nextFrame()
 
       // Overlays go through the same post-process the live export uses, on a

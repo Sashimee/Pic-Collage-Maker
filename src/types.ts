@@ -318,6 +318,22 @@ export type FilterOperation =
   | { type: 'preset'; id: FilterPreset }
   | { type: 'blur'; radius: number }
   | { type: 'vignette'; strength: number }
+  | { type: 'levels'; black: number; white: number; gamma: number }
+  | { type: 'curves'; channels: Partial<Record<ToneChannel, CurvePoint[]>> }
+  | { type: 'hsl'; bands: Partial<Record<HslBand, HslAdjust>> }
+  /** A 3D LUT as base64 RGB bytes, `size`³ entries with red varying fastest. */
+  | { type: 'lut'; name: string; size: number; data: string; amount: number }
+
+export type ToneChannel = 'rgb' | 'r' | 'g' | 'b'
+/** [input, output], both 0..255. */
+export type CurvePoint = [number, number]
+export type HslBand = 'red' | 'orange' | 'yellow' | 'green' | 'aqua' | 'blue' | 'purple' | 'magenta'
+/** Hue in degrees (−30..30); saturation and lightness −1..1. */
+export interface HslAdjust {
+  hue: number
+  saturation: number
+  lightness: number
+}
 
 export const DEFAULT_FILTER_STACK: FilterOperation[] = [
   { type: 'brightness', value: 0 },

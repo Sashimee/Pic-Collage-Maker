@@ -4,7 +4,7 @@ import type Konva from 'konva'
 import type { GridCell, GridLayout, PhotoElement } from '../types'
 import { useImage } from '../hooks/useImage'
 import { useEditor } from '../store/editorStore'
-import { computeFilterConfig } from '../lib/filters'
+import { applyPhotoFilters, photoStack, useFilterCompare } from '../lib/filters'
 import { assignSlots, cellRect, type CellRect as Rect2 } from '../lib/grids'
 import { getClipBounds, getClipFunc } from '../lib/gridClip'
 import { cropBasisScale, scaleCrop } from '../lib/photoCrop'
@@ -67,29 +67,19 @@ function CellPhoto({
   const image = el.crop && k === null ? undefined : drawn
   const crop = el.crop && k !== null ? scaleCrop(el.crop, k) : undefined
   const ref = useRef<Konva.Image>(null)
+  const comparing = useFilterCompare((s) => s.id === el.id)
 
   // The cache is a bitmap at the node's size, so a new cell size (layout
   // switch, gutter, margin, zoom) has to rebuild it or the stale one is drawn.
   useEffect(() => {
     const node = ref.current
     if (!node || !image) return
-    const cfg = computeFilterConfig(el.filters)
-    node.cache()
-    node.filters(cfg.filters)
-    node.brightness(cfg.brightness)
-    node.contrast(cfg.contrast)
-    node.hue(cfg.hue)
-    node.saturation(cfg.saturation)
-    node.luminance(cfg.luminance)
-    node.blurRadius(cfg.blurRadius)
-    node.getLayer()?.batchDraw()
-    return () => {
-      node.clearCache()
-      node.filters([])
-    }
+    return applyPhotoFilters(node, comparing ? [] : photoStack(el.filterStack, el.filters))
   }, [
     image,
     el.filters,
+    el.filterStack,
+    comparing,
     crop?.x,
     crop?.y,
     crop?.width,
