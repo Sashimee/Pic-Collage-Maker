@@ -46,6 +46,7 @@ npm run test           # vitest run (unit)
 npm run test:coverage  # unit + v8 coverage; CI fails below the thresholds in vitest.config.ts
 npm run check:bundle   # eager-JS gzip budget + pdf-lib/jszip/src/ai stay lazy (after `npm run build -- --sourcemap hidden`)
 npm run test:e2e       # playwright, e2e/playwright.config.ts (starts its own dev server)
+npm run test:e2e:offline # offline guarantee against the service worker (after `npm run build`)
 npm run build:lh       # root-based build into dist-lh/, for Lighthouse only — see gotchas
 npm run generate:icons # regenerate PWA PNG icons from scripts/generate-icons.mjs
 ```
