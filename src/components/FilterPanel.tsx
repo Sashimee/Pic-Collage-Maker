@@ -121,7 +121,7 @@ export function FilterPanel() {
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="rounded-lg bg-black/50 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-            {stack.length} {t('filter.countLabel')}
+            {t('filter.count', { count: stack.length })}
           </span>
         </div>
       </div>
