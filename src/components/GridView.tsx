@@ -68,6 +68,8 @@ function CellPhoto({
   const crop = el.crop && k !== null ? scaleCrop(el.crop, k) : undefined
   const ref = useRef<Konva.Image>(null)
 
+  // The cache is a bitmap at the node's size, so a new cell size (layout
+  // switch, gutter, margin, zoom) has to rebuild it or the stale one is drawn.
   useEffect(() => {
     const node = ref.current
     if (!node || !image) return
@@ -85,7 +87,17 @@ function CellPhoto({
       node.clearCache()
       node.filters([])
     }
-  }, [image, el.filters, crop?.x, crop?.y, crop?.width, crop?.height])
+  }, [
+    image,
+    el.filters,
+    crop?.x,
+    crop?.y,
+    crop?.width,
+    crop?.height,
+    rect.w,
+    rect.h,
+    el.cellZoom,
+  ])
 
   // NOTE: all hooks must run before any early return. `image` starts null and
   // becomes an HTMLImageElement once decoded; a `useMemo` placed after an
