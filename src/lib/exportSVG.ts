@@ -349,6 +349,8 @@ function elementsToSVG(elements: CanvasElement[]): string {
   const parts: string[] = []
   for (const el of elements) {
     if (el.hidden) continue
+    const blended = !!el.blendMode && el.blendMode !== 'normal'
+    if (blended) parts.push(`<g style="mix-blend-mode:${el.blendMode}">`)
     switch (el.type) {
       case 'text':
         parts.push(textToSVG(el))
@@ -370,6 +372,7 @@ function elementsToSVG(elements: CanvasElement[]): string {
         parts.push(elementsToSVG(el.children))
         break
     }
+    if (blended) parts.push('</g>')
   }
   return parts.join('\n')
 }

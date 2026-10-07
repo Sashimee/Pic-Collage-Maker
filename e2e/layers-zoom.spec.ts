@@ -134,3 +134,134 @@ test.describe('layer reordering', () => {
     expect((await order(page)).indexOf(bottomLayerId)).toBe(1)
   })
 })
+
+interface LayerProps {
+  id: string
+  name?: string
+  hidden?: boolean
+  locked?: boolean
+  opacity?: number
+  blendMode?: string
+}
+
+const layerProps = (page: import('@playwright/test').Page) =>
+  page.evaluate(() =>
+    (window.__editor!.getState().elements as unknown as LayerProps[]).map(
+      ({ id, name, hidden, locked, opacity, blendMode }) => ({
+        id,
+        name,
+        hidden,
+        locked,
+        opacity,
+        blendMode,
+      }),
+    ),
+  )
+
+/** What the live stage draws for an element: null when there is no node. */
+const nodeState = (page: import('@playwright/test').Page, id: string) =>
+  page.evaluate((id) => {
+    const konva = (window as unknown as { Konva: { stages: import('konva/lib/Stage').Stage[] } })
+      .Konva
+    const stage = konva.stages[0]
+    if (!stage) return 'no stage yet'
+    const node = stage.findOne('#' + id)
+    if (!node) return null
+    const r = node.getClientRect()
+    const c = konva.stages[0].container().getBoundingClientRect()
+    return {
+      listening: node.listening(),
+      opacity: node.opacity(),
+      blend: node.globalCompositeOperation(),
+      centre: { x: c.left + r.x + r.width / 2, y: c.top + r.y + r.height / 2 },
+    }
+  }, id)
+
+/** Whether the autosaved document in IndexedDB mentions `text` yet. */
+const autosaveHas = (page: import('@playwright/test').Page, text: string) =>
+  page.evaluate(
+    (text) =>
+      new Promise<boolean>((resolve) => {
+        const req = indexedDB.open('piccollage')
+        req.onsuccess = () => {
+          const db = req.result
+          if (!db.objectStoreNames.contains('doc')) {
+            db.close()
+            return resolve(false)
+          }
+          const t = db.transaction('doc', 'readonly')
+          const get = t.objectStore('doc').getAll()
+          get.onsuccess = () => resolve(JSON.stringify(get.result).includes(text))
+          get.onerror = () => resolve(false)
+          t.oncomplete = () => db.close()
+        }
+        req.onerror = () => resolve(false)
+      }),
+    text,
+  )
+
+test('layer name, visibility, lock, opacity and blend survive a reload', async ({ page }) => {
+  await openApp(page)
+  await skipGallery(page)
+  const [a, b] = await page.evaluate(() => {
+    const ed = window.__editor!.getState() as unknown as {
+      addSticker: (e: string) => void
+      updateElement: (id: string, p: Record<string, unknown>) => void
+      select: (id: string | null) => void
+    }
+    ed.addSticker('⭐')
+    ed.addSticker('🌙')
+    const els = window.__editor!.getState().elements
+    ed.updateElement(els[0].id, { x: 200, y: 300, opacity: 0.5, blendMode: 'multiply' })
+    ed.updateElement(els[1].id, { x: 600, y: 900 })
+    ed.select(null)
+    return els.map((e) => e.id)
+  })
+  await settleCanvas(page)
+  await page.getByRole('button', { name: 'Layers', exact: true }).click()
+
+  // Rows are listed top layer first: b, then a.
+  await page.getByRole('button', { name: /^Rename/ }).nth(1).click()
+  await page.getByRole('textbox', { name: /^Rename/ }).fill('Hero star')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: /Hero star/ }).first()).toBeFocused()
+
+  await page.getByRole('button', { name: /^Rename/ }).nth(0).click()
+  await page.getByRole('textbox', { name: /^Rename/ }).fill('scrapped')
+  await page.keyboard.press('Escape')
+  await expect(page.getByText('scrapped')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Rename/ }).nth(0)).not.toBeFocused()
+
+  await page.getByRole('button', { name: 'Hide' }).nth(0).click()
+  await page.getByRole('button', { name: 'Lock' }).nth(1).click()
+  await expect.poll(() => nodeState(page, b)).toBeNull()
+
+  const locked = (await nodeState(page, a)) as Exclude<
+    Awaited<ReturnType<typeof nodeState>>,
+    string | null
+  >
+  expect(locked).toMatchObject({ listening: false, opacity: 0.5, blend: 'multiply' })
+  await page.mouse.move(locked.centre.x, locked.centre.y)
+  await page.mouse.down()
+  await page.mouse.move(locked.centre.x + 60, locked.centre.y + 40, { steps: 6 })
+  await page.mouse.up()
+  const state = await page.evaluate(() => window.__editor!.getState())
+  expect(state.selectedId).not.toBe(a)
+  expect(state.elements.find((e) => e.id === a)).toMatchObject({ x: 200, y: 300 })
+
+  const before = await layerProps(page)
+  expect(before).toEqual([
+    { id: a, name: 'Hero star', hidden: undefined, locked: true, opacity: 0.5, blendMode: 'multiply' },
+    { id: b, name: undefined, hidden: true, locked: undefined, opacity: undefined, blendMode: undefined },
+  ])
+
+  await expect.poll(() => autosaveHas(page, '"locked":true'), { timeout: 15_000 }).toBe(true)
+  await page.reload()
+  await page.waitForFunction(() => !!window.__editor)
+  await waitForElements(page, 'sticker', 2)
+  expect(await layerProps(page)).toEqual(before)
+  await expect
+    .poll(() => nodeState(page, a))
+    .toMatchObject({ listening: false, opacity: 0.5, blend: 'multiply' })
+  expect(await nodeState(page, b)).toBeNull()
+})

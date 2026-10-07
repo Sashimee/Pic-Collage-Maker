@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
-import { Eye, EyeOff, Lock, LockOpen, GripVertical } from 'lucide-react'
+import { Eye, EyeOff, Lock, LockOpen, GripVertical, Pencil } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { usePointerReorder } from '../hooks/usePointerReorder'
 import { useT } from '../i18n/useLang'
@@ -60,6 +60,9 @@ export default function LayerPanel() {
   const select = useEditor((s) => s.select)
   const setElementHidden = useEditor((s) => s.setElementHidden)
   const setElementLocked = useEditor((s) => s.setElementLocked)
+  const updateElement = useEditor((s) => s.updateElement)
+  const [renaming, setRenaming] = useState<string | null>(null)
+  const refocusLabel = useRef(false)
   const bringForward = useEditor((s) => s.bringForward)
   const sendBackward = useEditor((s) => s.sendBackward)
 
@@ -124,13 +127,27 @@ export default function LayerPanel() {
     [displayElements, moveTo],
   )
 
+  const finishRename = (el: CanvasElement, value: string) => {
+    const name = value.trim()
+    if (name !== (el.name ?? '')) updateElement(el.id, { name: name || undefined })
+    setRenaming(null)
+    // Only Enter/Escape hand focus back; a click or Tab away keeps it where the user put it.
+    if (!refocusLabel.current) return
+    refocusLabel.current = false
+    requestAnimationFrame(() => {
+      scrollRef.current?.querySelector<HTMLElement>(`[data-layer-label="${el.id}"]`)?.focus()
+    })
+  }
+
   // Keep dragged element rendered even if it scrolls outside viewport
   const visibleIndices = useMemo(() => {
     const set = new Set<number>()
     for (let i = startIndex; i <= endIndex; i++) set.add(i)
     if (dragIndex !== null) set.add(dragIndex)
+    const renamingIndex = displayElements.findIndex((el) => el.id === renaming)
+    if (renamingIndex !== -1) set.add(renamingIndex)
     return Array.from(set).sort((a, b) => a - b)
-  }, [startIndex, endIndex, dragIndex])
+  }, [startIndex, endIndex, dragIndex, displayElements, renaming])
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -199,18 +216,59 @@ export default function LayerPanel() {
                   <GripVertical size={16} />
                 </div>
 
-                <button
-                  onClick={() => select(el.id)}
-                  aria-pressed={isSelected}
-                  className="flex h-full min-w-0 flex-1 items-center gap-2 text-left"
-                >
-                  <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
-                  <span className="flex-1 truncate text-sm text-text/80 select-none">
-                    {previewText(el)}
-                  </span>
-                </button>
+                {renaming === el.id ? (
+                  <div className="flex h-full min-w-0 flex-1 items-center gap-2">
+                    <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
+                    <input
+                      autoFocus
+                      defaultValue={el.name ?? ''}
+                      placeholder={previewText(el)}
+                      aria-label={`${t('layer.rename')}: ${el.name || previewText(el)}`}
+                      maxLength={60}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => {
+                        if (e.nativeEvent.isComposing) return
+                        if (e.key === 'Escape') {
+                          e.stopPropagation()
+                          e.currentTarget.value = el.name ?? ''
+                        }
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                          refocusLabel.current = true
+                          e.currentTarget.blur()
+                        }
+                      }}
+                      onBlur={(e) => finishRename(el, e.currentTarget.value)}
+                      className="min-w-0 flex-1 rounded-md bg-surface px-1.5 py-1 text-sm text-text ring-1 ring-accent outline-none"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    data-layer-label={el.id}
+                    onClick={() => select(el.id)}
+                    onDoubleClick={() => setRenaming(el.id)}
+                    aria-pressed={isSelected}
+                    className="flex h-full min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <span className="text-base shrink-0 select-none">{typeIcon(el)}</span>
+                    <span className="flex-1 truncate text-sm text-text/80 select-none">
+                      {el.name || previewText(el)}
+                    </span>
+                  </button>
+                )}
 
                 <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setRenaming(el.id)
+                    }}
+                    title={t('layer.rename')}
+                    aria-label={`${t('layer.rename')}: ${el.name || previewText(el)}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-text/60 transition hover:bg-surface-3 hover:text-text"
+                  >
+                    <Pencil size={14} />
+                  </button>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

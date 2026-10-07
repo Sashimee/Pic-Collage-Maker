@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Group, Rect, Text as KonvaText, TextPath } from 'react-konva'
 import type Konva from 'konva'
 import type { TextElement } from '../../types'
-import { toBlend, commonHandlers, type NodeProps } from './shared'
+import { toBlend, commonHandlers, lockProps, type NodeProps } from './shared'
 
 function measureText(text: string, fontSize: number, fontFamily: string, fontStyle: string): number {
   const canvas = document.createElement('canvas')
@@ -276,7 +276,7 @@ export function TextNode({ el, onSelect, onChange, onEditText, onDragMove }: Nod
       scaleY={el.scaleY}
       opacity={el.opacity ?? 1}
       globalCompositeOperation={toBlend(el.blendMode)}
-      draggable
+      {...lockProps(el)}
       onClick={(e) => onSelect(e)}
       onTap={(e) => onSelect(e)}
       onDblClick={() => onEditText?.(el.id)}
