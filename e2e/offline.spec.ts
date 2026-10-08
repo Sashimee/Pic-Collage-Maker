@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { pngFile } from './helpers'
+import { cspViolations, pngFile, recordCspViolations } from './helpers'
 import { WHATS_NEW_TIP } from '../src/lib/changelog'
 
 /**
@@ -12,6 +12,8 @@ test('loads, edits and exports with no network after the first visit', async ({
   page,
   context,
 }) => {
+  // The production build's policy, which unlike the dev server's allows no inline script.
+  await recordCspViolations(page)
   await page.addInitScript((whatsNew) => {
     const seen = ['welcome', whatsNew, 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
     localStorage.setItem(
@@ -50,4 +52,5 @@ test('loads, edits and exports with no network after the first visit', async ({
 
   // Only the update check may go to the network, and it is allowed to fail.
   expect(failed.filter((url) => !url.includes('version.json'))).toEqual([])
+  expect(await cspViolations(page)).toEqual([])
 })

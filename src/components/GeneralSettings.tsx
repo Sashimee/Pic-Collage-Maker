@@ -51,6 +51,7 @@ export function GeneralSettings() {
   const setLang = useLang((s) => s.setLang)
   const settings = useSettings()
   const analyticsId = useId()
+  const locationId = useId()
 
   return (
     <Section title={t('settings.general')}>
@@ -105,6 +106,21 @@ export function GeneralSettings() {
           type="checkbox"
           checked={!settings.analyticsOptOut}
           onChange={(e) => settings.setAnalyticsOptOut(!e.target.checked)}
+          className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
+        />
+      </div>
+      <div className="flex items-start justify-between gap-3">
+        <label htmlFor={locationId} className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium text-text/80">{t('settings.keepLocation')}</span>
+          <span className="text-[0.7rem] leading-relaxed text-muted">
+            {t('settings.keepLocationHint')}
+          </span>
+        </label>
+        <input
+          id={locationId}
+          type="checkbox"
+          checked={settings.keepLocation}
+          onChange={(e) => settings.setKeepLocation(e.target.checked)}
           className="mt-1 h-5 w-5 shrink-0 accent-[var(--accent)]"
         />
       </div>

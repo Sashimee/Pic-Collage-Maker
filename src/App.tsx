@@ -385,7 +385,9 @@ export default function App() {
   /** EXIF is only meaningful on JPEG, and only from that page's own photos. */
   const withExif = async (url: string, format: ExportFormat, elements: CanvasElement[]) => {
     if (format !== 'jpg') return url
-    const exif = await extractFirstExif(elements)
+    const exif = await extractFirstExif(elements, {
+      keepLocation: useSettings.getState().keepLocation,
+    })
     return exif ? injectExifIntoJpeg(url, exif) : url
   }
 

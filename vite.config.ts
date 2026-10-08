@@ -42,8 +42,78 @@ function buildVersionPlugin(): Plugin {
   }
 }
 
+// The analytics host in src/lib/analytics.ts; count.js comes from gc.zgo.at and
+// reports with sendBeacon, falling back to an image.
+const GOATCOUNTER = 'https://sashimee.goatcounter.com'
+
+/**
+ * The page's Content-Security-Policy, as a <meta> because GitHub Pages cannot send
+ * headers. Scripts are held to this origin and count.js. Styles allow inline: the app
+ * shell's <style> and the print-book sheet (src/lib/printBook.ts) are both inline,
+ * and CSS cannot run code. blob:/data: are how photos, fonts and exports move around.
+ *
+ * The dev server needs inline scripts (React refresh) and a websocket (HMR); the rest
+ * of the policy is the same, so the e2e suite still trips on anything new it lacks.
+ */
+function csp(dev: boolean): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' https://gc.zgo.at${dev ? " 'unsafe-inline'" : ''}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' blob: data: ${GOATCOUNTER}`,
+    `connect-src 'self' blob: data: ${GOATCOUNTER}${dev ? ' ws: wss:' : ''}`,
+    "font-src 'self' blob: data:",
+    "worker-src 'self' blob:",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+  ].join('; ')
+}
+
+function securityHeadersPlugin(): Plugin {
+  let dev = false
+  return {
+    name: 'security-headers',
+    configResolved(config) {
+      dev = config.command === 'serve'
+    },
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'meta',
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: csp(dev) },
+          injectTo: 'head-prepend',
+        },
+        { tag: 'meta', attrs: { name: 'referrer', content: 'strict-origin' }, injectTo: 'head' },
+      ]
+    },
+  }
+}
+
+/**
+ * piexif sniffs for a browser with `new Function`, which the policy above refuses
+ * (no 'unsafe-eval') at import time, so the whole app failed to start. Rewritten in
+ * the build and in dev pre-bundling; a piexif that changes the sniff fails the build
+ * rather than quietly shipping the eval again.
+ */
+const PIEXIF_SNIFF = "new Function('try {return this===window;}catch(e){ return false;}')()"
+
+function piexifWithoutEval(): Plugin {
+  return {
+    name: 'piexif-without-eval',
+    transform(code, id) {
+      if (!id.includes('/node_modules/piexif/')) return
+      if (!code.includes(PIEXIF_SNIFF))
+        this.error(`piexif no longer sniffs with ${PIEXIF_SNIFF}; update piexifWithoutEval`)
+      return code.replace(PIEXIF_SNIFF, "typeof window !== 'undefined'")
+    },
+  }
+}
+
 export default defineConfig({
   base: BASE,
+  optimizeDeps: { rolldownOptions: { plugins: [piexifWithoutEval()] } },
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -65,6 +135,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
     buildVersionPlugin(),
+    securityHeadersPlugin(),
+    piexifWithoutEval(),
     VitePWA({
       // 'autoUpdate' makes vite-plugin-pwa set workbox.skipWaiting +
       // clientsClaim to true (below, explicit for clarity). Without
