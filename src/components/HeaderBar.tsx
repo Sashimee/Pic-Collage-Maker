@@ -5,11 +5,12 @@ import {
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
   ChevronDown, FileCode, FileText, Package, Smartphone,
-  Plus, BookOpen, Proportions, Copy, ShieldCheck,
+  Plus, BookOpen, Clapperboard, Proportions, Copy, ShieldCheck,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useProjects } from '../store/projectsStore'
 import { canCopyImage, canShareImage } from '../lib/exportImage'
+import { canRecordVideo } from '../lib/exportVideo'
 import { clearPersisted } from '../lib/persistence'
 import { useT } from '../i18n/useLang'
 import { useTheme } from '../i18n/useTheme'
@@ -45,6 +46,7 @@ export type ExportKind =
   | 'svg'
   | 'pdf'
   | 'book'
+  | 'video'
   | 'batch'
 
 export function HeaderBar({
@@ -105,7 +107,8 @@ export function HeaderBar({
     setExportOpen(false)
     onExport(kind)
     // Copying leaves nothing on screen to land on, unlike a download or a sheet.
-    if (kind === 'copy') refocusTrigger()
+    // The video sheet hands focus back to whatever had it when it opened.
+    if (kind === 'copy' || kind === 'video') refocusTrigger()
   }
 
   /*
@@ -262,6 +265,11 @@ export function HeaderBar({
                     <MenuItem onClick={() => handleExport('book')} icon={<BookOpen size={16} />}>
                       {t('export.book')}
                     </MenuItem>
+                    {canRecordVideo() && (
+                      <MenuItem onClick={() => handleExport('video')} icon={<Clapperboard size={16} />}>
+                        {t('export.video')}
+                      </MenuItem>
+                    )}
                     {multiPage && (
                       <>
                         <div className="mx-3 my-1 h-px bg-border" />

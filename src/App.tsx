@@ -40,6 +40,9 @@ const CommandOverlay = lazy(() =>
 const PhotoBookSheet = lazy(() =>
   import('./components/PhotoBookSheet').then((m) => ({ default: m.PhotoBookSheet })),
 )
+const SlideshowSheet = lazy(() =>
+  import('./components/SlideshowSheet').then((m) => ({ default: m.SlideshowSheet })),
+)
 import { useEditor, type LoadedDocument } from './store/editorStore'
 import { useT } from './i18n/useLang'
 import { useProjects, defaultProjectName } from './store/projectsStore'
@@ -54,6 +57,7 @@ import {
   type ExportFormat,
 } from './lib/exportImage'
 import { exportSVG, downloadSVG } from './lib/exportSVG'
+import { downloadVideo } from './lib/exportVideo'
 import { fireConfetti } from './lib/confetti'
 import { track } from './lib/analytics'
 import { InstallSheet } from './components/InstallSheet'
@@ -131,6 +135,7 @@ export default function App() {
   const measure = (ids: string[]) => editorRef.current?.measure(ids) ?? {}
   const [installOpen, setInstallOpen] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
+  const [videoOpen, setVideoOpen] = useState(false)
   const [commandView, setCommandView] = useState<CommandView | null>(null)
   const [bookPages, setBookPages] = useState<LoadedDocument[]>([])
   const select = useEditor((s) => s.select)
@@ -315,6 +320,15 @@ export default function App() {
       // a perfectly good one-page book.
       setBookPages(stored.length ? stored : [liveDocument()])
       setBookOpen(true)
+      return
+    }
+    if (kind === 'video') {
+      track('export-video')
+      // The same committed page list as the book, for the same reasons.
+      await ensureProjectSaved()
+      const stored = useProjects.getState().pages
+      setBookPages(stored.length ? stored : [liveDocument()])
+      setVideoOpen(true)
       return
     }
     if (kind === 'pdf') {
@@ -555,6 +569,21 @@ export default function App() {
                 maybeNudgeInstall()
               }}
               onError={() => toast.error(t('book.failed'))}
+            />
+          </Suspense>
+        )}
+        {videoOpen && (
+          <Suspense fallback={null}>
+            <SlideshowSheet
+              pages={bookPages}
+              onClose={() => setVideoOpen(false)}
+              onDone={(video, format) => {
+                downloadVideo(video, format)
+                setVideoOpen(false)
+                fireConfetti()
+                maybeNudgeInstall()
+              }}
+              onError={() => toast.error(t('video.failed'))}
             />
           </Suspense>
         )}
