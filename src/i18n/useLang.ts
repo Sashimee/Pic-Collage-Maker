@@ -18,7 +18,17 @@ async function loadDict(lang: Lang): Promise<Dict> {
   return (loaded[lang] ??= (await LOADERS[lang]()).default)
 }
 
+// The hreflang alternates in index.html link here, so a search visitor lands in the
+// language the result was shown in, whatever the browser or an earlier visit says.
+function langFromUrl(): Lang | undefined {
+  if (typeof location === 'undefined') return undefined
+  const wanted = new URLSearchParams(location.search).get('lang')
+  return LANGS.find((l) => l.id === wanted)?.id
+}
+
 function detectLang(): Lang {
+  const linked = langFromUrl()
+  if (linked) return linked
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     const known = LANGS.find((l) => l.id === saved)
@@ -39,8 +49,13 @@ function detectLang(): Lang {
   return 'en'
 }
 
-function applyDocumentLang(lang: Lang) {
-  if (typeof document !== 'undefined') document.documentElement.lang = lang
+function applyDocumentLang(lang: Lang, dict: Dict) {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = lang
+  document.title = translate(lang, dict, 'meta.title')
+  document
+    .querySelector('meta[name="description"]')
+    ?.setAttribute('content', translate(lang, dict, 'meta.description'))
 }
 
 interface LangState {
@@ -72,7 +87,7 @@ async function switchTo(lang: Lang, persist: boolean) {
       /* ignore */
     }
   }
-  applyDocumentLang(lang)
+  applyDocumentLang(lang, dict)
   useLang.setState({ lang, dict })
 }
 
@@ -81,6 +96,19 @@ export const useLang = create<LangState>(() => ({
   dict: en,
   setLang: (lang) => switchTo(lang, true),
 }))
+
+// index.html's canonical is the bare URL; left alone, it would tell a crawler that each
+// ?lang= page is a copy of the English one and its hreflang alternate would be dropped.
+function canonicalizeLinkedLang() {
+  const linked = langFromUrl()
+  const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+  if (!linked || !canonical) return
+  const url = new URL(canonical.href)
+  url.search = `?lang=${linked}`
+  canonical.href = url.href
+}
+
+if (typeof document !== 'undefined') canonicalizeLinkedLang()
 
 /** The detected language, loaded; main.tsx waits for it before the first render. */
 export const langReady: Promise<void> = switchTo(detectLang(), false)
