@@ -1,6 +1,9 @@
 import type { Dict } from '../translations'
 
 const pt: Dict = {
+  'meta.title': 'Pic Collage Maker — Editor de colagens de fotos',
+  'meta.description':
+    'Criador de colagens de fotos grátis no navegador: grades, filtros, texto e stickers. Sem conta e sem uploads, suas fotos nunca saem do seu dispositivo.',
   'tab.photos': 'Fotos',
   'tab.layout': 'Layout',
   'tab.text': 'Texto',
@@ -301,6 +304,7 @@ const pt: Dict = {
   'header.nightMode': 'Modo noite',
   'header.export': 'Exportar',
   'header.refresh': 'Atualizar',
+  'header.privacy': 'Privacidade',
   'header.newCanvas': 'Nova tela',
   'header.addPhotos': 'Adicionar fotos',
   'header.projects': 'Projetos',

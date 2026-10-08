@@ -1,0 +1,33 @@
+name: Bug report
+description: Something in the editor doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a 2×2 grid
+        2. Add four photos
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device, browser and app version
+      description: The version and build id are at the bottom of Settings.
+      placeholder: iPhone 15, Safari 18, installed PWA, v0.1.0 · 2b3b80c
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or console output
+      description: Please don't attach private photos; the app never uploads them and neither should a bug report.

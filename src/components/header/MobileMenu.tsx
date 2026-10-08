@@ -3,7 +3,7 @@ import {
   Share2, FileImage, Image as ImageIcon,
   FolderOpen, Save, Upload,
   FileCode, Maximize, FileText, Package, Smartphone,
-  BookOpen, Clapperboard, Proportions, Copy,
+  BookOpen, Clapperboard, Proportions, Copy, ShieldCheck,
 } from 'lucide-react'
 import { useRef } from 'react'
 import { useEditor } from '../../store/editorStore'
@@ -242,6 +242,13 @@ export function MobileMenu({
         tabIndex={-1}
         aria-hidden="true"
         className="hidden"
+      />
+
+      <ActionDivider />
+      <ActionItem
+        onClick={() => { onClose(); window.open(`${import.meta.env.BASE_URL}privacy.html`, '_blank', 'noopener') }}
+        icon={<ShieldCheck size={18} />}
+        label={t('header.privacy')}
       />
 
       <ActionCancel onClick={onClose} label={t('menu.cancel')} />

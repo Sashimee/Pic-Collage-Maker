@@ -19,6 +19,15 @@
       content="Free photo collage maker that runs entirely in your browser. Grids, freehand layouts, filters, text and stickers — no account, no uploads, and your photos never leave your device."
     />
     <link rel="canonical" href="https://sashimee.github.io/Pic-Collage-Maker/" />
+    <!-- One URL per UI language (src/i18n/useLang.ts reads ?lang=); keep in step with
+         LANGS and public/sitemap.xml. -->
+    <link rel="alternate" hreflang="de" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=de" />
+    <link rel="alternate" hreflang="en" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=en" />
+    <link rel="alternate" hreflang="es" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=es" />
+    <link rel="alternate" hreflang="fr" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=fr" />
+    <link rel="alternate" hreflang="it" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=it" />
+    <link rel="alternate" hreflang="pt" href="https://sashimee.github.io/Pic-Collage-Maker/?lang=pt" />
+    <link rel="alternate" hreflang="x-default" href="https://sashimee.github.io/Pic-Collage-Maker/" />
 
     <!-- Social preview. Crawlers don't resolve relative URLs, so these are
          absolute and must be kept in step with BASE in vite.config.ts. -->
@@ -48,6 +57,23 @@
       content="Free photo collage maker that runs entirely in your browser. No account, no uploads — your photos never leave your device."
     />
     <meta name="twitter:image" content="https://sashimee.github.io/Pic-Collage-Maker/og-image.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Pic Collage Maker",
+        "url": "https://sashimee.github.io/Pic-Collage-Maker/",
+        "description": "Free photo collage maker that runs entirely in your browser. Grids, freehand layouts, filters, text and stickers — no account, no uploads, and your photos never leave your device.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript and a modern browser",
+        "inLanguage": ["de", "en", "es", "fr", "it", "pt"],
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "image": "https://sashimee.github.io/Pic-Collage-Maker/og-image.png",
+        "screenshot": "https://sashimee.github.io/Pic-Collage-Maker/og-image.png"
+      }
+    </script>
   </head>
   <body>
     <!--

@@ -15,6 +15,9 @@ export type Dict = Record<string, string>
 // is the only language in the eager bundle — the others are in ./locales/,
 // loaded on demand by useLang.
 export const en: Dict = {
+  'meta.title': 'Pic Collage Maker — Photo Collage Editor',
+  'meta.description':
+    'Free photo collage maker that runs entirely in your browser. Grids, freehand layouts, filters, text and stickers — no account, no uploads, and your photos never leave your device.',
   'tab.photos': 'Photos',
   'tab.layout': 'Layout',
   'tab.text': 'Text',
@@ -336,6 +339,7 @@ export const en: Dict = {
   'header.nightMode': 'Night mode',
   'header.export': 'Export',
   'header.refresh': 'Refresh',
+  'header.privacy': 'Privacy',
   'header.newCanvas': 'New canvas',
   'header.addPhotos': 'Add photos',
   'menu.more': 'Menu',

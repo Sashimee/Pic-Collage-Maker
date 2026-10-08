@@ -70,4 +70,58 @@ describe('useLang', () => {
     const t = renderHook(() => useT()).result.current
     expect(t('no.such.key')).toBe('no.such.key')
   })
+
+  describe('a ?lang= link', () => {
+    beforeEach(() => {
+      document.head.innerHTML =
+        '<meta name="description" content="" />' +
+        '<link rel="canonical" href="https://example.test/app/" />'
+    })
+    afterEach(() => {
+      window.history.replaceState(null, '', '/')
+      document.head.innerHTML = ''
+    })
+
+    it('wins over a saved language without replacing it', async () => {
+      store.set('lang', 'fr')
+      window.history.replaceState(null, '', '/?lang=de')
+      const { useLang, langReady } = await load()
+      await langReady
+      expect(useLang.getState().lang).toBe('de')
+      expect(store.get('lang')).toBe('fr')
+    })
+
+    it('becomes the canonical URL, so each language is its own page to a crawler', async () => {
+      window.history.replaceState(null, '', '/?lang=it')
+      const { langReady } = await load()
+      await langReady
+      expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        'https://example.test/app/?lang=it',
+      )
+    })
+
+    it('is ignored when it names no language', async () => {
+      window.history.replaceState(null, '', '/?lang=xx')
+      const { useLang, langReady } = await load()
+      await langReady
+      expect(useLang.getState().lang).toBe('en')
+      expect(document.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+        'https://example.test/app/',
+      )
+    })
+  })
+
+  it('titles and describes the page in the current language', async () => {
+    document.head.innerHTML = '<meta name="description" content="" />'
+    const { useLang, langReady } = await load()
+    await langReady
+    await useLang.getState().setLang('de')
+    const dict = useLang.getState().dict
+    expect(document.title).toBe(dict['meta.title'])
+    expect(document.title).not.toBe('meta.title')
+    expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      dict['meta.description'],
+    )
+    document.head.innerHTML = ''
+  })
 })

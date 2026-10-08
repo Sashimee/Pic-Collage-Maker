@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -20,6 +21,9 @@ const BUILD_ID =
       return Date.now().toString(36)
     }
   })()
+
+// release-please bumps package.json on each release; the app shows it beside the build id.
+const VERSION: string = JSON.parse(readFileSync('package.json', 'utf8')).version
 
 // Stamps index.html with the build id and emits version.json next to it so
 // runtime code can poll for a mismatch (see src/hooks/useVersionCheck.ts).
@@ -113,6 +117,10 @@ function piexifWithoutEval(): Plugin {
 
 export default defineConfig({
   base: BASE,
+  define: {
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(VERSION),
+    'import.meta.env.VITE_APP_BUILD': JSON.stringify(BUILD_ID),
+  },
   optimizeDeps: { rolldownOptions: { plugins: [piexifWithoutEval()] } },
   build: {
     chunkSizeWarningLimit: 600,

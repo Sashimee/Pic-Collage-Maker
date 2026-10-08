@@ -212,6 +212,9 @@ export function SettingsPanel() {
       <WatermarkPanel />
       <PrintPanel />
       <TipsPanel />
+      <p className="text-center text-[0.7rem] text-muted">
+        Pic Collage Maker v{import.meta.env.VITE_APP_VERSION} · {import.meta.env.VITE_APP_BUILD}
+      </p>
     </div>
   )
 }

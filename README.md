@@ -21,7 +21,9 @@ The only thing sent anywhere is an anonymous, cookieless page count via
 with no identifiers and nothing that can be tied back to you, which is why
 there's no cookie banner. It honours **Do Not Track** and **Global Privacy
 Control**, so switching either on in your browser stops it making any request at
-all. See [`src/lib/analytics.ts`](./src/lib/analytics.ts).
+all. See [`src/lib/analytics.ts`](./src/lib/analytics.ts) and the
+[privacy page](https://sashimee.github.io/Pic-Collage-Maker/privacy.html)
+([source](./public/privacy.html)).
 
 Found a bug or want something added?
 [Open an issue](https://github.com/Sashimee/Pic-Collage-Maker/issues/new) — a

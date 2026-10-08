@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { test, expect, type Page } from '@playwright/test'
 import { openApp } from './helpers'
 
@@ -46,5 +47,12 @@ test.describe('settings', () => {
     await page.waitForFunction(() => !!window.__editor)
     await openSettings(page)
     await expect(page.getByLabel('Anonymous usage counts')).not.toBeChecked()
+  })
+
+  test('the settings name the version and build that are running', async ({ page }) => {
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8'))
+    await openApp(page)
+    await openSettings(page)
+    await expect(page.getByText(new RegExp(`^Pic Collage Maker v${version} · \\w+$`))).toBeVisible()
   })
 })
