@@ -627,6 +627,8 @@ const it: Dict = {
   'print.cmyk': 'Simulazione CMYK',
   'settings.analytics': 'Conteggi d\'uso anonimi',
   'settings.analyticsHint': 'Conteggi delle visite senza cookie che aiutano a migliorare l\'app. Mai le tue foto o ciò che crei.',
+  'settings.keepLocation': 'Mantieni la posizione delle foto',
+  'settings.keepLocationHint': 'Disattivato per impostazione predefinita: le coordinate GPS vengono rimosse dai JPEG esportati. Attiva per mantenere il luogo in cui è stata scattata una foto.',
   'settings.appearance': 'Aspetto',
   'settings.autosave': 'Salvataggio automatico dopo',
   'settings.exportFormat': 'Download predefinito',
