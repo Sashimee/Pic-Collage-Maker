@@ -7,6 +7,7 @@ import { useEditor } from '../store/editorStore'
 import { useSettings } from '../store/settingsStore'
 import type { PanelTab } from './panels.config'
 import { canCopyImage } from '../lib/exportImage'
+import { canRecordVideo } from '../lib/exportVideo'
 import type { ExportKind } from './HeaderBar'
 
 export interface Command {
@@ -172,6 +173,12 @@ export function useCommands({
     { id: 'export-pdf', label: t('export.pdf'), run: () => onExport('pdf') },
     { id: 'export-svg', label: t('export.svg'), run: onExportSVG },
     { id: 'export-book', label: t('export.book'), run: () => onExport('book') },
+    {
+      id: 'export-video',
+      enabled: canRecordVideo(),
+      label: t('export.video'),
+      run: () => onExport('video'),
+    },
     {
       id: 'copy-image',
       enabled: canCopyImage(),

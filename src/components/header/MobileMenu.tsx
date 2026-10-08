@@ -3,7 +3,7 @@ import {
   Share2, FileImage, Image as ImageIcon,
   FolderOpen, Save, Upload,
   FileCode, Maximize, FileText, Package, Smartphone,
-  BookOpen, Proportions, Copy,
+  BookOpen, Clapperboard, Proportions, Copy,
 } from 'lucide-react'
 import { useRef } from 'react'
 import { useEditor } from '../../store/editorStore'
@@ -15,6 +15,7 @@ import { canPickFiles, useLinkedFileName } from '../../lib/linkedFile'
 import { ActionSheet, ActionItem, ActionDivider, ActionCancel } from '../ActionSheet'
 import type { ExportKind } from '../HeaderBar'
 import { canCopyImage } from '../../lib/exportImage'
+import { canRecordVideo } from '../../lib/exportVideo'
 
 interface Props {
   open: boolean
@@ -187,6 +188,13 @@ export function MobileMenu({
         icon={<BookOpen size={18} />}
         label={t('export.book')}
       />
+      {canRecordVideo() && (
+        <ActionItem
+          onClick={() => { onClose(); onExport('video') }}
+          icon={<Clapperboard size={18} />}
+          label={t('export.video')}
+        />
+      )}
       {multiPage && (
         <ActionItem
           onClick={() => { onClose(); onExport('share-page') }}
