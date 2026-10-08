@@ -51,6 +51,8 @@ declare global {
     /** Dev-only store seams, for flows that have to survive a page reload. */
     __projects?: { getState: () => ProjectsState }
     __versions?: { getState: () => VersionState }
+    /** Filled by recordCspViolations. */
+    __cspViolations?: string[]
   }
 }
 
@@ -299,3 +301,15 @@ export async function withoutFilePickers(page: Page) {
       Object.defineProperty(window, name, { value: undefined, configurable: true })
   })
 }
+
+/** Every violation from here on, as "directive blocked-uri". */
+export async function recordCspViolations(page: Page) {
+  await page.addInitScript(() => {
+    window.__cspViolations = []
+    document.addEventListener('securitypolicyviolation', (e) =>
+      window.__cspViolations!.push(`${e.violatedDirective} ${e.blockedURI}`),
+    )
+  })
+}
+
+export const cspViolations = (page: Page) => page.evaluate(() => window.__cspViolations ?? [])

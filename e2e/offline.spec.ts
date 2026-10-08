@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { pngFile } from './helpers'
+import { cspViolations, pngFile, recordCspViolations } from './helpers'
 
 /**
  * Load once, lose the network, and everything still works: the app reloads
@@ -11,6 +11,8 @@ test('loads, edits and exports with no network after the first visit', async ({
   page,
   context,
 }) => {
+  // The production build's policy, which unlike the dev server's allows no inline script.
+  await recordCspViolations(page)
   await page.addInitScript(() => {
     const seen = ['welcome', 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
     localStorage.setItem(
@@ -49,4 +51,5 @@ test('loads, edits and exports with no network after the first visit', async ({
 
   // Only the update check may go to the network, and it is allowed to fail.
   expect(failed.filter((url) => !url.includes('version.json'))).toEqual([])
+  expect(await cspViolations(page)).toEqual([])
 })
