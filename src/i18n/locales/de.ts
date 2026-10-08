@@ -322,6 +322,7 @@ const de: Dict = {
   'header.nightMode': 'Nachtmodus',
   'header.export': 'Export',
   'header.refresh': 'Aktualisieren',
+  'header.privacy': 'Datenschutz',
   'header.newCanvas': 'Neue Leinwand',
   'header.addPhotos': 'Fotos hinzufügen',
   'menu.more': 'Menü',

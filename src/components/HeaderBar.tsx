@@ -5,7 +5,7 @@ import {
   Share2, FileImage, Image as ImageIcon,
   RefreshCcw, Menu, FolderOpen, Save, Upload,
   ChevronDown, FileCode, FileText, Package, Smartphone,
-  Plus, BookOpen, Proportions, Copy,
+  Plus, BookOpen, Proportions, Copy, ShieldCheck,
 } from 'lucide-react'
 import { useEditor } from '../store/editorStore'
 import { useProjects } from '../store/projectsStore'
@@ -192,6 +192,12 @@ export function HeaderBar({
             </IconButton>
           )}
           <FullScreenButton />
+          <IconButton
+            onClick={() => window.open(`${import.meta.env.BASE_URL}privacy.html`, '_blank', 'noopener')}
+            label={t('header.privacy')}
+          >
+            <ShieldCheck size={18} />
+          </IconButton>
           <span className="mx-0.5 h-6 w-px bg-border" />
           <IconButton onClick={() => setProjectManagerOpen(true)} label={t('header.projects')}>
             <FolderOpen size={18} />

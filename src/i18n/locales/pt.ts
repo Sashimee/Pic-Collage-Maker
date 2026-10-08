@@ -301,6 +301,7 @@ const pt: Dict = {
   'header.nightMode': 'Modo noite',
   'header.export': 'Exportar',
   'header.refresh': 'Atualizar',
+  'header.privacy': 'Privacidade',
   'header.newCanvas': 'Nova tela',
   'header.addPhotos': 'Adicionar fotos',
   'header.projects': 'Projetos',
