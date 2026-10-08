@@ -17,10 +17,12 @@ interface SettingsState {
   exportFormat: DefaultExportFormat
   autosaveDelay: AutosaveDelay
   analyticsOptOut: boolean
+  keepLocation: boolean
   setUnits: (units: Units) => void
   setExportFormat: (format: DefaultExportFormat) => void
   setAutosaveDelay: (ms: AutosaveDelay) => void
   setAnalyticsOptOut: (optOut: boolean) => void
+  setKeepLocation: (keep: boolean) => void
 }
 
 export const useSettings = create<SettingsState>()(
@@ -30,10 +32,12 @@ export const useSettings = create<SettingsState>()(
       exportFormat: 'png',
       autosaveDelay: 1500,
       analyticsOptOut: false,
+      keepLocation: false,
       setUnits: (units) => set({ units }),
       setExportFormat: (exportFormat) => set({ exportFormat }),
       setAutosaveDelay: (autosaveDelay) => set({ autosaveDelay }),
       setAnalyticsOptOut: (analyticsOptOut) => set({ analyticsOptOut }),
+      setKeepLocation: (keepLocation) => set({ keepLocation }),
     }),
     {
       name: 'pic-collage-settings',
@@ -50,6 +54,7 @@ export const useSettings = create<SettingsState>()(
           autosaveDelay:
             AUTOSAVE_DELAYS.find((d) => d === saved.autosaveDelay) ?? current.autosaveDelay,
           analyticsOptOut: saved.analyticsOptOut === true,
+          keepLocation: saved.keepLocation === true,
         }
       },
     },
