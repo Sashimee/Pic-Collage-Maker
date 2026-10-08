@@ -85,11 +85,47 @@ export const useLang = create<LangState>(() => ({
 /** The detected language, loaded; main.tsx waits for it before the first render. */
 export const langReady: Promise<void> = switchTo(detectLang(), false)
 
-export type TFunc = (key: string) => string
+export type TVars = Record<string, string | number>
+export type TFunc = (key: string, vars?: TVars) => string
+
+/**
+ * A key with a `count` var is looked up as `key.one`, `key.few`… by the language's plural
+ * rule, falling back to `key.other`; `{name}` placeholders take the vars, numbers formatted
+ * for the language.
+ */
+// Built once per language: the layout gallery alone renders dozens of counts, and
+// constructing these is far from free.
+const pluralRules = new Map<Lang, Intl.PluralRules>()
+const numberFormats = new Map<Lang, Intl.NumberFormat>()
+
+function cached<T>(cache: Map<Lang, T>, lang: Lang, make: (lang: Lang) => T): T {
+  let value = cache.get(lang)
+  if (!value) cache.set(lang, (value = make(lang)))
+  return value
+}
+
+export function translate(lang: Lang, dict: Dict, key: string, vars?: TVars): string {
+  const lookup = (k: string) => dict[k] ?? en[k]
+  let text: string | undefined
+  if (typeof vars?.count === 'number') {
+    const rule = cached(pluralRules, lang, (l) => new Intl.PluralRules(l)).select(vars.count)
+    text = lookup(`${key}.${rule}`) ?? lookup(`${key}.other`)
+  }
+  text ??= lookup(key)
+  if (text === undefined) return key
+  if (!vars) return text
+  const numbers = cached(numberFormats, lang, (l) => new Intl.NumberFormat(l))
+  return text.replace(/\{(\w+)\}/g, (whole, name: string) => {
+    const value = vars[name]
+    if (value === undefined) return whole
+    return typeof value === 'number' ? numbers.format(value) : value
+  })
+}
 
 // Hook returning a translator bound to the current language. English is the
 // fallback; an unknown key returns the key itself so misses are visible.
 export function useT(): TFunc {
+  const lang = useLang((s) => s.lang)
   const dict = useLang((s) => s.dict)
-  return (key: string) => dict[key] ?? en[key] ?? key
+  return (key, vars) => translate(lang, dict, key, vars)
 }
