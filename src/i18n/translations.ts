@@ -769,4 +769,10 @@ export const en: Dict = {
   'cmd.deselect': 'Deselect',
   'cmd.openPanel': 'Open panel',
   'cmd.nudge': 'Move the selection (Shift: 10×)',
+  'whatsNew.title': "What's new",
+  'whatsNew.done': 'Got it',
+  'whatsNew.2026-10.samples': 'No photos to hand? Try the editor with sample photos from the start screen.',
+  'whatsNew.2026-10.settings': 'Settings now has a General section: theme, language, units (px, mm or inches), your default download format and how often to autosave.',
+  'whatsNew.2026-10.undoDelete': 'Deleted an element, a page or a project by mistake? Undo it straight from the notice.',
+  'whatsNew.2026-10.palette': 'Press Ctrl+K (⌘K on a Mac) to find any command, and ? for the list of shortcuts.',
 }

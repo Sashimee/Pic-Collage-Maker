@@ -60,6 +60,7 @@ import { InstallSheet } from './components/InstallSheet'
 import { useInstall } from './lib/pwaInstall'
 import { ToastContainer, useToasts } from './components/ToastContainer'
 import { OnboardingOverlay } from './components/Onboarding'
+import { WhatsNew } from './components/WhatsNew'
 import { restoreCustomFonts } from './lib/fonts'
 import { extractFirstExif, injectExifIntoJpeg } from './lib/exifHelpers'
 import { loadDoc, saveDoc, type StoredDoc } from './lib/persistence'
@@ -572,6 +573,7 @@ export default function App() {
         <UpdateBanner />
         <ToastContainer />
         <OnboardingOverlay />
+        <WhatsNew />
       </div>
     </MotionProvider>
   )
