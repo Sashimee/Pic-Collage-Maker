@@ -34,7 +34,13 @@ export function SlideshowSheet({
   const [progress, setProgress] = useState<SlideshowProgress | null>(null)
   const [musicName, setMusicName] = useState<string | null>(null)
   const [musicFailed, setMusicFailed] = useState(false)
+  const [decoding, setDecoding] = useState(false)
   const musicInput = useRef<HTMLInputElement>(null)
+  const musicRemove = useRef<HTMLButtonElement>(null)
+  const musicPick = useRef(0)
+  const focusMusic = useRef(false)
+  const musicNameId = useId()
+  const musicErrorId = useId()
   const signal = useRef({ cancelled: false })
   const createButton = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLDivElement>(null)
@@ -45,6 +51,14 @@ export function SlideshowSheet({
     document.activeElement instanceof HTMLElement ? document.activeElement : null,
   )
   const busy = progress !== null
+
+  // Choosing or removing a song swaps the input for the remove button (or back)
+  // while it holds focus, so focus follows once the swap has rendered.
+  useEffect(() => {
+    if (!focusMusic.current) return
+    focusMusic.current = false
+    ;(musicName ? musicRemove.current : musicInput.current)?.focus()
+  }, [musicName])
 
   const returnFocus = () => {
     if (opener?.isConnected) opener.focus()
@@ -110,23 +124,31 @@ export function SlideshowSheet({
 
   const pickMusic = async (file: File | undefined) => {
     if (!file) return
+    const pick = ++musicPick.current
     setMusicFailed(false)
+    setDecoding(true)
     try {
       const music = await decodeMusic(file)
+      if (pick !== musicPick.current) return
       setOptions((o) => ({ ...o, music }))
+      focusMusic.current = true
       setMusicName(file.name)
     } catch (err) {
+      if (pick !== musicPick.current) return
       console.warn('[SlideshowSheet] the chosen song does not decode', err)
       setOptions((o) => ({ ...o, music: null }))
       setMusicName(null)
       setMusicFailed(true)
+    } finally {
+      if (pick === musicPick.current) setDecoding(false)
     }
   }
 
   const removeMusic = () => {
+    musicPick.current++
     setOptions((o) => ({ ...o, music: null }))
+    focusMusic.current = true
     setMusicName(null)
-    musicInput.current?.focus()
   }
 
   const status =
@@ -223,18 +245,22 @@ export function SlideshowSheet({
             {musicName ? (
               <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-1.5 text-sm text-text/80">
                 <Music size={14} className="shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{musicName}</span>
+                <span id={musicNameId} className="min-w-0 flex-1 truncate">
+                  {musicName}
+                </span>
                 <button
+                  ref={musicRemove}
                   onClick={removeMusic}
                   disabled={busy}
                   aria-label={t('video.musicRemove')}
+                  aria-describedby={musicNameId}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-surface-3 hover:text-text disabled:opacity-50"
                 >
                   <X size={14} />
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg bg-surface-2 px-3 py-1.5 text-[0.75rem] font-medium text-text/80 transition hover:bg-surface-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
+              <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg bg-surface-2 px-3 py-1.5 text-[0.75rem] font-medium text-text/80 transition hover:bg-surface-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-offset-2">
                 <Music size={14} />
                 {t('video.musicPick')}
                 <input
@@ -242,6 +268,8 @@ export function SlideshowSheet({
                   type="file"
                   accept="audio/*"
                   disabled={busy}
+                  aria-invalid={musicFailed || undefined}
+                  aria-describedby={musicFailed ? musicErrorId : undefined}
                   className="sr-only"
                   onChange={(e) => {
                     void pickMusic(e.target.files?.[0])
@@ -251,7 +279,7 @@ export function SlideshowSheet({
               </label>
             )}
             {musicFailed && (
-              <p role="alert" className="text-[0.75rem] text-danger">
+              <p id={musicErrorId} role="alert" className="text-[0.75rem] text-danger">
                 {t('video.musicFailed')}
               </p>
             )}
@@ -262,7 +290,7 @@ export function SlideshowSheet({
           <button
             ref={createButton}
             onClick={() => void run()}
-            disabled={busy || pages.length === 0}
+            disabled={busy || decoding || pages.length === 0}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-accent-fg transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
           >
             {busy ? (

@@ -172,6 +172,10 @@ export async function recordSlideshow(
   }
   draw(0)
 
+  if (options.music && hooks.audio && hooks.audio.state !== 'running')
+    throw new Error(
+      'recordSlideshow: the browser kept the music suspended; try again or remove the song.',
+    )
   const stream = canvas.captureStream(FPS)
   const music = options.music && hooks.audio ? playInto(stream, hooks.audio, options.music) : null
   const recorder = new MediaRecorder(stream, {
@@ -266,10 +270,15 @@ export async function buildSlideshow(
   // Made now, while the click that started this still counts as a user
   // gesture: after the pages render, autoplay rules would leave it suspended.
   const audio = options.music ? new AudioContext() : undefined
+  // Safari can create it suspended even inside the gesture; resume() has to be
+  // asked for now too. Whether it worked is checked before the music starts.
+  audio?.resume().catch((err: unknown) => console.warn('[exportVideo] audio did not resume', err))
   try {
     return await renderAndRecord(pages, options, format, { ...hooks, audio })
   } finally {
-    await audio?.close()
+    await audio
+      ?.close()
+      .catch((err: unknown) => console.warn('[exportVideo] audio did not close', err))
   }
 }
 
