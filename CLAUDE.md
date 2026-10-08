@@ -293,8 +293,10 @@ to the browser language** (`navigator.languages`, matched by prefix; English
 otherwise), **persists** the choice in `localStorage`, and sets `<html lang>`.
 It loads a language's map before switching to it; `main.tsx` waits for the
 detected one (`langReady`) before the first render, so nothing flashes English. `useT()` returns a `t(key)`
-translator (English is the fallback; unknown key → the key). `t()` takes a key
-only — **no interpolation**, so compose counts as `` `${n} ${t('key')}` ``.
+translator (English is the fallback; unknown key → the key). `t(key, vars)` fills
+`{name}` placeholders; a numeric `count` picks `key.one` / `key.other` (… by
+`Intl.PluralRules`, falling back to `.other`), so counts go through
+`t('key', { count: n })` — never glue a number onto a word.
 `LangSwitcher` (in the header) toggles language live. **To add a UI string:** add
 the key to **all six** language maps (`translations.ts` + `locales/`), then `const t = useT()` and `t('your.key')`.
 Font names, the bold "B", emoji, grid glyphs, and caption suggestions stay
