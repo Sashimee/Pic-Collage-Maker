@@ -2,7 +2,8 @@
   "ci": {
     "collect": {
       "staticDistDir": "./dist-lh",
-      "numberOfRuns": 7
+      "numberOfRuns": 7,
+      "autodiscoverUrlBlocklist": ["/privacy.html"]
     },
     "assert": {
       "assertions": {
