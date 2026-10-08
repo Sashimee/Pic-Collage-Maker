@@ -642,6 +642,8 @@ export const en: Dict = {
   'print.cmyk': 'CMYK Simulation',
   'settings.analytics': 'Anonymous usage counts',
   'settings.analyticsHint': 'Cookieless visit counts that help improve the app. Never your photos or anything you make.',
+  'settings.keepLocation': 'Keep photo location',
+  'settings.keepLocationHint': 'Off by default: GPS coordinates are removed from exported JPEGs. Turn on to keep where a photo was taken.',
   'settings.appearance': 'Appearance',
   'settings.autosave': 'Autosave after',
   'settings.exportFormat': 'Default download',

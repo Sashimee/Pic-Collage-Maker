@@ -461,6 +461,8 @@ const pt: Dict = {
   'settings.autosave': 'Salvar automaticamente após',
   'settings.analytics': 'Contagens de uso anônimas',
   'settings.analyticsHint': 'Contagens de visitas sem cookies que ajudam a melhorar o app. Nunca suas fotos ou qualquer coisa que você criar.',
+  'settings.keepLocation': 'Manter a localização das fotos',
+  'settings.keepLocationHint': 'Desativado por padrão: as coordenadas GPS são removidas dos JPEGs exportados. Ative para manter onde uma foto foi tirada.',
   'workspace.presetEditing': 'Edição',
   'workspace.presetReview': 'Revisão',
   'workspace.presetMinimal': 'Minimalista',
