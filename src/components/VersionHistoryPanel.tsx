@@ -103,7 +103,7 @@ export default function VersionHistoryPanel() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-text">{formatDate(snap.timestamp)}</p>
               <p className="text-xs text-muted">
-                {snap.elementCount} {snap.elementCount === 1 ? (t('version.element')) : (t('version.elements'))}
+                {t('version.elementCount', { count: snap.elementCount })}
               </p>
             </div>
             <button

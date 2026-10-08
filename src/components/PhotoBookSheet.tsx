@@ -116,7 +116,7 @@ export function PhotoBookSheet({
 
         <div className="flex flex-col gap-4 p-4">
           <p className="text-sm text-muted">
-            {pages.length} {t('book.pages')}
+            {t('book.pageCount', { count: pages.length })}
           </p>
 
           <div className="flex flex-col gap-2">

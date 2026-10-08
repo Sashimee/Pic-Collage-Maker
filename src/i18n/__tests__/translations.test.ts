@@ -38,7 +38,7 @@ describe('translation keys', () => {
   const used = new Set<string>()
   for (const file of files) {
     const src = readFileSync(file, 'utf8')
-    for (const m of src.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'\s*\)/g)) {
+    for (const m of src.matchAll(/\bt\(\s*'([a-zA-Z0-9_.]+)'\s*[,)]/g)) {
       used.add(m[1])
     }
   }
@@ -48,7 +48,10 @@ describe('translation keys', () => {
   })
 
   it('every key used in the app exists in English', () => {
-    const missing = [...used].filter((k) => !(k in translations.en))
+    // A plural key lives in the map only under its forms.
+    const missing = [...used].filter(
+      (k) => !(k in translations.en) && !(`${k}.other` in translations.en),
+    )
     expect(missing).toEqual([])
   })
 
@@ -65,6 +68,16 @@ describe('translation keys', () => {
         (k) => !(k in translations.en),
       )
       expect(extra).toEqual([])
+    })
+
+    it(`${id} uses the same placeholders as English`, () => {
+      const names = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
+      const mismatched = Object.entries(translations[id])
+        .filter(
+          ([k, v]) => k in translations.en && names(v).join() !== names(translations.en[k]).join(),
+        )
+        .map(([k]) => k)
+      expect(mismatched).toEqual([])
     })
 
     it(`${id} has no blank values`, () => {

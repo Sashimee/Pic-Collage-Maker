@@ -182,7 +182,7 @@ export function LayoutGallery({
               transition={FADE.fast}
               onClick={() => handleSelect(layout.id)}
               className="flex flex-col items-center gap-1.5 rounded-xl p-1.5 transition active:scale-95 hover:bg-surface-2"
-              aria-label={`${layout.label} photos`}
+              aria-label={t('layout.photoCount', { count: layout.count })}
             >
               <LayoutPreview
                 layout={layout}
@@ -191,7 +191,7 @@ export function LayoutGallery({
                 active={false}
               />
               <span className="text-[0.6rem] font-medium text-muted">
-                {layout.count} {t('photos.add')?.split(' ')?.slice(-1)?.[0] ?? ''}
+                {t('layout.photoCount', { count: layout.count })}
               </span>
             </m.button>
           ))}
@@ -215,7 +215,7 @@ export function LayoutGallery({
                 key={layout.id}
                 onClick={() => handleSelect(layout.id)}
                 className="flex shrink-0 flex-col items-center gap-1 rounded-xl p-1 transition active:scale-95 hover:bg-surface-2"
-                aria-label={`${layout.label} photos`}
+                aria-label={t('layout.photoCount', { count: layout.count })}
               >
                 <LayoutPreview
                   layout={layout}

@@ -303,7 +303,7 @@ export function SelectionBar({ measure }: SelectionBarProps) {
                 className="pointer-events-auto flex items-center gap-2 rounded-full bg-accent/90 px-3 py-1.5 shadow-xl ring-1 ring-accent backdrop-blur"
               >
                 <span className="text-xs font-medium text-white">
-                  {multiSelected.length} {t('sel.selected')}
+                  {t('sel.count', { count: multiSelected.length })}
                 </span>
                 <button
                   onClick={() => groupElements(multiSelected)}

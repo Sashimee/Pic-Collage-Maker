@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
+import { WHATS_NEW_TIP } from '../src/lib/changelog'
 
 /** A tiny 2×2 red PNG — enough for loadPhotoMeta to decode. */
 export const TINY_PNG =
@@ -95,10 +96,11 @@ export const getZones = (page: Page) =>
   )
 
 /**
- * A layout card in the start-up gallery. Scoped to buttons on purpose: the
- * cards are labelled "<name> photos", and other things carry labels containing
- * "photos" too (the empty-cell file input is "Add photos"), so a bare
- * [aria-label*="photos"] would match whichever comes first in the DOM.
+ * A layout card in the start-up gallery — the first one for more than one photo,
+ * since the cards are labelled "1 photo", "2 photos"… Scoped to buttons on
+ * purpose: other things carry labels containing "photos" too (the empty-cell
+ * file input is "Add photos"), so a bare [aria-label*="photos"] would match
+ * whichever comes first in the DOM.
  */
 export const layoutCard = (page: Page) =>
   page.locator('button[aria-label*="photos"]').first()
@@ -120,20 +122,20 @@ export const assignmentSheet = (page: Page) =>
  */
 export async function openApp(page: Page, opts: { lang?: string; tips?: boolean } = {}) {
   await page.addInitScript(
-    ({ lang, tips }) => {
+    ({ lang, tips, whatsNew }) => {
       // A timestamp of 1 reads as "seen"; the value is never displayed. The
       // welcome carousel is suppressed either way — it is a full-screen modal,
       // and a spec about a gesture tip should not have to click through it.
       const seen = tips
-        ? ['welcome']
-        : ['welcome', 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
+        ? ['welcome', whatsNew]
+        : ['welcome', whatsNew, 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
       localStorage.setItem(
         'pic-collage-tips-v1',
         JSON.stringify(Object.fromEntries(seen.map((id) => [id, 1]))),
       )
       if (lang) localStorage.setItem('lang', lang)
     },
-    { lang: opts.lang ?? '', tips: !!opts.tips },
+    { lang: opts.lang ?? '', tips: !!opts.tips, whatsNew: WHATS_NEW_TIP },
   )
   await page.goto('/')
   await page.waitForFunction(() => !!window.__editor, undefined, { timeout: 10_000 })

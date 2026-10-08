@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { cspViolations, pngFile, recordCspViolations } from './helpers'
+import { WHATS_NEW_TIP } from '../src/lib/changelog'
 
 /**
  * Load once, lose the network, and everything still works: the app reloads
@@ -13,13 +14,13 @@ test('loads, edits and exports with no network after the first visit', async ({
 }) => {
   // The production build's policy, which unlike the dev server's allows no inline script.
   await recordCspViolations(page)
-  await page.addInitScript(() => {
-    const seen = ['welcome', 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
+  await page.addInitScript((whatsNew) => {
+    const seen = ['welcome', whatsNew, 'pinch', 'draw', 'layout', 'layers', 'cellZoom']
     localStorage.setItem(
       'pic-collage-tips-v1',
       JSON.stringify(Object.fromEntries(seen.map((id) => [id, 1]))),
     )
-  })
+  }, WHATS_NEW_TIP)
   await page.goto('/')
   // `ready` resolves once the worker is active, i.e. after the precache install.
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined))
