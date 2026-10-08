@@ -336,6 +336,7 @@ export const en: Dict = {
   'header.nightMode': 'Night mode',
   'header.export': 'Export',
   'header.refresh': 'Refresh',
+  'header.privacy': 'Privacy',
   'header.newCanvas': 'New canvas',
   'header.addPhotos': 'Add photos',
   'menu.more': 'Menu',

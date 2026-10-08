@@ -305,6 +305,7 @@ const es: Dict = {
   'header.nightMode': 'Modo noche',
   'header.export': 'Exportar',
   'header.refresh': 'Actualizar',
+  'header.privacy': 'Privacidad',
   'header.newCanvas': 'Nuevo lienzo',
   'header.addPhotos': 'Añadir fotos',
   'menu.more': 'Menú',

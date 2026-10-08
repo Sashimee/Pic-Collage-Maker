@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <title>Privacy · Pic Collage Maker</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #eef0fb;
+        --text: #14172b;
+        --muted: #616984;
+        --border: #e0e3f2;
+        --accent: #5b4ae6;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #080b18;
+          --text: #f3f5fb;
+          --muted: #93a0c0;
+          --border: #2c3760;
+          --accent: #a99fff;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.6 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 42rem;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+        margin: 0 0 0.25rem;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 2rem 0 0.5rem;
+      }
+      p,
+      li {
+        color: var(--text);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+      }
+      nav {
+        display: flex;
+        gap: 1rem;
+        margin: 1rem 0 2rem;
+      }
+      section + section {
+        border-top: 1px solid var(--border);
+        margin-top: 3rem;
+        padding-top: 2rem;
+      }
+      code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Language">
+        <a href="#en" hreflang="en">English</a>
+        <a href="#de" hreflang="de">Deutsch</a>
+      </nav>
+
+      <section id="en" lang="en">
+        <h1>Privacy</h1>
+        <p class="muted">Pic Collage Maker · last updated 8 October 2026</p>
+
+        <h2>Your photos stay on your device</h2>
+        <p>
+          Pic Collage Maker runs entirely in your browser. Photos you add, the collages you make and
+          everything you export are processed on your device and are never uploaded. There is no
+          account and no server that receives your content.
+        </p>
+
+        <h2>What is stored on your device</h2>
+        <ul>
+          <li>Projects, their photos and version history, in your browser's IndexedDB storage.</li>
+          <li>
+            Settings (language, theme, units, export and autosave preferences, analytics opt-out),
+            seen tips, custom layouts, templates, colours and uploaded fonts, in your browser's
+            local storage.
+          </li>
+        </ul>
+        <p>
+          This data never leaves your device. Clearing this site's data in your browser removes it.
+        </p>
+
+        <h2>Photo location</h2>
+        <p>
+          GPS coordinates are removed from exported JPEG images unless you turn on “Keep photo
+          location” in the settings.
+        </p>
+
+        <h2>Anonymous visit counts</h2>
+        <p>
+          To learn whether people use the app and finish a collage, it counts visits and a few steps
+          (such as “exported”) with
+          <a href="https://www.goatcounter.com/help/privacy">GoatCounter</a>. GoatCounter receives
+          the page path or step name, the referring site, your browser's user agent, your screen
+          size and the country derived from your IP address. It sets no cookies, stores no IP
+          address and creates no profile of you. None of your photos or content is ever sent.
+        </p>
+        <p>
+          Counting is off when your browser sends Do Not Track or Global Privacy Control, and you
+          can turn it off at any time under Settings → “Anonymous usage counts”. When it is off, the
+          counting script is not even requested.
+        </p>
+
+        <h2>Hosting</h2>
+        <p>
+          The app is served by GitHub Pages. GitHub logs the IP address of visitors for security
+          purposes; see the
+          <a
+            href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+            >GitHub Privacy Statement</a
+          >. To detect updates, the app occasionally fetches a small <code>version.json</code> file
+          from the same site.
+        </p>
+      </section>
+
+      <section id="de" lang="de">
+        <h1>Datenschutz</h1>
+        <p class="muted">Pic Collage Maker · Stand: 8. Oktober 2026</p>
+
+        <h2>Deine Fotos bleiben auf deinem Gerät</h2>
+        <p>
+          Pic Collage Maker läuft vollständig in deinem Browser. Fotos, die du hinzufügst, deine
+          Collagen und alles, was du exportierst, werden auf deinem Gerät verarbeitet und nie
+          hochgeladen. Es gibt kein Konto und keinen Server, der deine Inhalte empfängt.
+        </p>
+
+        <h2>Was auf deinem Gerät gespeichert wird</h2>
+        <ul>
+          <li>
+            Projekte, ihre Fotos und der Versionsverlauf im IndexedDB-Speicher deines Browsers.
+          </li>
+          <li>
+            Einstellungen (Sprache, Design, Einheiten, Export- und Autosave-Vorgaben,
+            Statistik-Widerspruch), gesehene Tipps, eigene Layouts, Vorlagen, Farben und
+            hochgeladene Schriften im lokalen Speicher deines Browsers.
+          </li>
+        </ul>
+        <p>
+          Diese Daten verlassen dein Gerät nie. Wenn du die Websitedaten in deinem Browser löschst,
+          sind sie entfernt.
+        </p>
+
+        <h2>Aufnahmeort</h2>
+        <p>
+          GPS-Koordinaten werden aus exportierten JPEG-Bildern entfernt, außer du schaltest
+          „Fotostandort behalten“ in den Einstellungen ein.
+        </p>
+
+        <h2>Anonyme Besuchszählung</h2>
+        <p>
+          Um zu erfahren, ob die App genutzt und eine Collage fertiggestellt wird, zählt sie Besuche
+          und einige Schritte (etwa „exportiert“) mit
+          <a href="https://www.goatcounter.com/help/privacy">GoatCounter</a>. GoatCounter erhält den
+          Seitenpfad bzw. Schrittnamen, die verweisende Website, den User-Agent deines Browsers,
+          deine Bildschirmgröße und das aus deiner IP-Adresse abgeleitete Land. Es setzt keine
+          Cookies, speichert keine IP-Adresse und erstellt kein Profil von dir. Deine Fotos und
+          Inhalte werden nie übertragen.
+        </p>
+        <p>
+          Die Zählung ist aus, wenn dein Browser „Do Not Track“ oder „Global Privacy Control“
+          sendet, und du kannst sie jederzeit unter Einstellungen → „Anonyme Nutzungszahlen“
+          abschalten. Ist sie aus, wird das Zählskript gar nicht erst geladen.
+        </p>
+
+        <h2>Hosting</h2>
+        <p>
+          Die App wird über GitHub Pages ausgeliefert. GitHub protokolliert die IP-Adressen der
+          Besucher zu Sicherheitszwecken; siehe die
+          <a
+            href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement"
+            >Datenschutzerklärung von GitHub</a
+          >. Um Updates zu erkennen, ruft die App gelegentlich eine kleine Datei
+          <code>version.json</code>
+          von derselben Website ab.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
