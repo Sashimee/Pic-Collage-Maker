@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickVideoFormat, slideAt, slideshowDuration, videoSize } from '../exportVideo'
+import { musicFade, pickVideoFormat, slideAt, slideshowDuration, videoSize } from '../exportVideo'
 
 describe('pickVideoFormat', () => {
   it('prefers MP4, which iOS can play', () => {
@@ -19,6 +19,30 @@ describe('pickVideoFormat', () => {
 
   it('returns null when nothing records', () => {
     expect(pickVideoFormat(() => false)).toBeNull()
+  })
+
+  it('names an audio codec when there is music', () => {
+    expect(pickVideoFormat(() => true, true)?.mimeType).toBe(
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    )
+    expect(pickVideoFormat((t) => t.startsWith('video/webm'), true)?.mimeType).toBe(
+      'video/webm;codecs=vp9,opus',
+    )
+  })
+
+  it('never picks a video-only codec for a video with music', () => {
+    const videoOnly = ['video/mp4;codecs=avc1.42E01E', 'video/webm;codecs=vp9']
+    expect(pickVideoFormat((t) => videoOnly.includes(t), true)).toBeNull()
+  })
+})
+
+describe('musicFade', () => {
+  it('fades out over the last two seconds', () => {
+    expect(musicFade(12)).toEqual({ start: 10, seconds: 2 })
+  })
+
+  it('fades over the second half of a short video', () => {
+    expect(musicFade(2)).toEqual({ start: 1, seconds: 1 })
   })
 })
 
@@ -81,5 +105,5 @@ describe('videoSize', () => {
 })
 
 it('runs for the page count times the time per page', () => {
-  expect(slideshowDuration(4, { secondsPerPage: 3, fadeSeconds: 1 })).toBe(12)
+  expect(slideshowDuration(4, { secondsPerPage: 3 })).toBe(12)
 })

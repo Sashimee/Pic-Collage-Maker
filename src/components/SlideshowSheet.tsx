@@ -1,10 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Clapperboard, X } from 'lucide-react'
+import { Clapperboard, Music, X } from 'lucide-react'
 import { useT } from '../i18n/useLang'
 import {
   DEFAULT_SLIDESHOW,
   SECONDS_PER_PAGE,
   buildSlideshow,
+  decodeMusic,
   type SlideshowOptions,
   type SlideshowProgress,
   type VideoFormat,
@@ -31,6 +32,9 @@ export function SlideshowSheet({
   const t = useT()
   const [options, setOptions] = useState<SlideshowOptions>(DEFAULT_SLIDESHOW)
   const [progress, setProgress] = useState<SlideshowProgress | null>(null)
+  const [musicName, setMusicName] = useState<string | null>(null)
+  const [musicFailed, setMusicFailed] = useState(false)
+  const musicInput = useRef<HTMLInputElement>(null)
   const signal = useRef({ cancelled: false })
   const createButton = useRef<HTMLButtonElement>(null)
   const dialog = useRef<HTMLDivElement>(null)
@@ -102,6 +106,27 @@ export function SlideshowSheet({
       // The button was disabled while it worked, which drops keyboard focus to the page.
       if (!signal.current.cancelled) requestAnimationFrame(() => createButton.current?.focus())
     }
+  }
+
+  const pickMusic = async (file: File | undefined) => {
+    if (!file) return
+    setMusicFailed(false)
+    try {
+      const music = await decodeMusic(file)
+      setOptions((o) => ({ ...o, music }))
+      setMusicName(file.name)
+    } catch (err) {
+      console.warn('[SlideshowSheet] the chosen song does not decode', err)
+      setOptions((o) => ({ ...o, music: null }))
+      setMusicName(null)
+      setMusicFailed(true)
+    }
+  }
+
+  const removeMusic = () => {
+    setOptions((o) => ({ ...o, music: null }))
+    setMusicName(null)
+    musicInput.current?.focus()
   }
 
   const status =
@@ -190,6 +215,47 @@ export function SlideshowSheet({
             />
             {t('video.fade')}
           </label>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted">
+              {t('video.music')}
+            </span>
+            {musicName ? (
+              <div className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-1.5 text-sm text-text/80">
+                <Music size={14} className="shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{musicName}</span>
+                <button
+                  onClick={removeMusic}
+                  disabled={busy}
+                  aria-label={t('video.musicRemove')}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-surface-3 hover:text-text disabled:opacity-50"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-2 self-start rounded-lg bg-surface-2 px-3 py-1.5 text-[0.75rem] font-medium text-text/80 transition hover:bg-surface-3 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
+                <Music size={14} />
+                {t('video.musicPick')}
+                <input
+                  ref={musicInput}
+                  type="file"
+                  accept="audio/*"
+                  disabled={busy}
+                  className="sr-only"
+                  onChange={(e) => {
+                    void pickMusic(e.target.files?.[0])
+                    e.target.value = ''
+                  }}
+                />
+              </label>
+            )}
+            {musicFailed && (
+              <p role="alert" className="text-[0.75rem] text-danger">
+                {t('video.musicFailed')}
+              </p>
+            )}
+          </div>
 
           <p className="text-[0.7rem] leading-relaxed text-muted">{t('video.hint')}</p>
 

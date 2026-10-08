@@ -17,10 +17,23 @@ const CANDIDATES: VideoFormat[] = [
   { mimeType: 'video/webm', extension: 'webm' },
 ]
 
+// With a music track the codec string has to name an audio codec too: a
+// video-only one makes the recorder drop the track, or refuse to start.
+const AUDIO_CANDIDATES: VideoFormat[] = [
+  { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', extension: 'mp4' },
+  { mimeType: 'video/mp4', extension: 'mp4' },
+  { mimeType: 'video/webm;codecs=vp9,opus', extension: 'webm' },
+  { mimeType: 'video/webm;codecs=vp8,opus', extension: 'webm' },
+  { mimeType: 'video/webm', extension: 'webm' },
+]
+
 export function pickVideoFormat(
   isTypeSupported: (mimeType: string) => boolean = (t) => MediaRecorder.isTypeSupported(t),
+  withAudio = false,
 ): VideoFormat | null {
-  return CANDIDATES.find((c) => isTypeSupported(c.mimeType)) ?? null
+  return (
+    (withAudio ? AUDIO_CANDIDATES : CANDIDATES).find((c) => isTypeSupported(c.mimeType)) ?? null
+  )
 }
 
 export function canRecordVideo(): boolean {
@@ -36,12 +49,21 @@ export interface SlideshowOptions {
   secondsPerPage: number
   /** Crossfade into the next page over this many seconds; 0 cuts. */
   fadeSeconds: number
+  /** A decoded song from the user's device, looped to the length and faded out. */
+  music: AudioBuffer | null
 }
 
-export const DEFAULT_SLIDESHOW: SlideshowOptions = { secondsPerPage: 3, fadeSeconds: 0.6 }
+export const DEFAULT_SLIDESHOW: SlideshowOptions = {
+  secondsPerPage: 3,
+  fadeSeconds: 0.6,
+  music: null,
+}
 export const SECONDS_PER_PAGE = [2, 3, 5] as const
 
-export function slideshowDuration(pageCount: number, { secondsPerPage }: SlideshowOptions): number {
+export function slideshowDuration(
+  pageCount: number,
+  { secondsPerPage }: Pick<SlideshowOptions, 'secondsPerPage'>,
+): number {
   return pageCount * secondsPerPage
 }
 
@@ -53,7 +75,7 @@ export function slideshowDuration(pageCount: number, { secondsPerPage }: Slidesh
 export function slideAt(
   t: number,
   pageCount: number,
-  { secondsPerPage, fadeSeconds }: SlideshowOptions,
+  { secondsPerPage, fadeSeconds }: Pick<SlideshowOptions, 'secondsPerPage' | 'fadeSeconds'>,
 ): { page: number; next: number; mix: number } {
   const last = pageCount - 1
   const page = Math.min(last, Math.max(0, Math.floor(t / secondsPerPage)))
@@ -61,6 +83,25 @@ export function slideAt(
   const fade = Math.min(fadeSeconds, secondsPerPage)
   const into = t - page * secondsPerPage - (secondsPerPage - fade)
   return { page, next: page + 1, mix: into > 0 ? Math.min(1, into / fade) : 0 }
+}
+
+/** How long the music takes to fade out at the end; shorter videos fade over half their length. */
+const MUSIC_FADE_SECONDS = 2
+
+/** When, from the start of the video, the music starts to fade, and how long it takes. */
+export function musicFade(duration: number): { start: number; seconds: number } {
+  const seconds = Math.min(MUSIC_FADE_SECONDS, duration / 2)
+  return { start: duration - seconds, seconds }
+}
+
+/**
+ * Decode a song the user picked. An offline context needs no audio device and
+ * no user gesture, and a buffer it decodes plays in any other context, so a
+ * file the browser cannot read is caught here, at the moment it is chosen.
+ */
+export async function decodeMusic(file: Blob): Promise<AudioBuffer> {
+  const context = new OfflineAudioContext(2, 1, 44_100)
+  return context.decodeAudioData(await file.arrayBuffer())
 }
 
 /** Long side of the video. 1080 is what phones record and share without re-encoding. */
@@ -112,7 +153,7 @@ export async function recordSlideshow(
   size: { width: number; height: number },
   options: SlideshowOptions,
   format: VideoFormat,
-  hooks: Pick<SlideshowHooks, 'onProgress' | 'signal'> = {},
+  hooks: Pick<SlideshowHooks, 'onProgress' | 'signal'> & { audio?: AudioContext } = {},
 ): Promise<Blob | null> {
   const canvas = document.createElement('canvas')
   canvas.width = size.width
@@ -132,6 +173,7 @@ export async function recordSlideshow(
   draw(0)
 
   const stream = canvas.captureStream(FPS)
+  const music = options.music && hooks.audio ? playInto(stream, hooks.audio, options.music) : null
   const recorder = new MediaRecorder(stream, {
     mimeType: format.mimeType,
     videoBitsPerSecond: 8_000_000,
@@ -151,6 +193,7 @@ export async function recordSlideshow(
 
   recorder.start()
   const started = performance.now()
+  music?.start(duration)
   // A timer rather than requestAnimationFrame: rAF stops in a background tab,
   // which would leave the recorder running with a frozen frame forever.
   await new Promise<void>((resolve) => {
@@ -168,12 +211,37 @@ export async function recordSlideshow(
   })
   draw(duration)
   if (recorder.state !== 'inactive') recorder.stop()
+  music?.stop()
   stream.getTracks().forEach((track) => track.stop())
   await stopped
 
   if (failure) throw failure
   if (hooks.signal?.cancelled) return null
   return new Blob(chunks, { type: format.mimeType.split(';')[0] })
+}
+
+/** Route a looping song into the recorded stream, with a fade-out scheduled on start. */
+function playInto(stream: MediaStream, context: AudioContext, music: AudioBuffer) {
+  const source = context.createBufferSource()
+  source.buffer = music
+  source.loop = true
+  const gain = context.createGain()
+  const destination = context.createMediaStreamDestination()
+  source.connect(gain).connect(destination)
+  destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track))
+  return {
+    start(duration: number) {
+      const now = context.currentTime
+      const fade = musicFade(duration)
+      gain.gain.setValueAtTime(1, now + fade.start)
+      gain.gain.linearRampToValueAtTime(0, now + duration)
+      source.start(now)
+    },
+    stop() {
+      source.stop()
+      source.disconnect()
+    },
+  }
 }
 
 async function decode(dataUrl: string): Promise<HTMLImageElement> {
@@ -193,9 +261,24 @@ export async function buildSlideshow(
   hooks: SlideshowHooks = {},
 ): Promise<{ blob: Blob; format: VideoFormat } | null> {
   if (!pages.length) return null
-  const format = pickVideoFormat()
+  const format = pickVideoFormat(undefined, options.music !== null)
   if (!format) throw new Error('buildSlideshow: this browser can record no video format.')
+  // Made now, while the click that started this still counts as a user
+  // gesture: after the pages render, autoplay rules would leave it suspended.
+  const audio = options.music ? new AudioContext() : undefined
+  try {
+    return await renderAndRecord(pages, options, format, { ...hooks, audio })
+  } finally {
+    await audio?.close()
+  }
+}
 
+async function renderAndRecord(
+  pages: LoadedDocument[],
+  options: SlideshowOptions,
+  format: VideoFormat,
+  hooks: SlideshowHooks & { audio?: AudioContext },
+): Promise<{ blob: Blob; format: VideoFormat } | null> {
   const size = videoSize(pages)
   const { renderPages } = await import('./renderPages')
   // Every page straight into the frame size, so a page whose board differs
