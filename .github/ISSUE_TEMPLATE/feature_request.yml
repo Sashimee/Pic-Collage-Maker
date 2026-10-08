@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest something the editor should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to make?
+      description: The collage, page or export you had in mind, and where the editor got in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: checkboxes
+    id: local
+    attributes:
+      label: Constraints
+      options:
+        - label: This can work entirely on the device, with no upload or account.
