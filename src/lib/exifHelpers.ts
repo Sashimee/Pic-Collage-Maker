@@ -30,11 +30,27 @@ function uint8ToDataURL(bytes: Uint8Array, mime: string): string {
   return `data:${mime};base64,${base64}`
 }
 
+/** The EXIF with its GPS block and the pointer to it gone, so no coordinates survive a dump. */
+export function withoutLocation(exif: piexif.IExif): piexif.IExif {
+  const rest = { ...exif }
+  delete rest.GPS
+  if (exif['0th']) {
+    const zeroth = { ...exif['0th'] }
+    delete zeroth[piexif.TagValues.ImageIFD.GPSTag]
+    rest['0th'] = zeroth
+  }
+  return rest
+}
+
 /**
  * Extract EXIF from the first photo element that has a source blob URL or photoId.
- * Returns the EXIF object (ready for piexif.dump) or null if none found.
+ * Returns the EXIF object (ready for piexif.dump) or null if none found. Where the
+ * photo was taken is left out unless `keepLocation` asks for it.
  */
-export async function extractFirstExif(elements: CanvasElement[]): Promise<piexif.IExif | null> {
+export async function extractFirstExif(
+  elements: CanvasElement[],
+  { keepLocation = false } = {},
+): Promise<piexif.IExif | null> {
   for (const el of elements) {
     if (el.type !== 'photo') continue
     // Prefer reading from the blob URL if it's a data URL (base64 JPEG)
@@ -46,7 +62,7 @@ export async function extractFirstExif(elements: CanvasElement[]): Promise<piexi
         const exif = piexif.load(binary)
         // Ensure the Exif IFD exists so piexif.dump won't throw
         if (!exif.Exif) exif.Exif = {}
-        return exif
+        return keepLocation ? exif : withoutLocation(exif)
       } catch {
         // ignore unreadable EXIF
       }
