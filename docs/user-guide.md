@@ -213,6 +213,12 @@ The **Export ▾** menu (on a phone: **Menu**) offers:
   sheet: Square 21 × 21 cm, A4 portrait or A4 landscape. Options: **First page
   is the cover** and **Page numbers**. **Create book** saves a PDF; **Print**
   opens the print dialog.
+- **Slideshow video** — every page in turn, 2, 3 or 5 seconds each, with an
+  optional crossfade and an optional song from your device (it loops to fill
+  the video and fades out at the end). The video is 1080 pixels on its long
+  side, saved as MP4 where your browser can record it and WebM otherwise. It is
+  recorded in real time, so it takes as long to make as it lasts; keep the tab
+  open. Only shown in browsers that can record video.
 - **Share this page only** / **Download this page (PNG)** — shown when the
   project has more than one page.
 - **Resize for…** — change the board to a preset size: social formats
