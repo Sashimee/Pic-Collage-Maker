@@ -7,6 +7,7 @@
     "dev": "vite",
     "size": "vite build --report",
     "build": "tsc -b && vite build",
+    "postbuild": "node scripts/generate-notices.mjs",
     "build:lh": "vite build --base=/ --outDir dist-lh",
     "preview": "vite preview",
     "lint": "tsc -b --noEmit && eslint .",
